@@ -168,7 +168,7 @@ clean-local:
 
 MAINTAINERCLEANFILES= $(BUILT_SOURCES)
 
-base-1.0.hl: jhc lib/base/base.cabal
+base-1.0.hl: lib/base/base.cabal
 	./jhc -v -funboxed-tuples $(RTSOPTS) $(JHC_TEST)  -ilib/base --noauto --build-hl lib/base/base.cabal -o $@
 
 haskell98-1.0.hl: jhc lib/haskell98/haskell98.cabal base-1.0.hl
@@ -177,3 +177,12 @@ haskell98-1.0.hl: jhc lib/haskell98/haskell98.cabal base-1.0.hl
 
 libs: base-1.0.hl haskell98-1.0.hl
 
+helloworld: test/HelloWorld.hs jhc
+	-[ -e $@.log ] && mv -f $@.log $@.log.bak
+	./jhc -v -L. $(JHC_TEST) test/HelloWorld.hs -o $@ 2>&1 | tee $@.log
+calendar: test/Calendar.hs jhc
+	-[ -e $@.log ] && mv -f $@.log $@.log.bak
+	./jhc -v -L. $(JHC_TEST) test/Calendar.hs -o $@ 2>&1 | tee $@.log
+primes: test/Primes.hs jhc
+	-[ -e $@.log ] && mv -f $@.log $@.log.bak
+	./jhc -v -L. $(JHC_TEST) test/Primes.hs -o $@ 2>&1 | tee $@.log
