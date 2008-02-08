@@ -53,10 +53,7 @@ HCI = ghci
 HC_OPTS = $(GHCOPTS)
 PROF_OPTS = -P
 
-EXTRA_DIST = data utils arch docs FrontEnd/HsParser.y $(BUILT_SOURCES) lib/base lib/haskell98 lib/haskell98.cabal
-
-dist-hook:
-	find $(distdir)  -name _darcs -o -name \*.ho | xargs echo rm -rf --
+EXTRA_DIST = data utils arch docs FrontEnd/HsParser.y $(BUILT_SOURCES)
 
 UTILS = utils/op_process.prl utils/opt_sets.prl utils/gen_props.prl utils/op_names.prl utils/op_raw.prl
 
@@ -174,7 +171,7 @@ MAINTAINERCLEANFILES= $(BUILT_SOURCES)
 base-1.0.hl: jhc lib/base/base.cabal
 	./jhc -v -funboxed-tuples $(RTSOPTS) $(JHC_TEST)  -ilib/base --noauto --build-hl lib/base/base.cabal -o $@
 
-haskell98-1.0.hl: jhc lib/haskell98.cabal base-1.0.hl
+haskell98-1.0.hl: jhc lib/haskell98/haskell98.cabal base-1.0.hl
 	./jhc -v $(RTSOPTS) $(JHC_TEST) -ilib/haskell98 --noauto -L- -L. -p base --build-hl lib/haskell98.cabal -o $@
 
 
