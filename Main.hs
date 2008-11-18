@@ -1,11 +1,10 @@
-
 module Main(main) where
 
 import Control.Exception
 import Control.Monad.Identity
 import Control.Monad.Writer
 import Control.Monad.State
-import IO(hFlush,stderr,stdout)
+import System.IO(hFlush,stderr,stdout)
 import Prelude hiding(putStrLn, putStr,print)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -77,7 +76,7 @@ import qualified Grin.SSimplify
 import qualified Info.Info as Info
 import qualified Interactive
 import qualified Stats
-import qualified IO
+import qualified System.IO as IO
 
 ---------------
 -- ∀α∃β . α → β

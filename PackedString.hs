@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -ffi #-}
+{-# OPTIONS_GHC -ffi -fglasgow-exts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.PackedString
