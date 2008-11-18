@@ -1,11 +1,14 @@
 name:                jhc
-version:             2008.11.18
-synopsis:            <Project description>
-description:         <Project description>
-category:            
+version:             0.5.20081118
+synopsis:            Jhc Haskell Compiler
+description:         
+  jhc is a haskell compiler which aims to produce the most efficient programs possible via whole
+  program analysis and other optimizations.
+Tested-With:         GHC == 6.10.1
+category:            Compiler
 license:             BSD3
 license-file:        LICENSE
-author:              John Meacham
+author:              John Meacham <john@repetae.net>
 maintainer:          lemmih@gmail.com
 build-Depends:       base, syb, containers, mtl, pretty, array, bytestring
 build-Depends:       binary, directory, readline, random, regex-compat
