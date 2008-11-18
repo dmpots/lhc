@@ -34,7 +34,7 @@ Executable lhc
  Extensions:          DeriveDataTypeable, ForeignFunctionInterface, EmptyDataDecls, GeneralizedNewtypeDeriving
                       MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts
                       UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
-                      OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards, PatternSignatures
+                      OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards
  build-Depends:       containers, mtl, pretty, array, bytestring
  build-Depends:       binary, directory, readline, random, regex-compat
  build-Depends:       graphviz, fgl, unix, zlib, old-time
@@ -43,6 +43,7 @@ Executable lhc
   build-depends:      base >= 4 && < 5, syb
  else
   build-depends:      base >= 3 && < 4
+  Extensions:         PatternSignatures
  Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators, UTF8,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
