@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Interactive(Interactive.interact) where
 
 import Control.Monad.Reader
@@ -136,7 +137,11 @@ interact cho = mre where
                 xs -> f "" xs where
             f opt [x] = (opt,x)
             f opt ~(x:xs) = f (x ++ opt) xs
+#if __GLASGOW_HASKELL__ >= 610
         rx <- CE.catch ( Just `fmap` evaluate (mkRegex reg)) (\(e::SomeException) -> return Nothing)
+#else
+        rx <- CE.catch ( Just `fmap` evaluate (mkRegex reg)) (\_ -> return Nothing)
+#endif
         case rx of
             Nothing -> putStrLn $ "Invalid regex: " ++ arg
             --Just rx -> mapM_ putStrLn $ sort [ nameTag (nameType v):' ':show v <+> "::" <+> ptype v  | v <- Map.keys (hoDefs hoE), isJust (matchRegex rx (show v)), nameTag (nameType v) `elem` opt ]
@@ -151,7 +156,11 @@ interact cho = mre where
     do_expr act s = case parseStmt (s ++ "\n") of
         Left m -> putStrLn m >> return act
         Right e -> do
+#if __GLASGOW_HASKELL__ >= 610
             CE.catch (runIn isStart { stateInteract = act } $ executeStatement e) $ (\e -> putStrLn $ show (e::SomeException))
+#else
+            CE.catch (runIn isStart { stateInteract = act } $ executeStatement e) $ (\e -> putStrLn $ show e)
+#endif
             return act
     pshow _opt v
         | Just d <- showSynonym (show . (pprint :: HsType -> PP.Doc) ) v (hoTypeSynonyms hoB) = nameTag (nameType v):' ':d

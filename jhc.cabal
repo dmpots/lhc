@@ -1,3 +1,4 @@
+cabal-version:       >= 1.2
 name:                jhc
 version:             0.5.20081118
 synopsis:            Jhc Haskell Compiler
@@ -6,34 +7,42 @@ description:
   program analysis and other optimizations.
 Tested-With:         GHC == 6.10.1
 category:            Compiler
-license:             BSD3
+license:             GPL
 license-file:        LICENSE
 author:              John Meacham <john@repetae.net>
 maintainer:          lemmih@gmail.com
-build-Depends:       base, syb, containers, mtl, pretty, array, bytestring
-build-Depends:       binary, directory, readline, random, regex-compat
-build-Depends:       graphviz, fgl, unix, zlib
-build-Depends:       haskell98
 build-type:          Custom
 Extra-Source-Files:  cbits/_stdint.h, cbits/config.h, StringTable/StringTable_cbits.h, arch/generic.arch
                      arch/i686.arch, arch/x86_64.arch
 
-executable:          jhc
-main-is:             Main.hs
-Other-modules:       C.FFI, C.FromGrin2, Cmm.Op, C.Prims, DataConstructors, DerivingDrift.StandardRules,
-                     E.CPR, E.Demand, E.LambdaLift, E.SSimplify, E.ToHs, E.TypeCheck, E.Type, FrontEnd.Class,
-                     FrontEnd.Exports, FrontEnd.HsSyn, FrontEnd.KindInfer, FrontEnd.Representation, FrontEnd.SrcLoc,
-                     FrontEnd.Tc.Kind, FrontEnd.Tc.Monad, Grin.SSimplify, Name.VConsts, Options, Ho.Type, Ho.Build
-C-Sources:           cbits/md5sum.c, StringTable/StringTable_cbits.c
-Includes:            cbits/_stdint.h
-Include-dirs:        cbits, StringTable
-cc-Options:          -std=c99 -O2 -Wall
-ghc-options:         
-Extensions:          DeriveDataTypeable, ForeignFunctionInterface, EmptyDataDecls, GeneralizedNewtypeDeriving
-                     MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts
-                     UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
-                     OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards
-Other-modules:
+
+flag base4
+
+
+Executable jhc
+ main-is:             Main.hs
+ Other-modules:       C.FFI, C.FromGrin2, Cmm.Op, C.Prims, DataConstructors, DerivingDrift.StandardRules,
+                      E.CPR, E.Demand, E.LambdaLift, E.SSimplify, E.ToHs, E.TypeCheck, E.Type, FrontEnd.Class,
+                      FrontEnd.Exports, FrontEnd.HsSyn, FrontEnd.KindInfer, FrontEnd.Representation, FrontEnd.SrcLoc,
+                      FrontEnd.Tc.Kind, FrontEnd.Tc.Monad, Grin.SSimplify, Name.VConsts, Options, Ho.Type, Ho.Build
+ C-Sources:           cbits/md5sum.c, StringTable/StringTable_cbits.c
+ Includes:            cbits/_stdint.h
+ Include-dirs:        cbits, StringTable
+ cc-Options:          -std=c99 -O2 -Wall
+ ghc-options:         
+ Extensions:          DeriveDataTypeable, ForeignFunctionInterface, EmptyDataDecls, GeneralizedNewtypeDeriving
+                      MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts
+                      UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
+                      OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards, PatternSignatures
+ build-Depends:       containers, mtl, pretty, array, bytestring
+ build-Depends:       binary, directory, readline, random, regex-compat
+ build-Depends:       graphviz, fgl, unix, zlib, old-time
+ build-Depends:       haskell98
+ if flag(base4)
+  build-depends:      base >= 4 && < 5, syb
+ else
+  build-depends:      base >= 3 && < 4
+ Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators, UTF8,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
   C.FromGrin2
@@ -195,3 +204,7 @@ Other-modules:
   Util.Util
   Version.Version
   Version.Config
+
+
+flag base4
+

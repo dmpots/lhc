@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Grin.Lint(
     lintCheckGrin,
     typecheckGrin,
@@ -72,7 +73,11 @@ transformGrin tp prog = do
         putErrLn $ "\n>>> Before " ++ name
         dumpGrin ("lint-before-" ++ name) prog
         putErrLn $ "\n>>>"
+#if __GLASGOW_HASKELL__ >= 610
         putErrLn (show (e::SomeException))
+#else
+        putErrLn (show e)
+#endif
         maybeDie
         return prog
     let istat = grinStats prog

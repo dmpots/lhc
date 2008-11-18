@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Main(main) where
 
 import Control.Exception
@@ -847,7 +848,11 @@ transformProgram tp prog = liftIO $ do
         putErrLn $ "\n>>> Before " ++ name
         printProgram prog
         putErrLn $ "\n>>>"
+#if __GLASGOW_HASKELL__ >= 610
         putErrLn (show (e::SomeException))
+#else
+        putErrLn (show e)
+#endif
         maybeDie
         return prog
     prog' <- Control.Exception.catch (transformOperation tp prog { progStats = mempty }) ferr

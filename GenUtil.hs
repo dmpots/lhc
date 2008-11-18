@@ -121,14 +121,16 @@ module GenUtil(
     UniqueProducer(..)
     ) where
 
-import Char(isAlphaNum, isSpace, toLower, ord, chr)
-import List
-import Monad
-import qualified IO
-import qualified System
-import Random(StdGen, newStdGen, Random(randomR))
-import Time
-import CPUTime
+import Data.Char(isAlphaNum, isSpace, toLower, ord, chr)
+import Data.List
+import Control.Monad
+import qualified System.IO as IO
+import qualified System.IO.Error as IO
+import qualified System.Environment as System
+import qualified System.Exit as System
+import System.Random(StdGen, newStdGen, Random(randomR))
+import System.Time
+import System.CPUTime
 
 {-# SPECIALIZE snub :: [String] -> [String] #-}
 {-# SPECIALIZE snub :: [Int] -> [Int] #-}
@@ -348,15 +350,15 @@ repeatM_ x = sequence_ $ repeat x
 {-# RULES "replicateM/0" replicateM 0 = const (return []) #-}
 {-# RULES "replicateM_/0" replicateM_ 0 = const (return ()) #-}
 
-{-# INLINE replicateM #-}
-{-# SPECIALIZE replicateM :: Int -> IO a -> IO [a] #-}
-replicateM :: Monad m => Int -> m a -> m [a]
-replicateM n x = sequence $ replicate n x
+{- INLINE replicateM -}
+{- SPECIALIZE replicateM :: Int -> IO a -> IO [a] -}
+--replicateM :: Monad m => Int -> m a -> m [a]
+--replicateM n x = sequence $ replicate n x
 
-{-# INLINE replicateM_ #-}
-{-# SPECIALIZE replicateM_ :: Int -> IO a -> IO () #-}
-replicateM_ :: Monad m => Int -> m a -> m ()
-replicateM_ n x = sequence_ $ replicate n x
+{- INLINE replicateM_ -}
+{- SPECIALIZE replicateM_ :: Int -> IO a -> IO () -}
+--replicateM_ :: Monad m => Int -> m a -> m ()
+--replicateM_ n x = sequence_ $ replicate n x
 
 -- | convert a maybe to an arbitrary failable monad
 maybeToMonad :: Monad m => Maybe a -> m a
@@ -580,8 +582,8 @@ isConjoint xs ys = or [x == y | x <- xs, y <- ys]
 isDisjoint xs ys = not (isConjoint xs ys)
 
 -- | 'concat' composed with 'List.intersperse'. Can be used similarly to join in perl.
-intercalate :: [a] -> [[a]] -> [a]
-intercalate x xss = concat (intersperse x xss)
+--intercalate :: [a] -> [[a]] -> [a]
+--intercalate x xss = concat (intersperse x xss)
 
 -- | place spaces before each line in string.
 indentLines :: Int -> String -> String
@@ -602,11 +604,11 @@ buildTableLL ps = map f ps where
     f (x,y) = x ++ replicate (bs - length x) ' ' ++ replicate 4 ' ' ++ y
     bs = maximum (map (length . fst) ps)
 
-{-# INLINE foldl' #-}
+{- INLINE foldl' -}
 -- | strict version of 'foldl'
-foldl' :: (a -> b -> a) -> a -> [b] -> a
-foldl' _ a []     = a
-foldl' f a (x:xs) = (foldl' f $! f a x) xs
+--foldl' :: (a -> b -> a) -> a -> [b] -> a
+--foldl' _ a []     = a
+--foldl' f a (x:xs) = (foldl' f $! f a x) xs
 
 -- | count elements of list that have a given property
 count :: (a -> Bool) -> [a] -> Int
