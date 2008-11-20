@@ -13,8 +13,8 @@ myPreProcessors = [("hs", \_ _ -> pp)]
     where pp = PreProcessor
                  { platformIndependent = True
                  , runPreProcessor = \(inDir,inFile) (outDir,outFile) verbose
-                     -> if normalise ("drift_processed" </> inDir </> inFile) `elem` driftFiles
-                        then do --putStrLn $ "Processing: " ++ inDir </> inFile
+                     -> if normalise (inDir </> inFile) `elem` (map ("src" </>) driftFiles)
+                        then do putStrLn $ "Processing: " ++ inDir </> inFile
                                 rawSystemExit verbose "DrIFT" [inDir </> inFile, "-o", outDir </> outFile]
                                 let bootFile = inDir </> inFile ++ "-boot"
                                 hasBoot <- doesFileExist bootFile
@@ -25,10 +25,10 @@ myPreProcessors = [("hs", \_ _ -> pp)]
 
 
 driftFiles = words
- "drift_processed/C/FFI.hs drift_processed/C/FromGrin2.hs drift_processed/Cmm/Op.hs drift_processed/C/Prims.hs drift_processed/DataConstructors.hs \
- \drift_processed/DerivingDrift/StandardRules.hs drift_processed/E/CPR.hs drift_processed/E/Demand.hs drift_processed/E/LambdaLift.hs \
- \drift_processed/E/SSimplify.hs drift_processed/E/ToHs.hs drift_processed/E/TypeCheck.hs drift_processed/E/Type.hs drift_processed/FrontEnd/Class.hs \
- \drift_processed/FrontEnd/Exports.hs drift_processed/FrontEnd/HsSyn.hs drift_processed/FrontEnd/KindInfer.hs \
- \drift_processed/FrontEnd/Representation.hs drift_processed/FrontEnd/SrcLoc.hs drift_processed/FrontEnd/Tc/Kind.hs \
- \drift_processed/FrontEnd/Tc/Monad.hs drift_processed/Grin/SSimplify.hs drift_processed/Name/VConsts.hs drift_processed/Options.hs \
- \drift_processed/DataConstructors.hs-boot drift_processed/Ho/Type.hs  drift_processed/Ho/Build.hs"
+ "C/FFI.hs C/FromGrin2.hs Cmm/Op.hs C/Prims.hs DataConstructors.hs \
+ \DerivingDrift/StandardRules.hs E/CPR.hs E/Demand.hs E/LambdaLift.hs \
+ \E/SSimplify.hs E/ToHs.hs E/TypeCheck.hs E/Type.hs FrontEnd/Class.hs \
+ \FrontEnd/Exports.hs FrontEnd/HsSyn.hs FrontEnd/KindInfer.hs \
+ \FrontEnd/Representation.hs FrontEnd/SrcLoc.hs FrontEnd/Tc/Kind.hs \
+ \FrontEnd/Tc/Monad.hs Grin/SSimplify.hs Name/VConsts.hs Options.hs \
+ \DataConstructors.hs-boot Ho/Type.hs  Ho/Build.hs"
