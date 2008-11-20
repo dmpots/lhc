@@ -1,8 +1,11 @@
 Cabal-version:   >= 1.2
 Name: base
 Version: 1.0
-Extensions: ForeignFunctionInterface
-Exposed-Modules: Control.Exception,
+Build-Type: Simple
+
+Library
+  Extensions:      ForeignFunctionInterface
+  Exposed-Modules: Control.Exception,
                  Control.Monad,
                  Data.Array,
                  Data.Char,
@@ -61,3 +64,5 @@ Exposed-Modules: Control.Exception,
                  System
                  Text.Show.Functions
 
+  if !(impl(jhc) || impl(lhc))
+    buildable:     False
