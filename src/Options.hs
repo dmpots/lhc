@@ -31,6 +31,7 @@ import Data.List(nub)
 import System
 import System.Console.GetOpt
 import System.IO.Unsafe
+import System.Directory
 
 import Util.Gen
 import qualified FlagDump
@@ -231,7 +232,7 @@ processOptions = do
         exitSuccess
     case optNoAuto o2 of
       True -> return (o2 { optArgs = ns })
-      False-> return (o2 { optArgs = ns, optHls  = ("base":"haskell98":optHls o2) })
+      False-> return (o2 { optArgs = ns, optHls  = ("base":optHls o2) })
 
 a ==> b = (a,show b)
 
@@ -298,10 +299,11 @@ initialLibIncludes :: [String]
 initialLibIncludes = unsafePerformIO $ do
     ps <- lookupEnv "JHCLIBPATH"
     h <- lookupEnv "HOME"
+    l <- getAppUserDataDirectory "lhc"
     let paths = h ++ ["/usr/local","/usr"]
         bases = ["/lib","/share"]
-        vers = ["/jhc-" ++ shortVersion, "/jhc"]
-    return $ nub $ maybe [] (tokens (':' ==))  ps ++ [ p ++ b ++ v | b <- bases, p <- paths, v <- vers ] ++ [libraryInstall]
+        vers = ["/lhc-" ++ shortVersion, "/lhc"]
+    return $ nub $ maybe [] (tokens (':' ==))  ps ++ (l ++ "/jhc-" ++ shortVersion):[ p ++ b ++ v | b <- bases, p <- paths, v <- vers ] ++ [libraryInstall]
 
 
 class Monad m => OptionMonad m where
