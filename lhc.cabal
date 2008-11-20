@@ -1,15 +1,15 @@
 cabal-version:       >= 1.2
 name:                lhc
-version:             20081118
+version:             20081121
 synopsis:            Lhc Haskell Compiler
 description:         
   lhc is a haskell compiler which aims to produce the most efficient programs possible via whole
   program analysis and other optimizations.
-Tested-With:         GHC == 6.10.1
+Tested-With:         GHC == 6.10.1, GHC == 6.8.3
 category:            Compiler
 license:             GPL
 license-file:        LICENSE
-author:              John Meacham, Lemmih
+author:              John Meacham, David Himmelstrup
 maintainer:          lemmih@gmail.com
 homepage:            http://lhc.seize.it/
 build-type:          Custom
