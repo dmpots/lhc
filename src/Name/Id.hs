@@ -48,7 +48,7 @@ import Name.Name
 
 -- TODO - make this a newtype
 type Id = Int
-
+-- data Id = Etherial Int | NoBind | Named Name | Unnamed Int
 
 -- IdSet
 
