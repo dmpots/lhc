@@ -1,5 +1,4 @@
-{-# LANGUAGE CPP, NoBangPatterns #-}
-{-# OPTIONS -fglasgow-exts #-}
+{-# LANGUAGE CPP, NoBangPatterns, MagicHash #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.IntBag
