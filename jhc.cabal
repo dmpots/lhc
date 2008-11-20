@@ -32,6 +32,7 @@ Executable lhc
  Include-dirs:        cbits, src/StringTable
  cc-Options:          -std=c99 -O2 -Wall
  ghc-options:         
+ ghc-prof-options:    -auto-all
  Extensions:          DeriveDataTypeable, ForeignFunctionInterface, EmptyDataDecls, GeneralizedNewtypeDeriving
                       MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts
                       UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
