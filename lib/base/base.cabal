@@ -1,3 +1,4 @@
+Cabal-version:   >= 1.2
 Name: base
 Version: 1.0
 Extensions: ForeignFunctionInterface
