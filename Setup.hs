@@ -3,6 +3,8 @@ import Distribution.Simple.PreProcess
 import Distribution.Simple.Utils
 import System.Directory
 import System.FilePath
+import System.Exit
+import System.IO
 import Control.Monad
 
 main :: IO ()
@@ -14,11 +16,15 @@ myPreProcessors = [("hs", \_ _ -> pp)]
                  { platformIndependent = True
                  , runPreProcessor = \(inDir,inFile) (outDir,outFile) verbose
                      -> if normalise (inDir </> inFile) `elem` (map ("src" </>) driftFiles)
-                        then do putStrLn $ "Processing: " ++ inDir </> inFile
-                                rawSystemExit verbose "DrIFT" [inDir </> inFile, "-o", outDir </> outFile]
-                                let bootFile = inDir </> inFile ++ "-boot"
-                                hasBoot <- doesFileExist bootFile
-                                when hasBoot $ copyFile bootFile (outDir </> outFile ++ "-boot")
+                        then do mbDrIFT <- findExecutable "DrIFT"
+                                case mbDrIFT of
+                                  Just drift -> do putStrLn $ "Processing: " ++ inDir </> inFile
+                                                   rawSystemExit verbose drift [inDir </> inFile, "-o", outDir </> outFile]
+                                                   let bootFile = inDir </> inFile ++ "-boot"
+                                                   hasBoot <- doesFileExist bootFile
+                                                   when hasBoot $ copyFile bootFile (outDir </> outFile ++ "-boot")
+                                  Nothing    -> do hPutStrLn stderr $ "Could not find DrIFT executable. Exiting."
+                                                   exitWith (ExitFailure 1)
                         else do --putStrLn $ "Ignoring: " ++ inDir </> inFile
                                 return ()
                  }
