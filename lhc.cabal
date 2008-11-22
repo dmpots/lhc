@@ -18,7 +18,8 @@ Extra-Source-Files:  cbits/_stdint.h, cbits/config.h, src/StringTable/StringTabl
 
 
 flag base4
-
+flag hpc
+  default:            False
 
 Executable lhc
  main-is:             Main.hs
@@ -46,6 +47,8 @@ Executable lhc
  else
   build-depends:      base >= 3 && < 4
   Extensions:         PatternSignatures
+ if flag(hpc)
+  ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
  Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators, UTF8,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
