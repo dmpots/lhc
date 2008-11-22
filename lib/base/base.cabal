@@ -64,5 +64,5 @@ Library
                  System
                  Text.Show.Functions
 
-  if !(impl(jhc) || impl(lhc))
+  if !impl(lhc)
     buildable:     False
