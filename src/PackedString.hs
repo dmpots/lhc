@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -ffi -fglasgow-exts #-}
+{-# LANGUAGE ForeignFunctionInterface, MagicHash #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.PackedString

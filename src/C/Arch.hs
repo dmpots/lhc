@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -cpp -fbang-patterns #-}
+{-# LANGUAGE CPP, BangPatterns #-}
 module C.Arch(
     ArchInfo(),
     archGetPrimInfo,

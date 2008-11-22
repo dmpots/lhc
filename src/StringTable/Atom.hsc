@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -fffi -XTypeSynonymInstances -XDeriveDataTypeable  #-}
+{-# LANGUAGE ForeignFunctionInterface, TypeSynonymInstances, DeriveDataTypeable #-}
 module StringTable.Atom(
     Atom(),
     ToAtom(..),
