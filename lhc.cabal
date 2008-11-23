@@ -50,9 +50,10 @@ Executable lhc
  else
   build-depends:      base >= 3 && < 4
   Extensions:         PatternSignatures
-
  if flag(hpc)
   ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
+ if flag(threaded)
+  ghc-options:        -threaded
  Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
