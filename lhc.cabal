@@ -1,8 +1,8 @@
 cabal-version:       >= 1.2
 name:                lhc
 version:             20081121
-synopsis:            Lhc Haskell Compiler
-description:         
+synopsis:            LHC Haskell Compiler
+description:
   lhc is a haskell compiler which aims to produce the most efficient programs possible via whole
   program analysis and other optimizations.
 Tested-With:         GHC == 6.10.1, GHC == 6.8.3
@@ -34,25 +34,24 @@ Executable lhc
  Includes:            cbits/_stdint.h
  Include-dirs:        cbits, src/StringTable
  cc-Options:          -std=c99 -O2 -Wall
- ghc-options:         
  ghc-prof-options:    -auto-all
  Extensions:          DeriveDataTypeable, ForeignFunctionInterface, EmptyDataDecls, GeneralizedNewtypeDeriving
                       MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts
                       UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
                       OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards
- build-Depends:       containers, mtl, pretty, array, bytestring
- build-Depends:       binary, directory, readline, random, regex-compat
- build-Depends:       graphviz, fgl, unix, zlib, old-time
- build-Depends:       haskell98
+ build-Depends:       containers, mtl, pretty, array, bytestring,
+                      binary, directory, readline, random, regex-compat,
+                      graphviz, fgl, unix, zlib, old-time, haskell98
+
+
  if flag(base4)
   build-depends:      base >= 4 && < 5, syb
  else
   build-depends:      base >= 3 && < 4
   Extensions:         PatternSignatures
+
  if flag(hpc)
   ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
- if flag(threaded)
-  ghc-options:        -threaded
  Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators, UTF8,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
