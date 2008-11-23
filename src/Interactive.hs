@@ -105,10 +105,10 @@ interact cho = mre where
         xs -> runInteractions initialInteract (concatMap lines $ reverse xs) >> exitSuccess
     go = do
         putStrLn "--------------------------------------------------------------"
-        putStrLn "Welcome to the jhc interactive experience. use :help for help."
+        putStrLn "Welcome to the lhc interactive experience. use :help for help."
         putStrLn versionString
         putStrLn "--------------------------------------------------------------"
-        runInteraction initialInteract ":execfile jhci.rc"
+        runInteraction initialInteract ":execfile lhci.rc"
         beginInteraction initialInteract
     initialInteract = emptyInteract {
         interactSettables = ["prog", "args"],
@@ -170,7 +170,7 @@ kindShow (KBase b) = pprint b
 kindShow x = parens (pprint x)
 
 parseStmt ::  Monad m => String -> m HsStmt
-parseStmt s = case runParserWithMode (parseModeOptions options) { parseFilename = "(jhci)" } parseHsStmt  s  of
+parseStmt s = case runParserWithMode (parseModeOptions options) { parseFilename = "(lhci)" } parseHsStmt  s  of
                       ParseOk _ e -> return e
                       ParseFailed sl err -> fail $ show sl ++ ": " ++ err
 

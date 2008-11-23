@@ -42,9 +42,7 @@ import Version.Version(versionString)
 data Mode = BuildHl String -- ^ Build the specified hl-file given a description file.
           | Interactive    -- ^ Run interactively.
           | Version        -- ^ Print version and die.
-          | VersionCtx     -- ^ Print version context and die.
           | ShowHelp       -- ^ Show help message and die.
-          | ShowConfig     -- ^ Show configuration info.
           | Interpret      -- ^ Interpret.
           | CompileHo      -- ^ Compile ho
           | CompileHoGrin  -- ^ Compile ho and grin
@@ -130,9 +128,7 @@ idu d ds = ds ++ [d]
 theoptions :: [OptDescr (Opt -> Opt)]
 theoptions =
     [ Option ['V'] ["version"]   (NoArg  (optMode_s Version))          "print version info and exit"
-    , Option []    ["version-context"] (NoArg  (optMode_s VersionCtx)) "print version context info and exit"
     , Option []    ["help"]      (NoArg  (optMode_s ShowHelp))         "print help information and exit"
-    , Option []    ["config"]    (NoArg  (optMode_s ShowConfig))       "show a variety of config info"
     , Option ['v'] ["verbose"]   (NoArg  (optVerbose_u (+1)))          "chatty output on stderr"
     , Option ['z'] []            (NoArg  (optStatLevel_u (+1)))        "Increase verbosity of statistics"
     , Option ['d'] []            (ReqArg (\d -> optDump_u (d:)) "[no-]flag")  "dump specified data during compilation"
@@ -153,7 +149,7 @@ theoptions =
     , Option []    ["main"]      (ReqArg (optMainFunc_s . Just . (,) False) "Main.main")  "main entry point."
     , Option ['m'] ["arch"]      (ReqArg (optArch_s . Just ) "arch")            "target architecture."
     , Option []    ["entry"]     (ReqArg (optMainFunc_s . Just . (,) True)  "<expr>")  "main entry point, showable expression."
-    , Option ['e'] []            (ReqArg (\d -> optStmts_u (d:)) "<statement>")  "run given statement as if on jhci prompt"
+    , Option ['e'] []            (ReqArg (\d -> optStmts_u (d:)) "<statement>")  "run given statement as if on lhci prompt"
     , Option []    ["debug"]     (NoArg  (optDebug_s True))            "debugging"
     , Option []    ["show-ho"]   (ReqArg  (optMode_s . ShowHo) "file.ho") "Show ho file"
     , Option []    ["noauto"]    (NoArg  (optNoAuto_s True))           "Don't automatically load base and haskell98 packages"
@@ -217,7 +213,7 @@ pfill maxn length xs = f maxn xs [] [] where
 processOptions :: IO Opt
 processOptions = do
     argv <- getArguments
-    let header = "Usage: jhc [OPTION...] Main.hs"
+    let header = "Usage: lhc [OPTION...] Main.hs"
     let mkoptlist d os = "valid " ++ d ++ " arguments: 'help' for more info\n    " ++ intercalate "\n    " (map (intercalate ", ") $ pfill 100 ((2 +) . length) os) ++ "\n"
     let trailer = "\n" ++ mkoptlist "-d" FlagDump.helpFlags ++ "\n" ++ mkoptlist "-f" FlagOpts.helpFlags
     let (o,ns,rc) = getOpt Permute theoptions argv
@@ -227,24 +223,9 @@ processOptions = do
     when (optMode o2 == ShowHelp) $ do
         putStrLn (usageInfo header theoptions ++ trailer)
         exitSuccess
-    when (optMode o2 == ShowConfig) $ do
-        mapM_ (\ (x,y) -> putStrLn (x ++ ": " ++ y))  configs
-        exitSuccess
     case optNoAuto o2 of
       True -> return (o2 { optArgs = ns })
       False-> return (o2 { optArgs = ns, optHls  = ("base":optHls o2) })
-
-a ==> b = (a,show b)
-
-configs = [
-    "jhclibpath" ==> initialLibIncludes,
-    "version" ==> version,
-    "package" ==> package,
-    "libdir" ==> libdir,
-    "datadir" ==> datadir,
-    "libraryInstall" ==> libraryInstall,
-    "host" ==> host
-    ]
 
 
 {-# NOINLINE fileOptions #-}
@@ -303,7 +284,7 @@ initialLibIncludes = unsafePerformIO $ do
     let paths = h ++ ["/usr/local","/usr"]
         bases = ["/lib","/share"]
         vers = ["/lhc-" ++ shortVersion, "/lhc"]
-    return $ nub $ maybe [] (tokens (':' ==))  ps ++ (l ++ "/lhc-" ++ shortVersion):[ p ++ b ++ v | b <- bases, p <- paths, v <- vers ] ++ [libraryInstall]
+    return $ nub $ maybe [] (tokens (':' ==))  ps ++ (l ++ "/lhc-" ++ shortVersion):[ p ++ b ++ v | b <- bases, p <- paths, v <- vers ]
 
 
 class Monad m => OptionMonad m where

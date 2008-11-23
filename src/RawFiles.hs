@@ -863,18 +863,6 @@ viaghc_hs = "\
  \\n\
  \"
 
--- | Generated from ChangeLog on Tue Nov 18 04:44:37 CET 2008
-{-# NOINLINE changelog #-}
-changelog :: String
-changelog = "\
- \"
-
--- | Generated from data\/shortchange.txt on Tue Nov 18 04:44:37 CET 2008
-{-# NOINLINE shortchange_txt #-}
-shortchange_txt :: String
-shortchange_txt = "\
- \"
-
 -- | Generated from data\/prelude.m4 on Tue Nov 18 04:44:37 CET 2008
 {-# NOINLINE prelude_m4 #-}
 prelude_m4 :: String
@@ -884,6 +872,3 @@ prelude_m4 = "\
  \\n\
  \m4_define(ONCE,{{m4_ifdef(done-$1,{{m4_dnl}},{{m4_define(done-$1,1)$1}})}})\n\
  \"
-
-
-

@@ -65,7 +65,7 @@ import Support.CanType(getType)
 import Support.Transform
 import Util.Graph
 import Util.SetLike as S
-import Version.Version(versionString,versionContext,versionSimple)
+import Version.Version(versionString,versionSimple)
 import qualified C.FromGrin2 as FG2
 import qualified E.CPR
 import qualified E.Demand as Demand(analyzeProgram)
@@ -120,13 +120,12 @@ main = do -- runMain $ catom $ bracketHtml $ do
         ShowHo ho     -> dumpHoFile ho
         Version       -> putStrLn versionString
         DependencyTree -> doDependency (optArgs o)
-        VersionCtx    -> putStrLn (versionString ++ versionContext)
         _             -> processFiles  (optArgs o)
 
 
 processFiles [] | Nothing <- optMainFunc options = do
     int <- isInteractive
-    when (not int) $ putErrDie "jhc: no input files"
+    when (not int) $ putErrDie "lhc: no input files"
     processFilesModules [Left (Module "Prelude")]
 processFiles [] | Just (b,m) <- optMainFunc options = do
     m <- return $ parseName Val m
