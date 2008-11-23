@@ -11,7 +11,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import List(group,union)
 import qualified System
-
+import qualified System.Exit as Exit
 import Util.Util
 import StringTable.Atom
 import C.Arch
@@ -79,9 +79,16 @@ import qualified Interactive
 import qualified Stats
 import qualified System.IO as IO
 
----------------
--- ∀α∃β . α → β
----------------
+#if __GLASGOW_HASKELL__ >= 610
+runMain action = Control.Exception.catches (action >> return ())
+                   [ Handler $ \ (e::Exit.ExitCode) -> throw e
+                   , Handler $ \ (e::SomeException) -> putErrDie $ show e ]
+#else
+runMain action = Control.Exception.catch (action >> return ()) $ \e ->
+                   case e of
+                     ExitException c -> throw (ExitException c)
+                     other -> putErrDie $ show e
+#endif
 
 progress str = wdump FD.Progress $  (putErrLn str) >> hFlush stderr
 progressM c  = wdump FD.Progress $ (c >>= putErrLn) >> hFlush stderr
