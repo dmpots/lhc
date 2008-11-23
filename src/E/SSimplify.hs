@@ -568,6 +568,7 @@ simplifyDs prog sopts dsIn = ans where
              | otherwise = "(epheremal)"
 
     -- Rename a if necessary. We always have to substitute all occurrences because we update the type.
+--    nname tvr = renameSM tvr
     nname tvr@(TVr { tvrIdent = n, tvrType =  t})  = do
         t' <- dosub t
         inb <- ask
