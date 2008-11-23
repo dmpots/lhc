@@ -30,7 +30,7 @@ Executable lhc
                       E.CPR, E.Demand, E.LambdaLift, E.SSimplify, E.ToHs, E.TypeCheck, E.Type, FrontEnd.Class,
                       FrontEnd.Exports, FrontEnd.HsSyn, FrontEnd.KindInfer, FrontEnd.Representation, FrontEnd.SrcLoc,
                       FrontEnd.Tc.Kind, FrontEnd.Tc.Monad, Grin.SSimplify, Name.VConsts, Options, Ho.Type, Ho.Build
- C-Sources:           cbits/md5sum.c, src/StringTable/StringTable_cbits.c
+ C-Sources:           src/StringTable/StringTable_cbits.c
  Includes:            cbits/_stdint.h
  Include-dirs:        cbits, src/StringTable
  cc-Options:          -std=c99 -O2 -Wall
@@ -39,7 +39,7 @@ Executable lhc
                       MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts
                       UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
                       OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards
- build-Depends:       containers, mtl, pretty, array, bytestring,
+ build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
                       binary, directory, readline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98
 
@@ -182,7 +182,6 @@ Executable lhc
   Support.Transform
   Support.Unparse
   Support.MapBinaryInstance
-  Support.MD5
   Util.Graph
   Util.Gen
   Util.ArbitraryInstances

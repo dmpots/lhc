@@ -19,10 +19,10 @@ import Name.Name(Name)
 import FrontEnd.TypeSynonyms(TypeSynonyms)
 import PackedString
 import Data.Binary
-import qualified Support.MD5 as MD5
+import qualified Data.Digest.Pure.MD5 as MD5
 
-type SourceHash = MD5.Hash
-type HoHash     = MD5.Hash
+type SourceHash = MD5.MD5Digest
+type HoHash     = MD5.MD5Digest
 
 -- the collected information that is passed around
 data CollectedHo = CollectedHo {
@@ -51,7 +51,7 @@ data HoHeader = HoHeader {
     -- * my sha1 id
     hohHash       :: HoHash,
     -- * Haskell Source files depended on
-    hohDepends    :: [(Module,SourceHash)],
+    hohDepends    :: [(Module,Maybe SourceHash)],
     -- * Other objects depended on to be considered up to date.
     hohModDepends :: [HoHash],
     -- * metainformation, filled for hl-files, empty for normal objects.

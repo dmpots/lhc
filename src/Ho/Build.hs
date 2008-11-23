@@ -22,7 +22,7 @@ import Text.Printf
 import Prelude hiding(print,putStrLn)
 import System.IO hiding(print,putStrLn)
 import System.Posix.Files
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.HughesPJ as PPrint
@@ -65,7 +65,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified FlagDump as FD
 import qualified FlagOpts as FO
 import qualified Util.Graph as G
-import qualified Support.MD5 as MD5
+import qualified Data.Digest.Pure.MD5 as MD5
 import qualified UTF8
 
 
@@ -108,9 +108,11 @@ shortenPath x@('/':_) = do
 shortenPath x = return x
 
 
-instance DocLike d => PPrint d MD5.Hash where
+instance DocLike d => PPrint d MD5.MD5Digest where
     pprintPrec _ h = tshow h
-
+instance (DocLike d, PPrint d a) => PPrint d (Maybe a) where
+    pprintPrec _ Nothing  = text "Nothing"
+    pprintPrec x (Just a) = pprintPrec x a
 
 findFirstFile :: String -> [(FilePath,a)] -> IO (LBS.ByteString,FilePath,a)
 findFirstFile err [] = FrontEnd.Warning.err "missing-dep" ("Module not found: " ++ err) >> fail ("Module not found: " ++ err) -- return (error "findFirstFile not found","",undefined)
@@ -183,7 +185,7 @@ fetchSource done_ref fs mm = do
             Nothing -> fail $ "Could not load file: " ++ show fs
             Just m -> modifyIORef done_ref (modEncountered_u $ Map.insert m ModNotFound) >> return m
     onErr killMod (findFirstFile mod [ (f,undefined) | f <- fs]) $ \ (lbs,fn,_) -> do
-    let hash = MD5.md5lazy lbs
+    let hash = MD5.md5 lbs
     (foundho,mho) <- findHoFile done_ref fn mm hash
     done <- readIORef done_ref
     (mod,m,ds) <- case mlookup hash (knownSourceMap done) of
@@ -297,7 +299,7 @@ toCompUnitGraph done roots = do
             pm (fromMaybe [] (Map.lookup m phomap)) $ do
                 let deps = Set.toList $ Set.fromList (concat $ snds ms) `Set.difference` (Set.fromList amods)
                 deps' <- snub `fmap` mapM f deps
-                let mhash = MD5.md5String (concatMap (show . fst) ms ++ show deps')
+                let mhash = MD5.md5 . L.pack $ (concatMap (show . fst) ms ++ show deps')
                 writeIORef (fromJust $ Map.lookup m mods) (Right mhash)
                 let cunit = CompSources $ map fs amods
                 modifyIORef cug_ref ((mhash,(deps',cunit)):)
@@ -328,8 +330,8 @@ toCompUnitGraph done roots = do
                             else printf "Stale: <%s> (forced)" fp
                         modifyIORef hom_ref (Map.delete h)
                         fail "don't know this file"
-        cdep (_,hash) | hash == MD5.emptyHash = return ()
-        cdep (mod,hash) = case Map.lookup mod sources of
+        cdep (_,Nothing)  = return ()
+        cdep (mod,Just hash) = case Map.lookup mod sources of
             Just hash' | hash == hash' -> return ()
             _ -> fail "Can't verify module up to date"
         fs m = case Map.lookup m (modEncountered done) of
@@ -387,7 +389,7 @@ processCug cug = mdo
 mkPhonyCompNode :: [Module] -> [CompNode] -> IO CompNode
 mkPhonyCompNode need cs = do
     xs <- forM cs $ \cn@(CompNode _ _ cu) -> readIORef cu >>= \u -> return $ if null $ providesModules u `intersect` need then [] else [cn]
-    let hash = MD5.md5String $ show [ h | CompNode h _ _ <- concat xs ]
+    let hash = MD5.md5 . L.pack $ show [ h | CompNode h _ _ <- concat xs ]
     CompNode hash (concat xs) `fmap` newIORef CompPhony
 
 compileCompNode :: (CollectedHo -> Ho -> IO CollectedHo)              -- ^ Process initial ho loaded from file
@@ -434,7 +436,7 @@ compileCompNode ifunc func cn = do ns <- countNodes cn
             showProgress n cur (snds modules)
             (cho',newHo) <- func cho (snds modules)
             let hoh = HoHeader {
-                                 hohDepends    = [ (hsModuleName mod,h) | (h,mod) <- modules],
+                                 hohDepends    = [ (hsModuleName mod,Just h) | (h,mod) <- modules],
                                  hohModDepends = hdep,
                                  hohHash       = hh,
                                  hohMetaInfo   = []
@@ -449,7 +451,7 @@ compileCompNode ifunc func cn = do ns <- countNodes cn
 findModule :: [Either Module String]                                -- ^ Either a module or filename to find
               -> (CollectedHo -> Ho -> IO CollectedHo)              -- ^ Process initial ho loaded from file
               -> (CollectedHo -> [HsModule] -> IO (CollectedHo,Ho)) -- ^ Process set of mutually recursive modules to produce final Ho
-              -> IO (CollectedHo,[(Module,MD5.Hash)],Ho)            -- ^ (Final accumulated ho,just the ho read to satisfy this command)
+              -> IO (CollectedHo,[(Module,MD5.MD5Digest)],Ho)            -- ^ (Final accumulated ho,just the ho read to satisfy this command)
 findModule need ifunc func  = do
     (needed,cug) <- loadModules (optHls options) need
     cnodes <- processCug cug
@@ -624,7 +626,7 @@ buildLibrary ifunc func = ans where
         let pdesc = [(n, packString v) | (n,v) <- ("jhc-hl-filename",outName):("jhc-description-file",fp):("jhc-compiled-by",versionString):desc, n /= "exposed-modules" ]
         let hoh =  HoHeader {
                 hohHash = lhash,
-                hohDepends = [ (m,MD5.emptyHash) | m <- Set.toList prvds ],
+                hohDepends = [ (m,Nothing) | m <- Set.toList prvds ],
                 hohModDepends = Map.keys ldeps,
                 hohMetaInfo = pdesc
                 }
