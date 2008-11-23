@@ -1,37 +1,22 @@
--- This module contains routines to provide an interactive shell prompt and is
--- built on top of the readline library.
-
 module Util.Interact(
     Interact(..),
     InteractCommand(..),
     beginInteraction,
     runInteraction,
     runInteractions,
-    emptyInteract) where
-
+    emptyInteract
+) where
+import IO
 import Char
-import Control.Monad.Identity
 import List
 import qualified Data.Map as Map
+import Control.Monad.Identity
+import Control.Monad.Trans
 import System
-import System.Console.Readline
+import System.Console.Haskeline
 import System.Directory
-import IO
-
 import GenUtil
 
-
-readLine :: String -> (String -> IO [String]) -> IO String
-readLine prompt tabExpand =  do
-    setCompletionEntryFunction (Just (\s -> tabExpand s))
-    s <- readline prompt
-    case s of
-        Nothing -> putStrLn "Bye!" >> exitSuccess
-        Just cs | all isSpace cs -> return ""
-        Just s -> addHistory s >> return s
-
-
---simpleCommand :: String -> IO (Maybe String)
 
 commands = [
     (":quit","quit interactive session"),
@@ -41,9 +26,8 @@ commands = [
     (":set", "set options"),
     (":unset", "unset options"),
     (":execfile", "run sequence of commands from a file"),
---    (":execfile!", "run sequence of commands from a file if it exists"),
+--  (":execfile!", "run sequence of commands from a file if it exists"),
     (":echo", "echo argument to screen"),
-    (":addhist", "add argument to command line history"),
     (":command", "enter command mode"),
     (":normal", "enter normal mode"),
     (":help", "print help table")
@@ -79,12 +63,11 @@ data Interact = Interact {
     interactWords :: [String],              -- ^ list of words to autocomplete
     interactEcho :: Bool,                   -- ^ whether to echo commands
     interactCommandMode :: Bool,                -- ^ whether we are in command mode
-    interactHistFile :: Maybe String,       -- ^ filename to store history of commands in
     interactComment :: Maybe String         -- ^ comment initializer
     }
 
 emptyInteract = Interact {
-    interactPrompt = ">",
+    interactPrompt = "> ",
     interactCommands = [],
     interactSettables = [],
     interactVersion = "(none)",
@@ -94,7 +77,6 @@ emptyInteract = Interact {
     interactWords = [],
     interactEcho = False,
     interactCommandMode = False,
-    interactHistFile = Nothing,
     interactComment = Nothing
     }
 
@@ -110,7 +92,6 @@ thePrompt Interact { interactCommandMode = False, interactPrompt = p } = p
 thePrompt Interact { interactCommandMode = True } = ":"
 
 -- | run a command as if typed at prompt
-
 runInteraction :: Interact -> String -> IO Interact
 runInteraction act s = do
     act <- runInteractions act { interactRC = [] } (interactRC act)
@@ -138,9 +119,8 @@ runInteraction act s = do
             [":help"] -> putStrLn help_text >> return act
             [":version"] -> putStrLn (interactVersion act) >> return act
             [":echo"] -> putStrLn arg >> return act
-            [":addhist"] -> addHistory arg >> return act
-            [":cd"] -> catch (setCurrentDirectory arg) (\_ -> putStrLn $ "Could not change to directory: " ++ arg) >> return act
-            [":pwd"] -> (catch getCurrentDirectory (\_ -> putStrLn "Could not get current directory." >> return "") >>= putStrLn)  >> return act
+            [":cd"] -> IO.catch (setCurrentDirectory arg) (\_ -> putStrLn $ "Could not change to directory: " ++ arg) >> return act
+            [":pwd"] -> (IO.catch getCurrentDirectory (\_ -> putStrLn "Could not get current directory." >> return "") >>= putStrLn)  >> return act
             [":set"] -> case simpleUnquote arg of
                 [] -> showSet >> return act
                 rs -> do
@@ -149,11 +129,11 @@ runInteraction act s = do
                     return act { interactSet = Map.fromList [ x | x@(a,_) <- ts, a `elem` interactSettables act ] `Map.union` interactSet act }
             [":unset"] -> return act { interactSet = interactSet act Map.\\ Map.fromList [ (cleanupWhitespace rs,"") | rs <- simpleUnquote arg] }
             [":execfile"] -> do
-                fc <- catch (readFile arg) (\_ -> putStrLn ("Could not read file: " ++ arg) >> return "")
+                fc <- IO.catch (readFile arg) (\_ -> putStrLn ("Could not read file: " ++ arg) >> return "")
                 act <- runInteractions act { interactEcho = True } (lines fc)
                 return act { interactEcho = False }
             [":execfile!"] -> do
-                fc <- catch (readFile arg) (\_ -> return "")
+                fc <- IO.catch (readFile arg) (\_ -> return "")
                 runInteractions act { interactEcho = True } (lines fc)
             [":command"] -> return act { interactCommandMode = True }
             [":normal"] -> return act {interactCommandMode = False }
@@ -165,29 +145,10 @@ runInteraction act s = do
 
 
 -- | begin interactive interaction
-
 beginInteraction :: Interact -> IO ()
-beginInteraction act = do
-    hist <- case interactHistFile act of
-        Nothing -> return Nothing
-        Just fn -> do
-            ch <- catch (readFile fn >>= return . lines) (\_ -> return [])
-            let cl = (map head $ group ch)
-            mapM_ addHistory cl
-            putStrLn $ show (length cl) ++ " lines of history added from " ++ fn
-            catch (openFile fn AppendMode >>= return . Just) (\_ -> return Nothing)
-    go hist act
-    where
-    go hist act = do
-        let commands' = commands ++ [ (n,h) | InteractCommand { commandName = n, commandHelp = h } <- interactCommands act ]
-            args s =  [ bb | bb@(n,_) <- commands', s `isPrefixOf` n ]
-            expand s = snub $ fsts (args s) ++ filter (isPrefixOf s) (interactSettables act ++ interactWords act)
-        s <- readLine (thePrompt act) (return . expand)
-        case (hist,s) of
-            (Just h,(_:_)) -> do
-                catch (hPutStrLn h s >> hFlush h) (const (return ()))
-            _ -> return ()
-        act' <- runInteraction act s
-        go hist act'
-
-
+beginInteraction act = runInputT defaultSettings (loop act)
+    where loop act = do s <- getInputLine (thePrompt act)
+                        case s of
+                          Nothing -> outputStrLn "Bye!" >> liftIO exitSuccess
+                          Just cs | all isSpace cs -> return ()
+                          Just s -> liftIO (runInteraction act s) >>= loop

@@ -115,7 +115,6 @@ interact cho = mre where
         interactVersion = versionString,
         interactCommands = commands,
         interactWords = map (show . fst ) $ stateImports isStart,
-        interactHistFile = Just ".jhci-hist",
         interactComment = Just "--",
         interactExpr = do_expr
         }
