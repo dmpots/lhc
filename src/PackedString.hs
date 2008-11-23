@@ -55,7 +55,8 @@ import Data.Char
 import Data.Int
 import Data.Binary
 import qualified Data.ByteString as BS
-
+import qualified Data.ByteString.UTF8 as BSUTF8
+import qualified Codec.Binary.UTF8.String as UTF8
 import Bits
 import GHC.Exts
 import Data.Array.Base
@@ -95,7 +96,7 @@ consPS c cs = packString (c : (unpackPS cs)) -- ToDo:better
 
 -- | Convert a 'String' into a 'PackedString'
 packString :: String -> PackedString
-packString str = PS $ (BS.pack $ toUTF str)
+packString str = PS $ (BSUTF8.fromString str)
 
 
 -- -----------------------------------------------------------------------------
@@ -103,7 +104,7 @@ packString str = PS $ (BS.pack $ toUTF str)
 
 
 unpackPS :: PackedString -> String
-unpackPS (PS bs) = fromUTF (BS.unpack bs)
+unpackPS (PS bs) = BSUTF8.toString bs
 --unpackPS (PS (UArray _ (I# e) ba)) = unpackFoldrUtf8# (ba) (e +# 1#) f [] where
 --    f ch r = C# ch : r
 
@@ -357,41 +358,6 @@ utfCount cs = uc 0# cs where
         | ord x <= 0x3ffffff = uc (n +# 5#) xs
         | ord x <= 0x7fffffff = uc (n +# 6#) xs
         | otherwise = error "invalid string"
-
-
--- | Convert Unicode characters to UTF-8.
-toUTF :: String -> [Word8]
-toUTF [] = []
-toUTF (x:xs) | ord x<=0x007F = (fromIntegral $ ord x):toUTF xs
-	     | ord x<=0x07FF = fromIntegral (0xC0 .|. ((ord x `shift` (-6)) .&. 0x1F)):
-			       fromIntegral (0x80 .|. (ord x .&. 0x3F)):
-			       toUTF xs
-	     | otherwise     = fromIntegral (0xE0 .|. ((ord x `shift` (-12)) .&. 0x0F)):
-			       fromIntegral (0x80 .|. ((ord x `shift` (-6)) .&. 0x3F)):
-			       fromIntegral (0x80 .|. (ord x .&. 0x3F)):
-			       toUTF xs
-
-
-fromUTF :: [Word8] -> String
-fromUTF xs = fromUTF' (map fromIntegral xs) where
-    fromUTF' [] = []
-    fromUTF' (all@(x:xs))
-	| x<=0x7F = (chr (x)):fromUTF' xs
-	| x<=0xBF = err
-	| x<=0xDF = twoBytes all
-	| x<=0xEF = threeBytes all
-	| otherwise   = err
-    twoBytes (x1:x2:xs) = chr  ((((x1 .&. 0x1F) `shift` 6) .|.
-			       (x2 .&. 0x3F))):fromUTF' xs
-    twoBytes _ = error "fromUTF: illegal two byte sequence"
-
-    threeBytes (x1:x2:x3:xs) = chr ((((x1 .&. 0x0F) `shift` 12) .|.
-				    ((x2 .&. 0x3F) `shift` 6) .|.
-				    (x3 .&. 0x3F))):fromUTF' xs
-    threeBytes _ = error "fromUTF: illegal three byte sequence"
-
-    err = error "fromUTF: illegal UTF-8 character"
-
 
 
 

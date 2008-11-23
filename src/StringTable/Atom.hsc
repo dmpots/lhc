@@ -19,6 +19,7 @@ module StringTable.Atom(
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Unsafe as BS
+import Data.ByteString.UTF8 as BSUTF8
 import Control.Monad
 import Data.Binary
 import Data.Binary.Get
@@ -98,10 +99,10 @@ instance ToAtom CString where
         toAtomIO (cs,fromIntegral len :: Int)
 
 instance ToAtom String where
-    toAtomIO s = toAtomIO (BS.pack (toUTF s))
+    toAtomIO s = toAtomIO (BSUTF8.fromString s)
 
 instance FromAtom String where
-    fromAtom = fromUTF . BS.unpack . fromAtom
+    fromAtom = BSUTF8.toString . fromAtom
 
 instance ToAtom BS.ByteString where
     toAtomIO bs = BS.unsafeUseAsCStringLen bs toAtomIO
@@ -153,42 +154,6 @@ foreign import ccall unsafe hash2  :: Word32 -> CString -> CInt -> IO Word32
 
 atomCompare a b = if c == 0 then EQ else if c > 0 then GT else LT where
     c = c_atomCompare a b
-
-
-
--- | Convert Unicode characters to UTF-8.
-toUTF :: String -> [Word8]
-toUTF [] = []
-toUTF (x:xs) | ord x<=0x007F = (fromIntegral $ ord x):toUTF xs
-	     | ord x<=0x07FF = fromIntegral (0xC0 .|. ((ord x `shift` (-6)) .&. 0x1F)):
-			       fromIntegral (0x80 .|. (ord x .&. 0x3F)):
-			       toUTF xs
-	     | otherwise     = fromIntegral (0xE0 .|. ((ord x `shift` (-12)) .&. 0x0F)):
-			       fromIntegral (0x80 .|. ((ord x `shift` (-6)) .&. 0x3F)):
-			       fromIntegral (0x80 .|. (ord x .&. 0x3F)):
-			       toUTF xs
-
--- | Convert UTF-8 to Unicode.
-
-fromUTF :: [Word8] -> String
-fromUTF xs = fromUTF' (map fromIntegral xs) where
-    fromUTF' [] = []
-    fromUTF' (all@(x:xs))
-	| x<=0x7F = (chr (x)):fromUTF' xs
-	| x<=0xBF = err
-	| x<=0xDF = twoBytes all
-	| x<=0xEF = threeBytes all
-	| otherwise   = err
-    twoBytes (x1:x2:xs) = chr  ((((x1 .&. 0x1F) `shift` 6) .|.
-			       (x2 .&. 0x3F))):fromUTF' xs
-    twoBytes _ = error "fromUTF: illegal two byte sequence"
-
-    threeBytes (x1:x2:x3:xs) = chr ((((x1 .&. 0x0F) `shift` 12) .|.
-				    ((x2 .&. 0x3F) `shift` 6) .|.
-				    (x3 .&. 0x3F))):fromUTF' xs
-    threeBytes _ = error "fromUTF: illegal three byte sequence"
-
-    err = error "fromUTF: illegal UTF-8 character"
 
 instance Binary Atom where
     get = do

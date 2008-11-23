@@ -66,7 +66,7 @@ import qualified FlagDump as FD
 import qualified FlagOpts as FO
 import qualified Util.Graph as G
 import qualified Data.Digest.Pure.MD5 as MD5
-import qualified UTF8
+import qualified Codec.Binary.UTF8.String as UTF8
 
 
 --
@@ -545,7 +545,7 @@ langmap = [
 
 parseHsSource :: String -> LBS.ByteString -> IO HsModule
 parseHsSource fn lbs = do
-    let txt = UTF8.fromUTF $ LBS.unpack lbs
+    let txt = UTF8.decode $ LBS.unpack lbs
     let f s = opt where
             Just opt = fileOptions opts `mplus` Just options
             popts = parseOptions $ if "shl." `isPrefixOf` reverse fn  then unlit fn s else s

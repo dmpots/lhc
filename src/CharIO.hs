@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, ScopedTypeVariables, NoMonomorphismRestriction #-}
 module CharIO(
     putStr,
     putStrLn,
@@ -16,12 +16,9 @@ import Char
 import Control.Exception
 import Prelude hiding(putStr, putStrLn)
 import System
-import UTF8
 import qualified IO
+import qualified System.IO.UTF8 as UTF8
 import qualified Prelude (putStr, putStrLn)
-
-toUTF8 s = (map (chr. fromIntegral) $ toUTF s)
-fromUTF8 s = fromUTF (map (fromIntegral . ord) s)
 
 #if __GLASGOW_HASKELL__ >= 610
 flushOut = Control.Exception.catch  (IO.hFlush IO.stdout) (\(e::SomeException) -> return ())
@@ -29,18 +26,15 @@ flushOut = Control.Exception.catch  (IO.hFlush IO.stdout) (\(e::SomeException) -
 flushOut = Control.Exception.catch  (IO.hFlush IO.stdout) (\_ -> return ())
 #endif
 
-putStr = Prelude.putStr . toUTF8
-putStrLn = Prelude.putStrLn . toUTF8
-putErr s = flushOut >> IO.hPutStr IO.stderr (toUTF8 s)
-putErrLn s = flushOut >> hPutStrLn IO.stderr s
-putErrDie s = flushOut >> hPutStrLn IO.stderr s >> System.exitFailure
-print x = putStrLn $ show x
-
-
-hPutStrLn fh = IO.hPutStrLn fh . toUTF8
-
-readFile fn = Prelude.readFile fn >>= \s -> return (fromUTF8 s)
-hGetContents h =  IO.hGetContents h >>= \s -> return (fromUTF8 s)
+putStr       = UTF8.putStr
+putStrLn     = UTF8.putStrLn
+putErr    s  = flushOut >> UTF8.hPutStr IO.stderr s
+putErrLn  s  = flushOut >> UTF8.hPutStrLn IO.stderr s
+putErrDie s  = flushOut >> UTF8.hPutStrLn IO.stderr s >> System.exitFailure
+print        = UTF8.print
+hPutStrLn    = UTF8.hPutStrLn
+readFile     = UTF8.readFile
+hGetContents = UTF8.hGetContents
 
 runMain :: IO a -> IO ()
 #if __GLASGOW_HASKELL__ >= 610

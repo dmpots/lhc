@@ -34,6 +34,7 @@ import Foreign
 import Foreign.C
 import System.IO
 import System.IO.Unsafe (unsafePerformIO)
+import Codec.Binary.UTF8.String as UTF8
 
 type Hash = ABCDE
 data ABCDE = ABCDE !Word32 !Word32 !Word32 !Word32 !Word32
@@ -44,19 +45,7 @@ emptyHash = ABCDE 0 0 0 0 0
 data XYZ = XYZ !Word32 !Word32 !Word32
 
 sha1String :: String -> Hash
-sha1String ss = sha1Bytes (toUTF ss) where
-    -- | Convert Unicode characters to UTF-8.
-    toUTF :: String -> [Word8]
-    toUTF [] = []
-    toUTF (x:xs) | ord x<=0x007F = (fromIntegral $ ord x):toUTF xs
-                 | ord x<=0x07FF = fromIntegral (0xC0 .|. ((ord x `shift` (-6)) .&. 0x1F)):
-                                   fromIntegral (0x80 .|. (ord x .&. 0x3F)):
-                                   toUTF xs
-                 | otherwise     = fromIntegral (0xE0 .|. ((ord x `shift` (-12)) .&. 0x0F)):
-                                   fromIntegral (0x80 .|. ((ord x `shift` (-6)) .&. 0x3F)):
-                                   fromIntegral (0x80 .|. (ord x .&. 0x3F)):
-                                   toUTF xs
-
+sha1String ss = sha1Bytes (UTF8.encode ss) where
 
 sha1Bytes :: [Word8] -> Hash
 sha1Bytes ss = unsafePerformIO $ do

@@ -41,7 +41,8 @@ Executable lhc
                       OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
                       binary, directory, readline, random, regex-compat,
-                      graphviz, fgl, unix, zlib, old-time, haskell98
+                      graphviz, fgl, unix, zlib, old-time, haskell98,
+                      utf8-string
 
 
  if flag(base4)
@@ -53,7 +54,7 @@ Executable lhc
  if flag(hpc)
   ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
  Other-modules:
-  CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators, UTF8,
+  CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
   C.FromGrin2
   C.Arch
