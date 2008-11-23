@@ -903,10 +903,7 @@ simplifyDs prog sopts dsIn = ans where
         s' <- mapM z ds
         inb <- ask
         let sub'' = fromList [ (t,susp e sub'') | (t, UseInfo { useOccurance = Once },_,e) <- s'] `union`
-                    fromList [ (t,Done (EVar t'))  | (t,n,t',_) <- s', useOccurance n /= Once
-                                                   -- If the ident is the same and it is not a loopbreaker, don't
-                                                   -- insert it into the substitution.
-                                                   , not (t==tvrIdent t' && useOccurance n /= LoopBreaker)] `union`
+                    fromList [ (t,Done (EVar t'))  | (t,n,t',_) <- s', useOccurance n /= Once] `union`
                     envSubst inb
         (ds',inb') <- localEnv (envSubst_s sub'' . extendScope (fromList [ (tvrIdent t',NotKnown) | (_,n,t',_) <- s', useOccurance n /= Once])) $ w s' []
         let minArgs t = case Info.lookup (tvrInfo t) of
