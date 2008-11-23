@@ -63,6 +63,7 @@ Library
                  System.Time,
                  System
                  Text.Show.Functions
+                 Text.Printf
 
   if !impl(lhc)
     buildable:     False
