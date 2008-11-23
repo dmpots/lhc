@@ -41,7 +41,7 @@ module GenUtil(
     isLeft,isRight,
     fst3,snd3,thd3,
     -- ** System routines
-    exitSuccess, System.exitFailure, epoch, lookupEnv,endOfTime,
+    exitSuccess, epoch, lookupEnv,endOfTime,
     -- ** Random routines
     repMaybe,
     liftT2, liftT3, liftT4,

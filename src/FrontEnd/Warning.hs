@@ -14,6 +14,7 @@ module FrontEnd.Warning(
 import List
 import GenUtil
 import Options
+import System.Exit
 import Control.Monad.Writer
 import System.IO.Unsafe
 import Data.IORef
