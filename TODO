@@ -1,0 +1,14 @@
+= LHC Todo list =
+
+ * Clean-up warnings.
+ * Cabalise the lhc-base library.
+ * Test coverage
+ * QuickCheck testsuite
+ * Parallisation.
+ * Remove unnecessary IO.
+ * Remove old cruft in favor of Hackage; e.g. we have now replaced the UTF8 and MD5 stuff with utf8-string and pureMD5
+ * Replace Doc - this will make LHC much easier to build. Candidates: ansi-wl-pprint?
+ * Remove the last bits of the previous build system (Makefile.am, configure.ac, etc).
+ * Write a script for recreating the generated code.
+ * Can we replace SHA1.hs with something from Hackage? (note: we may be able to use the Crypto package.)
+ * We currently depend on stringtable-atom from hackage; we would like to delete this.
