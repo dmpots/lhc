@@ -22,8 +22,6 @@ flag hpc
   default:            False
 flag threaded
   default:            False
-flag prof
-  default:            False
 
 Executable lhc
  main-is:             Main.hs
@@ -52,8 +50,6 @@ Executable lhc
   ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
  if flag(threaded)
   ghc-options:        -threaded
- if flag(prof)
-  ghc-options:        -prof -auto-all
  Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
