@@ -1,27 +1,15 @@
 module FrontEnd.HsSyn where
 
-
-
+import Data.DeriveTH
+import Data.Derive.All
 import StringTable.Atom
 import StringTable.Atom()
 import Data.Binary
 import C.FFI
 import Data.Generics
 import FrontEnd.SrcLoc
+import Control.Monad
 
-
-
-
-
-instance HasLocation HsAlt where
-    srcLoc (HsAlt sl _ _ _) = sl
-
-instance HasLocation HsExp where
-    srcLoc (HsCase _ xs) = srcLoc xs
-    srcLoc (HsExpTypeSig sl _ _) = sl
-    srcLoc (HsLambda sl _ _) = sl
-    srcLoc HsError { hsExpSrcLoc = sl } = sl
-    srcLoc _ = bogusASrcLoc
 
 
 
@@ -34,13 +22,14 @@ instance Show Module where
 fromModule (Module s) = s
 
 -- Names
+newtype HsIdentifier = HsIdent { hsIdentString :: String }
+  deriving(Data,Typeable,Eq,Ord)
+
 
 data HsName
 	= Qual { hsNameModule :: Module, hsNameIdent ::  HsIdentifier}
 	| UnQual { hsNameIdent :: HsIdentifier}
   deriving(Data,Typeable,Eq,Ord)
-  {-! derive: is, update, Binary !-}
-
 
 instance ToAtom HsName where
     toAtom = toAtom . show
@@ -49,9 +38,6 @@ instance Show HsName where
    showsPrec _ (Qual (Module m) s) =
 	showString m . showString "." . shows s
    showsPrec _ (UnQual s) = shows s
-
-newtype HsIdentifier = HsIdent { hsIdentString :: String }
-  deriving(Data,Typeable,Eq,Ord)
 
 instance Binary Module where
     get = do
@@ -75,19 +61,6 @@ instance Show HsIdentifier where
 --   showsPrec _ (HsSymbol s) = showString s
 --   showsPrec _ (HsSpecial s) = showString s
 
-instance HasLocation HsModule where
-    srcLoc x = hsModuleSrcLoc x
-
-data HsModule = HsModule {
-    hsModuleName :: Module,
-    hsModuleSrcLoc :: SrcLoc,
-    hsModuleExports :: (Maybe [HsExportSpec]),
-    hsModuleImports :: [HsImportDecl],
-    hsModuleDecls :: [HsDecl],
-    hsModuleOptions :: [String]
-    }
-  {-! derive: update !-}
-
 -- Export/Import Specifications
 
 data HsExportSpec
@@ -101,6 +74,24 @@ data HsExportSpec
 instance HasLocation HsImportDecl where
     srcLoc x = hsImportDeclSrcLoc x
 
+data HsKind = HsKind HsName | HsKindFn HsKind HsKind
+  deriving(Data,Typeable,Eq,Ord,Show)
+
+hsKindStar = HsKind (Qual (Module "Lhc@") (HsIdent "*"))
+hsKindHash = HsKind (Qual (Module "Lhc@") (HsIdent "#"))
+hsKindBang = HsKind (Qual (Module "Lhc@") (HsIdent "!"))
+hsKindQuest = HsKind (Qual (Module "Lhc@") (HsIdent "?"))
+hsKindQuestQuest = HsKind (Qual (Module "Lhc@") (HsIdent "??"))
+hsKindStarBang   = HsKind (Qual (Module "Lhc@") (HsIdent "*!"))
+
+
+
+data HsImportSpec
+	 = HsIVar HsName		-- variable
+	 | HsIAbs HsName		-- T
+	 | HsIThingAll HsName		-- T(..)
+	 | HsIThingWith HsName [HsName]	-- T(C_1,...,C_n)
+  deriving(Eq,Show)
 
 data HsImportDecl = HsImportDecl {
     hsImportDeclSrcLoc :: SrcLoc,
@@ -111,60 +102,48 @@ data HsImportDecl = HsImportDecl {
     }
   deriving(Eq,Show)
 
-data HsImportSpec
-	 = HsIVar HsName		-- variable
-	 | HsIAbs HsName		-- T
-	 | HsIThingAll HsName		-- T(..)
-	 | HsIThingWith HsName [HsName]	-- T(C_1,...,C_n)
-  deriving(Eq,Show)
-
 data HsAssoc = HsAssocNone | HsAssocLeft | HsAssocRight
   deriving(Eq,Show)
-  {-! derive: Binary !-}
+$(derive makeBinary ''HsAssoc)
 
-instance HasLocation HsDecl where
-    srcLoc HsTypeDecl	  { hsDeclSrcLoc  = sl } = sl
-    srcLoc HsDeclDeriving { hsDeclSrcLoc  = sl } = sl
-    srcLoc HsSpaceDecl    { hsDeclSrcLoc  = sl } = sl
-    srcLoc HsDataDecl	  { hsDeclSrcLoc  = sl } = sl
-    srcLoc HsInfixDecl    { hsDeclSrcLoc = sl } = sl
-    srcLoc HsNewTypeDecl  { hsDeclSrcLoc = sl } = sl
-    srcLoc HsPragmaSpecialize { hsDeclSrcLoc = sl } = sl
-    srcLoc (HsPragmaRules rs) = srcLoc rs
-    srcLoc HsForeignDecl  { hsDeclSrcLoc = sl } = sl
-    srcLoc HsActionDecl   { hsDeclSrcLoc = sl } = sl
-    srcLoc (HsForeignExport sl _ _ _) = sl
-    srcLoc (HsClassDecl	 sl _ _) = sl
-    srcLoc HsClassAliasDecl { hsDeclSrcLoc = sl } = sl
-    srcLoc (HsInstDecl	 sl _ _) = sl
-    srcLoc (HsDefaultDecl sl _) = sl
-    srcLoc (HsTypeSig	 sl _ _) = sl
-    srcLoc (HsFunBind     ms) = srcLoc ms
-    srcLoc (HsPatBind	 sl _ _ _) = sl
-    srcLoc (HsPragmaProps sl _ _) = sl
+data HsAsst = HsAsst HsName [HsName] | HsAsstEq HsType HsType
+  deriving(Data,Typeable,Eq,Ord, Show)
 
-instance HasLocation HsRule where
-    srcLoc HsRule { hsRuleSrcLoc = sl } = sl
+type HsContext = [HsAsst]
 
-hsDataDecl = HsDataDecl {
-    hsDeclKindDecl = False,
-    hsDeclSrcLoc = bogusASrcLoc,
-    hsDeclContext = [],
-    hsDeclName = error "hsDataDecl.hsDeclName",
-    hsDeclArgs = [],
-    hsDeclCons = [],
-    hsDeclHasKind = Nothing,
-    hsDeclDerives = []
-    }
+data HsQualType
+	 = HsQualType   { hsQualTypeContext :: HsContext, hsQualTypeType :: HsType }
+  deriving(Data,Typeable,Eq,Ord,Show)
 
-hsNewTypeDecl = HsNewTypeDecl {
-    hsDeclSrcLoc = bogusASrcLoc,
-    hsDeclContext = [],
-    hsDeclName = error "hsNewTypeDecl.hsDeclName",
-    hsDeclArgs = [],
-    hsDeclCon = error "hsNewTypeDecl.hsDeclCon",
-    hsDeclDerives = []
-    }
+data HsTyVarBind = HsTyVarBind {
+    hsTyVarBindSrcLoc :: SrcLoc,
+    hsTyVarBindName :: HsName,
+    hsTyVarBindKind :: Maybe HsKind }
+  deriving(Data,Typeable,Eq,Ord,Show)
+
+hsTyVarBind = HsTyVarBind { hsTyVarBindSrcLoc = bogusASrcLoc, hsTyVarBindName = undefined, hsTyVarBindKind = Nothing }
+
+instance HasLocation HsTyVarBind where
+    srcLoc = hsTyVarBindSrcLoc
+
+data HsType
+	 = HsTyFun   HsType HsType
+	 | HsTyTuple [HsType]
+	 | HsTyUnboxedTuple [HsType]
+	 | HsTyApp   HsType HsType
+	 | HsTyVar   { hsTypeName :: HsName }
+	 | HsTyCon   { hsTypeName :: HsName }
+         | HsTyForall {
+            hsTypeVars :: [HsTyVarBind],
+            hsTypeType :: HsQualType }
+         | HsTyExists {
+            hsTypeVars :: [HsTyVarBind],
+            hsTypeType :: HsQualType }
+         | HsTyExpKind { hsTySrcLoc :: SrcLoc, hsTyType :: HsType, hsTyKind :: HsKind }
+         -- the following are used internally
+         | HsTyAssoc
+         | HsTyEq HsType HsType
+  deriving(Data,Typeable,Eq,Ord,Show)
 
 data HsDecl
     = HsTypeDecl	 { hsDeclSrcLoc :: SrcLoc, hsDeclName :: HsName, hsDeclTArgs :: [HsType], hsDeclType :: HsType }
@@ -231,7 +210,59 @@ data HsDecl
     | HsPragmaSpecialize { hsDeclUniq :: (Module,Int), hsDeclSrcLoc :: SrcLoc, hsDeclBool :: Bool, hsDeclName :: HsName, hsDeclType :: HsType }
     | HsDeclDeriving { hsDeclSrcLoc :: SrcLoc, hsDeclClassHead :: HsClassHead }
   deriving(Eq,Show)
-  {-! derive: is !-}
+
+instance HasLocation HsDecl where
+    srcLoc HsTypeDecl	  { hsDeclSrcLoc  = sl } = sl
+    srcLoc HsDeclDeriving { hsDeclSrcLoc  = sl } = sl
+    srcLoc HsSpaceDecl    { hsDeclSrcLoc  = sl } = sl
+    srcLoc HsDataDecl	  { hsDeclSrcLoc  = sl } = sl
+    srcLoc HsInfixDecl    { hsDeclSrcLoc = sl } = sl
+    srcLoc HsNewTypeDecl  { hsDeclSrcLoc = sl } = sl
+    srcLoc HsPragmaSpecialize { hsDeclSrcLoc = sl } = sl
+    srcLoc (HsPragmaRules rs) = srcLoc rs
+    srcLoc HsForeignDecl  { hsDeclSrcLoc = sl } = sl
+    srcLoc HsActionDecl   { hsDeclSrcLoc = sl } = sl
+    srcLoc (HsForeignExport sl _ _ _) = sl
+    srcLoc (HsClassDecl	 sl _ _) = sl
+    srcLoc HsClassAliasDecl { hsDeclSrcLoc = sl } = sl
+    srcLoc (HsInstDecl	 sl _ _) = sl
+    srcLoc (HsDefaultDecl sl _) = sl
+    srcLoc (HsTypeSig	 sl _ _) = sl
+    srcLoc (HsFunBind     ms) = srcLoc ms
+    srcLoc (HsPatBind	 sl _ _ _) = sl
+    srcLoc (HsPragmaProps sl _ _) = sl
+
+hsDataDecl = HsDataDecl {
+    hsDeclKindDecl = False,
+    hsDeclSrcLoc = bogusASrcLoc,
+    hsDeclContext = [],
+    hsDeclName = error "hsDataDecl.hsDeclName",
+    hsDeclArgs = [],
+    hsDeclCons = [],
+    hsDeclHasKind = Nothing,
+    hsDeclDerives = []
+    }
+
+hsNewTypeDecl = HsNewTypeDecl {
+    hsDeclSrcLoc = bogusASrcLoc,
+    hsDeclContext = [],
+    hsDeclName = error "hsNewTypeDecl.hsDeclName",
+    hsDeclArgs = [],
+    hsDeclCon = error "hsNewTypeDecl.hsDeclCon",
+    hsDeclDerives = []
+    }
+
+data HsModule = HsModule {
+    hsModuleName :: Module,
+    hsModuleSrcLoc :: SrcLoc,
+    hsModuleExports :: (Maybe [HsExportSpec]),
+    hsModuleImports :: [HsImportDecl],
+    hsModuleDecls :: [HsDecl],
+    hsModuleOptions :: [String]
+    }
+
+instance HasLocation HsModule where
+    srcLoc x = hsModuleSrcLoc x
 
 data HsRule = HsRule {
     hsRuleUniq :: (Module,Int),
@@ -244,6 +275,9 @@ data HsRule = HsRule {
     }
   deriving(Eq,Show)
 
+instance HasLocation HsRule where
+    srcLoc HsRule { hsRuleSrcLoc = sl } = sl
+
 instance HasLocation HsMatch where
     srcLoc (HsMatch sl _ _ _ _) = sl
 
@@ -255,7 +289,6 @@ data HsConDecl
 	 = HsConDecl { hsConDeclSrcLoc :: SrcLoc, hsConDeclExists :: [HsTyVarBind], hsConDeclName :: HsName, hsConDeclConArg :: [HsBangType] }
 	 | HsRecDecl { hsConDeclSrcLoc :: SrcLoc, hsConDeclExists :: [HsTyVarBind], hsConDeclName :: HsName, hsConDeclRecArg :: [([HsName],HsBangType)] }
   deriving(Eq,Show)
-  {-! derive: is, update !-}
 
 hsConDeclArgs HsConDecl { hsConDeclConArg = as } = as
 hsConDeclArgs HsRecDecl { hsConDeclRecArg = as } = concat [ replicate (length ns) t | (ns,t) <- as]
@@ -274,52 +307,10 @@ data HsGuardedRhs
 	 = HsGuardedRhs SrcLoc HsExp HsExp
   deriving(Eq,Show)
 
-data HsQualType
-	 = HsQualType   { hsQualTypeContext :: HsContext, hsQualTypeType :: HsType }
-  deriving(Data,Typeable,Eq,Ord,Show)
-  {-! derive: Binary !-}
-
 hsQualTypeHsContext HsQualType { hsQualTypeContext = c } = c
 
-data HsType
-	 = HsTyFun   HsType HsType
-	 | HsTyTuple [HsType]
-	 | HsTyUnboxedTuple [HsType]
-	 | HsTyApp   HsType HsType
-	 | HsTyVar   { hsTypeName :: HsName }
-	 | HsTyCon   { hsTypeName :: HsName }
-         | HsTyForall {
-            hsTypeVars :: [HsTyVarBind],
-            hsTypeType :: HsQualType }
-         | HsTyExists {
-            hsTypeVars :: [HsTyVarBind],
-            hsTypeType :: HsQualType }
-         | HsTyExpKind { hsTySrcLoc :: SrcLoc, hsTyType :: HsType, hsTyKind :: HsKind }
-         -- the following are used internally
-         | HsTyAssoc
-         | HsTyEq HsType HsType
-  deriving(Data,Typeable,Eq,Ord,Show)
-  {-! derive: Binary, is !-}
-
-data HsTyVarBind = HsTyVarBind {
-    hsTyVarBindSrcLoc :: SrcLoc,
-    hsTyVarBindName :: HsName,
-    hsTyVarBindKind :: Maybe HsKind }
-  deriving(Data,Typeable,Eq,Ord,Show)
-  {-! derive: Binary, update !-}
-
-hsTyVarBind = HsTyVarBind { hsTyVarBindSrcLoc = bogusASrcLoc, hsTyVarBindName = undefined, hsTyVarBindKind = Nothing }
-
-instance HasLocation HsTyVarBind where
-    srcLoc = hsTyVarBindSrcLoc
-
-type HsContext = [HsAsst]
 --type HsAsst    = (HsName,[HsType])	-- for multi-parameter type classes
 --type HsAsst    = (HsName,HsName)	-- clobber
-
-data HsAsst = HsAsst HsName [HsName] | HsAsstEq HsType HsType
-  deriving(Data,Typeable,Eq,Ord, Show)
-    {-! derive: Binary !-}
 
 data HsLiteral
 	= HsInt		!Integer
@@ -335,7 +326,7 @@ data HsLiteral
 	-- GHC extension:
 	| HsLitLit	String
   deriving(Eq,Ord, Show)
-    {-! derive: is !-}
+
 
 hsParen x@HsVar {} = x
 hsParen x@HsCon {} = x
@@ -381,11 +372,19 @@ data HsExp
 	| HsWildCard SrcLoc			-- ditto
 	| HsIrrPat { hsExpLExp :: LHsExp }
  deriving(Eq,Show)
-    {-! derive: is, update !-}
+
+instance HasLocation HsAlt where
+    srcLoc (HsAlt sl _ _ _) = sl
+
+instance HasLocation HsExp where
+    srcLoc (HsCase _ xs) = srcLoc xs
+    srcLoc (HsExpTypeSig sl _ _) = sl
+    srcLoc (HsLambda sl _ _) = sl
+    srcLoc HsError { hsExpSrcLoc = sl } = sl
+    srcLoc _ = bogusASrcLoc
 
 data HsClassHead = HsClassHead { hsClassHeadContext :: HsContext, hsClassHead :: HsName, hsClassHeadArgs :: [HsType] }
  deriving(Eq,Show)
-    {-! derive: update !-}
 
 type LHsPat = Located HsPat
 
@@ -405,7 +404,6 @@ data HsPat
 	| HsPIrrPat { hsPatLPat :: LHsPat }
 	| HsPTypeSig SrcLoc HsPat HsQualType  -- scoped type variable extension
  deriving(Eq,Ord,Show)
- {-! derive: is !-}
 
 data HsPatField
 	= HsPFieldPat HsName HsPat
@@ -424,17 +422,25 @@ data HsFieldUpdate
 data HsAlt = HsAlt SrcLoc HsPat HsRhs [HsDecl]
   deriving(Eq,Show)
 
-data HsKind = HsKind HsName | HsKindFn HsKind HsKind
-  deriving(Data,Typeable,Eq,Ord,Show)
-  {-! derive: Binary !-}
-
-hsKindStar = HsKind (Qual (Module "Lhc@") (HsIdent "*"))
-hsKindHash = HsKind (Qual (Module "Lhc@") (HsIdent "#"))
-hsKindBang = HsKind (Qual (Module "Lhc@") (HsIdent "!"))
-hsKindQuest = HsKind (Qual (Module "Lhc@") (HsIdent "?"))
-hsKindQuestQuest = HsKind (Qual (Module "Lhc@") (HsIdent "??"))
-hsKindStarBang   = HsKind (Qual (Module "Lhc@") (HsIdent "*!"))
-
 -----------------------------------------------------------------------------
--- Builtin names.
+-- Deriving stuff
 
+$(derive makeIs ''HsName)
+$(derive makeUpdate ''HsName)
+$(derive makeBinary ''HsName)
+$(derive makeBinary ''HsKind)
+$(derive makeIs ''HsType)
+$(derive makeBinary ''HsType)
+$(derive makeBinary ''HsAsst)
+$(derive makeBinary ''HsQualType)
+$(derive makeBinary ''HsTyVarBind)
+$(derive makeUpdate ''HsTyVarBind)
+$(derive makeIs ''HsDecl)
+$(derive makeUpdate ''HsModule)
+$(derive makeIs ''HsConDecl)
+$(derive makeUpdate ''HsConDecl)
+$(derive makeIs ''HsLiteral)
+$(derive makeUpdate ''HsExp)
+$(derive makeIs ''HsExp)
+$(derive makeUpdate ''HsClassHead)
+$(derive makeIs ''HsPat)

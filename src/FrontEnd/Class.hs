@@ -19,6 +19,8 @@ module FrontEnd.Class(
     Inst(..)
     ) where
 
+import Data.DeriveTH
+import Data.Derive.All
 import Control.Monad.Identity
 import Control.Monad.Writer
 import Data.Monoid
@@ -61,7 +63,7 @@ data Inst = Inst {
     instHead :: Qual Pred,
     instAssocs :: [(Tycon,[Tyvar],[Tyvar],Sigma)]
     } deriving(Eq,Ord,Show)
-    {-! derive: Binary !-}
+$(derive makeBinary ''Inst)
 
 instance PPrint a (Qual Pred) => PPrint a Inst where
     pprint Inst { instHead = h, instAssocs = [] } = pprint h
@@ -90,7 +92,8 @@ data ClassRecord = ClassRecord      { className :: Class,
                                       classMethodMap :: Map.Map Name Class  
                                     }
     deriving Show
-    {-! derive: Binary, is !-}
+$(derive makeBinary ''ClassRecord)
+$(derive makeIs ''ClassRecord)
 
 newClassRecord c = ClassRecord {
     className = c,

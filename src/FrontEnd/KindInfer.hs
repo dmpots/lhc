@@ -16,6 +16,8 @@ module FrontEnd.KindInfer (
     getConstructorKinds
     ) where
 
+import Data.DeriveTH
+import Data.Derive.All
 import Control.Monad.Reader
 import Data.List
 import qualified Data.Traversable as T
@@ -52,7 +54,7 @@ data KindEnv = KindEnv {
     kindEnvAssocs :: Map.Map Name (Int,Int),
     kindEnvClasses :: Map.Map Name [Kind]
     } deriving(Typeable,Show)
-        {-!derive: Monoid !-}
+$(derive makeMonoid ''KindEnv)
 
 instance Binary KindEnv where
     put KindEnv { kindEnv = a, kindEnvAssocs = b, kindEnvClasses = c } = putMap a >> putMap b >> putMap c

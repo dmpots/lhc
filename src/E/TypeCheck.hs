@@ -16,6 +16,8 @@ import Control.Monad.Writer
 import Monad(when,liftM)
 import qualified Data.Map as Map
 
+import Data.DeriveTH
+import Data.Derive.All
 import Doc.DocLike
 import Doc.PPrint
 import Doc.Pretty
@@ -329,6 +331,11 @@ instance CanTypeCheck DataTable (Alt E) E where
 instance CanTypeCheck DataTable [(TVr,E)] [E] where
     typecheck dataTable ds = do mapM (typecheck dataTable) (snds ds)
 
+data TcEnv = TcEnv {
+    tcDefns :: [(TVr,E)],
+    tcContext :: [String],
+    tcDataTable :: DataTable
+    }
 
 -- | Determine type of term using full algorithm with substitutions. This
 -- should be used instead of 'typ' when let-bound type variables exist or you
@@ -344,53 +351,8 @@ typeInfer' dataTable ds e = case typeInfer'' dataTable ds e of
     Left ss -> error $ "\n>>> internal error:\n" ++ unlines (tail ss)
     Right v -> v
 
-data TcEnv = TcEnv {
-    tcDefns :: [(TVr,E)],
-    tcContext :: [String],
-    tcDataTable :: DataTable
-    }
-   {-! derive: update !-}
-
 newtype Tc a = Tc (Reader TcEnv a)
     deriving(Monad,Functor,MonadReader TcEnv)
-
-instance ContextMonad String Tc where
-    withContext s = local (tcContext_u (s:))
-
-tcE :: E -> Tc E
-tcE e = rfc e where
-    rfc e =  withContextDoc (text "tcE:" </> ePrettyEx e) (fc e >>=  strong')
-    strong' e = do
-        ds <- asks tcDefns
-        withContextDoc (text "tcE.strong:" </> ePrettyEx e) $ strong ds e
-
-    fc s@ESort {} = return $ getType s
-    fc (ELit LitCons { litType = t }) = strong' t
-    fc e@ELit {} = strong' (getType e)
-    fc (EVar TVr { tvrIdent = 0 }) = fail "variable with nothing!"
-    fc (EVar TVr { tvrType =  t}) =  strong' t
-    fc (EPi TVr { tvrIdent = n, tvrType = at} b) =  do
-        ESort a <- rfc at
-        ESort b <- local (tcDefns_u (\ds -> [ d | d@(v,_) <- ds, tvrIdent v /= n ])) $ rfc b
-        liftM ESort $ monadicLookup (a,b) ptsRulesMap
-    fc (ELam tvr@TVr { tvrIdent = n, tvrType =  at} b) = do
-        at' <- strong' at
-        b' <- local (tcDefns_u (\ds -> [ d | d@(v,_) <- ds, tvrIdent v /= n ])) $ rfc b
-        return (EPi (tVr n at') b')
-    fc (EAp (EPi tvr e) b) = do
-        b <- strong' b
-        rfc (subst tvr b e)
-    fc (EAp (ELit lc@LitCons { litAliasFor = Just af }) b) = fc (EAp (foldl eAp af (litArgs lc)) b)
-    fc (EAp a b) = do
-        a' <- rfc a
-        if a' == tBox then return tBox else strong' (eAp a' b)
-    fc (ELetRec vs e) = local (tcDefns_u (vs ++)) $ rfc e
-    fc (EError _ e) = strong' e
-    fc (EPrim _ ts t) = strong' t
-    fc ECase { eCaseType = ty } = do
-        strong' ty
-    fc Unknown = return Unknown
-    fc e = failDoc $ text "what's this? " </> (ePrettyEx e)
 
 typeInfer'' :: ContextMonad String m => DataTable -> [(TVr,E)] -> E -> m E
 typeInfer'' dataTable ds e = rfc e where
@@ -470,4 +432,43 @@ match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () (-2::Int)) 
     lam va ea vb eb mm c = do
         un (tvrType va) (tvrType vb) mm c
         un (subst va (EVar va { tvrIdent = c }) ea) (subst vb (EVar vb { tvrIdent = c }) eb) mm (c - 2)
+
+$(derive makeUpdate ''TcEnv)
+instance ContextMonad String Tc where
+    withContext s = local (tcContext_u (s:))
+
+tcE :: E -> Tc E
+tcE e = rfc e where
+    rfc e =  withContextDoc (text "tcE:" </> ePrettyEx e) (fc e >>=  strong')
+    strong' e = do
+        ds <- asks tcDefns
+        withContextDoc (text "tcE.strong:" </> ePrettyEx e) $ strong ds e
+
+    fc s@ESort {} = return $ getType s
+    fc (ELit LitCons { litType = t }) = strong' t
+    fc e@ELit {} = strong' (getType e)
+    fc (EVar TVr { tvrIdent = 0 }) = fail "variable with nothing!"
+    fc (EVar TVr { tvrType =  t}) =  strong' t
+    fc (EPi TVr { tvrIdent = n, tvrType = at} b) =  do
+        ESort a <- rfc at
+        ESort b <- local (tcDefns_u (\ds -> [ d | d@(v,_) <- ds, tvrIdent v /= n ])) $ rfc b
+        liftM ESort $ monadicLookup (a,b) ptsRulesMap
+    fc (ELam tvr@TVr { tvrIdent = n, tvrType =  at} b) = do
+        at' <- strong' at
+        b' <- local (tcDefns_u (\ds -> [ d | d@(v,_) <- ds, tvrIdent v /= n ])) $ rfc b
+        return (EPi (tVr n at') b')
+    fc (EAp (EPi tvr e) b) = do
+        b <- strong' b
+        rfc (subst tvr b e)
+    fc (EAp (ELit lc@LitCons { litAliasFor = Just af }) b) = fc (EAp (foldl eAp af (litArgs lc)) b)
+    fc (EAp a b) = do
+        a' <- rfc a
+        if a' == tBox then return tBox else strong' (eAp a' b)
+    fc (ELetRec vs e) = local (tcDefns_u (vs ++)) $ rfc e
+    fc (EError _ e) = strong' e
+    fc (EPrim _ ts t) = strong' t
+    fc ECase { eCaseType = ty } = do
+        strong' ty
+    fc Unknown = return Unknown
+    fc e = failDoc $ text "what's this? " </> (ePrettyEx e)
 

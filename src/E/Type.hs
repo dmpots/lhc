@@ -9,6 +9,8 @@ import Data.Foldable hiding(concat)
 import Control.Applicative
 
 
+import Data.DeriveTH
+import Data.Derive.All
 import StringTable.Atom
 import C.Prims
 import Doc.DocLike hiding((<$>))
@@ -63,36 +65,6 @@ data Comb = Comb {
     combRules :: [Rule]
     }
 
-instance HasProperties Comb where
-    modifyProperties f comb = combHead_u (modifyProperties f) comb
-    getProperties comb = getProperties $ combHead comb
-    putProperties p comb = combHead_u (putProperties p) comb
-
-instance HasProperties TVr where
-    modifyProperties f = tvrInfo_u (modifyProperties f)
-    getProperties = getProperties . tvrInfo
-    putProperties prop =  tvrInfo_u (putProperties prop)
-
-combBody_u f r@Comb{combBody  = x} = r{combBody = f x}
-combHead_u f r@Comb{combHead  = x} = r{combHead = f x}
-combRules_u f r@Comb{combRules  = x} = cp r{combRules = fx} where
-    cp = if null fx then unsetProperty PROP_HASRULE else setProperty PROP_HASRULE
-    fx = f x
-
-combBody_s v =  combBody_u  (const v)
-combHead_s v =  combHead_u  (const v)
-combRules_s v =  combRules_u  (const v)
-
-
-emptyComb = Comb { combHead = tvr, combBody = Unknown, combRules = [] }
-combIdent = tvrIdent . combHead
-combArgs  = snd . fromLam . combBody
-combABody = fst . fromLam . combBody
-combBind b = (combHead b,combBody b)
-bindComb (t,e) = combHead_s t . combBody_s e $ emptyComb
-combTriple comb = (combHead comb,combArgs comb,combABody comb)
-combTriple_s (t,as,e) comb = comb { combHead = t, combBody = Prelude.foldr ELam e as }
-
 data RuleType = RuleSpecialization | RuleUser | RuleCatalyst
     deriving(Eq)
 
@@ -117,8 +89,12 @@ data ARules = ARules {
 data Lit e t = LitInt { litNumber :: Number, litType :: t }
     | LitCons  { litName :: Name, litArgs :: [e], litType :: t, litAliasFor :: Maybe E }
     deriving(Eq,Ord)
-        {-!derive: is, Functor, Foldable, Traversable !-}
 
+data Alt e = Alt (Lit TVr e) e
+    deriving(Eq,Ord)
+
+instance Show e => Show (Alt e) where
+    showsPrec n (Alt l e) = showParen (n > 10) $ shows l . showString " -> " . shows e
 
 --------------------------------------
 -- Lambda Cube (it's just fun to say.)
@@ -137,7 +113,6 @@ data ESort =
     | EStarStar   -- ^ the supersort of boxed types
     | ESortNamed Name -- ^ user defined sorts
     deriving(Eq, Ord)
-    {-! derive: is !-}
 
 
 data E = EAp E E
@@ -159,7 +134,6 @@ data E = EAp E E
        eCaseAllFV  :: IdSet
        }
 	deriving(Eq, Ord, Show)
-    {-! derive: is, from !-}
 
 
 
@@ -190,22 +164,8 @@ instance Show a => Show (TVr' a) where
         Just n -> shows n . showString "::" . shows e
         Nothing  -> shows x . showString "::" . shows e
 
-
 type TVr = TVr' E
 data TVr' e = TVr { tvrIdent :: !Id, tvrType :: e, tvrInfo :: Info.Info }
-        {-!derive: update, Functor, Foldable, Traversable !-}
-
-data Alt e = Alt (Lit TVr e) e
-    deriving(Eq,Ord)
-
---instance FunctorM TVr' where
---    fmapM f t = do e <- f (tvrType t); return t { tvrType = e }
---instance Functor TVr' where
---    fmap f t = runIdentity (fmapM (return . f) t)
-
-instance Show e => Show (Alt e) where
-    showsPrec n (Alt l e) = showParen (n > 10) $ shows l . showString " -> " . shows e
-
 
 instance Eq TVr where
     (==) (TVr { tvrIdent = i }) (TVr { tvrIdent = i' }) = i == i'
@@ -217,6 +177,18 @@ instance Ord TVr where
     x > y = tvrIdent x > tvrIdent y
     x >= y = tvrIdent x >= tvrIdent y
     x <= y = tvrIdent x <= tvrIdent y
+
+$(derive makeUpdate ''TVr')
+
+instance HasProperties TVr where
+    modifyProperties f = tvrInfo_u (modifyProperties f)
+    getProperties = getProperties . tvrInfo
+    putProperties prop =  tvrInfo_u (putProperties prop)
+
+--instance FunctorM TVr' where
+--    fmapM f t = do e <- f (tvrType t); return t { tvrType = e }
+--instance Functor TVr' where
+--    fmap f t = runIdentity (fmapM (return . f) t)
 
 
 -- simple querying routines
@@ -260,7 +232,6 @@ fromLam e = f [] e where
     f as (ELam v e) = f (v:as) e
     f as e  =  (e,reverse as)
 
-
 litCons = LitCons { litName = error "litName: name not set", litArgs = [], litType = error "litCons: type not set", litAliasFor = Nothing }
 
 -----------------
@@ -276,6 +247,37 @@ eHash = ESort EHash
 tVr x y = tvr { tvrIdent = x, tvrType = y }
 tvr = TVr { tvrIdent = 0, tvrType = Unknown, tvrInfo = Info.empty }
 
+combBody_u f r@Comb{combBody  = x} = r{combBody = f x}
+combHead_u f r@Comb{combHead  = x} = r{combHead = f x}
+combRules_u f r@Comb{combRules  = x} = cp r{combRules = fx} where
+    cp = if null fx then unsetProperty PROP_HASRULE else setProperty PROP_HASRULE
+    fx = f x
+
+combBody_s v =  combBody_u  (const v)
+combHead_s v =  combHead_u  (const v)
+combRules_s v =  combRules_u  (const v)
+combArgs  = snd . fromLam . combBody
+combABody = fst . fromLam . combBody
+emptyComb = Comb { combHead = tvr, combBody = Unknown, combRules = [] }
+combIdent = tvrIdent . combHead
+combBind b = (combHead b,combBody b)
+bindComb (t,e) = combHead_s t . combBody_s e $ emptyComb
+combTriple comb = (combHead comb,combArgs comb,combABody comb)
+combTriple_s (t,as,e) comb = comb { combHead = t, combBody = Prelude.foldr ELam e as }
+
+instance HasProperties Comb where
+    modifyProperties f comb = combHead_u (modifyProperties f) comb
+    getProperties comb = getProperties $ combHead comb
+    putProperties p comb = combHead_u (putProperties p) comb
 
 
---  Imported from other files :-
+$(derive makeIs ''Lit)
+$(derive makeFunctor ''Lit)
+$(derive makeFoldable ''Lit)
+$(derive makeTraversable ''Lit)
+$(derive makeIs ''ESort)
+$(derive makeIs ''E)
+$(derive makeFrom ''E)
+$(derive makeFunctor ''TVr')
+$(derive makeFoldable ''TVr')
+$(derive makeTraversable ''TVr')

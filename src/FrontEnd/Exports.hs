@@ -3,6 +3,8 @@
 
 module FrontEnd.Exports(determineExports,ModInfo(..),modInfoHsModule_s) where
 
+import Data.DeriveTH
+import Data.Derive.All
 import Control.Monad.Identity
 import Data.Monoid
 import List
@@ -31,7 +33,7 @@ data ModInfo = ModInfo {
     modInfoHsModule :: HsModule,
     modInfoOptions :: Opt
     }
-   {-! derive: update !-}
+$(derive makeUpdate ''ModInfo)
 
 instance Eq ModInfo where
     a == b = modInfoName a == modInfoName b

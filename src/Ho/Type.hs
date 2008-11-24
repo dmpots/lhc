@@ -3,6 +3,8 @@ module Ho.Type where
 import Data.Monoid
 import qualified Data.Map as Map
 
+import Data.DeriveTH
+import Data.Derive.All
 import DataConstructors(DataTable)
 import E.Rules(Rules)
 import E.Type
@@ -20,6 +22,7 @@ import FrontEnd.TypeSynonyms(TypeSynonyms)
 import PackedString
 import Data.Binary
 import qualified Data.Digest.Pure.MD5 as MD5
+import Control.Monad
 
 type SourceHash = MD5.MD5Digest
 type HoHash     = MD5.MD5Digest
@@ -37,7 +40,6 @@ data CollectedHo = CollectedHo {
     -- the hos
     choHoMap :: Map.Map String Ho
     }
-    {-! derive: update !-}
 
 
 -- this is the immutable information about modules that depnends only on their contents
@@ -45,7 +47,6 @@ data CollectedHo = CollectedHo {
 newtype HoIDeps = HoIDeps {
     hoIDeps :: Map.Map SourceHash (Module,[Module])
     }
-    deriving(Binary)
 
 data HoHeader = HoHeader {
     -- * my sha1 id
@@ -76,13 +77,15 @@ data HoBuild = HoBuild {
     hoEs :: [(TVr,E)],
     hoRules :: Rules
     }
-    {-! derive: update !-}
 
 data Ho = Ho {
     hoExp :: HoExp,
     hoBuild :: HoBuild
     }
-    {-! derive: update !-}
+$(derive makeUpdate ''Ho)
+$(derive makeUpdate ''CollectedHo)
+$(derive makeBinary ''HoIDeps)
+$(derive makeUpdate ''HoBuild)
 
 instance Monoid Ho where
     mempty = Ho mempty mempty

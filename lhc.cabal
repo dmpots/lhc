@@ -12,7 +12,7 @@ license-file:        COPYING
 author:              John Meacham, David Himmelstrup
 maintainer:          lemmih@gmail.com
 homepage:            http://lhc.seize.it/
-build-type:          Custom
+build-type:          Simple
 Extra-Source-Files:  cbits/_stdint.h, cbits/config.h, arch/generic.arch
                      arch/i686.arch, arch/x86_64.arch
 
@@ -33,11 +33,11 @@ Executable lhc
  Extensions:          DeriveDataTypeable, ForeignFunctionInterface, EmptyDataDecls, GeneralizedNewtypeDeriving
                       MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts
                       UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
-                      OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards
+                      OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards, TemplateHaskell
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
                       binary, directory, haskeline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
-                      utf8-string, stringtable-atom
+                      utf8-string, stringtable-atom, derive >= 0.1.4
 
 
  if flag(base4)

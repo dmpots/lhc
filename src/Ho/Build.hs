@@ -27,6 +27,8 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.HughesPJ as PPrint
 
+import Data.DeriveTH
+import Data.Derive.All
 import PackedString(packString)
 import CharIO
 import DataConstructors
@@ -126,12 +128,20 @@ data ModDone
     | ModLibrary String HoHash
     | Found SourceCode
 
+data SourceCode
+    = SourceParsed { sourceHash :: SourceHash, sourceDeps :: [Module]
+                   , sourceModule :: HsModule, sourceFP :: FilePath, sourceHoName :: FilePath }
+    | SourceRaw    { sourceHash :: SourceHash, sourceDeps :: [Module]
+                   , sourceModName :: Module, sourceLBS :: LBS.ByteString, sourceFP :: FilePath, sourceHoName :: FilePath }
+
 data Done = Done {
     knownSourceMap :: Map.Map SourceHash (Module,[Module]),
     hosEncountered :: Map.Map HoHash     (FilePath,HoHeader,Ho),
     modEncountered :: Map.Map Module     ModDone
     }
-    {-! derive: Monoid, update !-}
+
+$(derive makeMonoid ''Done)
+$(derive makeUpdate ''Done)
 
 fileOrModule f = case reverse f of
                    ('s':'h':'.':_)     -> Right f
@@ -218,14 +228,6 @@ resolveDeps done_ref m = do
     if isJust $ m `mlookup` modEncountered done then return () else do
     fetchSource done_ref (map fst $ searchPaths (show m)) (Just m)
     return ()
-
-
-data SourceCode
-    = SourceParsed { sourceHash :: SourceHash, sourceDeps :: [Module]
-                   , sourceModule :: HsModule, sourceFP :: FilePath, sourceHoName :: FilePath }
-    | SourceRaw    { sourceHash :: SourceHash, sourceDeps :: [Module]
-                   , sourceModName :: Module, sourceLBS :: LBS.ByteString, sourceFP :: FilePath, sourceHoName :: FilePath }
-
 
 sourceIdent SourceParsed { sourceModule = m } = show $ hsModuleName m
 sourceIdent SourceRaw { sourceModName = fp } = show fp
@@ -714,4 +716,3 @@ dumpHoFile fn = do
         when (dump FD.EInfo || verbose2) $ putStrLn (show $ tvrInfo tvr)
         putStrLn (render $ hang 4 (pprint tvr <+> text "::" <+> pprint (tvrType tvr)))
         putStrLn (render $ hang 4 (pprint tvr <+> equals <+> pprint e))
-

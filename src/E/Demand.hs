@@ -18,6 +18,8 @@ import Data.Monoid hiding(Product(..))
 import Data.Maybe
 import Data.Typeable
 
+import Data.DeriveTH
+import Data.Derive.All
 import DataConstructors
 import Doc.DocLike
 import Doc.PPrint
@@ -37,7 +39,6 @@ data Demand =
     | Error SubDemand  -- diverges, might use arguments
     | Absent           -- Not used
     deriving(Eq,Ord,Typeable)
-        {-! derive: Binary !-}
 
 instance Show Demand where
     showsPrec _ Bottom = ("_|_" ++)
@@ -54,14 +55,12 @@ instance DocLike d => PPrint d Demand where
 
 data SubDemand = None | Product [Demand]
     deriving(Eq,Ord,Typeable)
-        {-! derive: Binary !-}
 
 data DemandSignature = DemandSignature !Int DemandType
     deriving(Eq,Ord,Typeable)
-        {-! derive: Binary !-}
+
 data DemandType = (:=>) DemandEnv [Demand]
     deriving(Eq,Ord,Typeable)
-        {-! derive: Binary !-}
 
 data DemandEnv = DemandEnv (IdMap Demand) Demand
     deriving(Eq,Ord,Typeable)
@@ -424,6 +423,7 @@ analyzeProgram prog = do
     dsOut <- solveDs (progDataTable prog) (programDs prog)
     return $ programSetDs' dsOut prog
 
-
-
-
+$(derive makeBinary ''Demand)
+$(derive makeBinary ''SubDemand)
+$(derive makeBinary ''DemandSignature)
+$(derive makeBinary ''DemandType)

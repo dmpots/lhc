@@ -3,7 +3,9 @@ module C.Prims where
 import Data.Monoid
 import Data.Typeable
 import Data.Binary
-
+import Control.Monad
+import Data.DeriveTH
+import Data.Derive.All
 import StringTable.Atom
 import C.FFI(Requires(..))
 import Doc.DocLike
@@ -27,7 +29,6 @@ type ExtType = String
 
 data DotNetPrim = DotNetField | DotNetCtor | DotNetMethod
     deriving(Typeable, Eq, Ord, Show)
-    {-! derive: Binary !-}
 
 data Prim =
     PrimPrim Atom          -- Special primitive implemented in the compiler somehow.
@@ -64,11 +65,9 @@ data Prim =
         primRetTy :: Op.Ty
         }
     deriving(Typeable, Eq, Ord, Show)
-    {-! derive: Binary !-}
 
 data PrimTypeInfo = PrimSizeOf | PrimMaxBound | PrimMinBound | PrimAlignmentOf | PrimUMaxBound
     deriving(Typeable, Eq, Ord, Show)
-    {-! derive: Binary !-}
 
 primStaticTypeInfo :: Op.Ty -> PrimTypeInfo -> Maybe Integer
 primStaticTypeInfo (Op.TyBits (Op.Bits b) _) w = Just ans where
@@ -132,7 +131,7 @@ primPrim s = APrim (PrimPrim $ toAtom s) mempty
 
 data APrim = APrim Prim Requires
     deriving(Typeable,  Eq, Ord)
-    {-! derive: Binary !-}
+
 
 instance Show APrim where
     showsPrec n (APrim p r) | r == mempty = showsPrec n p
@@ -179,4 +178,7 @@ parseDotNetFFI s = ans where
     g dn [n] = return dn { primDotNetName = packString n }
     g _ _ = fail "invalid .NET ffi specification"
 
-
+$(derive makeBinary ''DotNetPrim)
+$(derive makeBinary ''Prim)
+$(derive makeBinary ''PrimTypeInfo)
+$(derive makeBinary ''APrim)

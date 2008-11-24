@@ -33,6 +33,8 @@ import System.Console.GetOpt
 import System.IO.Unsafe
 import System.Directory
 
+import Data.DeriveTH
+import Data.Derive.All
 import Util.Gen
 import qualified FlagDump
 import qualified FlagOpts
@@ -85,7 +87,8 @@ data Opt = Opt {
     optStatLevel   :: !Int,                    -- ^ Level to print statistics
     optDumpSet     ::  S.Set FlagDump.Flag,    -- ^ Dump flags.
     optFOptsSet    ::  S.Set FlagOpts.Flag     -- ^ Flag options (-f\<opt\>).
-  } {-!derive: update !-}
+  } 
+$(derive makeUpdate ''Opt)
 
 
 opt = Opt {

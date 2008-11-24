@@ -13,6 +13,8 @@ import qualified Data.Traversable as T
 import qualified System
 import qualified Data.Set as Set
 
+import Data.DeriveTH
+import Data.Derive.All
 import PackedString
 import C.Prims
 import C.Arch
@@ -162,7 +164,7 @@ emptyEnvironment = Env {
     }
 
 data Collect = Coll { collNames :: Set.Set (Name,Int,Bool), collPrims :: Set.Set Prim }
-    {-! derive: Monoid !-}
+$(derive makeMonoid ''Collect)
 
 newtype TM a = TM { fromTM :: RWST Environment Collect Int IO a }
     deriving(MonadState Int,MonadReader Environment,MonadWriter Collect,Monad,Functor,MonadIO)

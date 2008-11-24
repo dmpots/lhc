@@ -45,6 +45,8 @@ import Data.Maybe
 import List(sortBy)
 import qualified Data.Map as Map hiding(map)
 
+import Data.DeriveTH
+import Data.Derive.All
 import C.Prims
 import Data.Binary
 import Doc.DocLike
@@ -118,7 +120,6 @@ kind _ = error "DataConstructors.kind"
 
 data AliasType = NotAlias | ErasedAlias | RecursiveAlias
     deriving(Eq,Ord,Show)
-    {-! derive: Binary !-}
 
 -- these apply to types
 data DataFamily =
@@ -128,7 +129,6 @@ data DataFamily =
     | DataEnum !Int     -- bounded integral type, argument is maximum number
     | DataNormal [Name] -- child constructors
     deriving(Eq,Ord,Show)
-    {-! derive: Binary !-}
 
 -- | Record describing a data type.
 -- * is also a data type containing the type constructors, which are unlifted, yet boxed.
@@ -144,14 +144,12 @@ data Constructor = Constructor {
     conVirtual   :: Maybe [Name], -- whether this is a virtual constructor that translates into an enum and its siblings
     conChildren  :: DataFamily
     } deriving(Show)
-    {-! derive: Binary !-}
 
 data Slot =
     SlotNormal E
     | SlotUnpacked E !Name [E]
     | SlotExistential TVr
     deriving(Eq,Ord,Show)
-    {-! derive: Binary !-}
 
 mapESlot f (SlotExistential t) = SlotExistential t { tvrType = f (tvrType t) }
 mapESlot f (SlotNormal e) = SlotNormal $ f e
@@ -173,7 +171,6 @@ getHsSlots ss = map f ss where
 newtype DataTable = DataTable {
     constructorMap :: (Map.Map Name Constructor)
     }
-    {-! derive: Monoid !-}
 
 instance Binary DataTable where
     put (DataTable dt) = putMap dt
@@ -858,4 +855,8 @@ primitiveAliases = [
     (tc_Float128, rt_float128)
     ]
 
-
+$(derive makeBinary ''AliasType)
+$(derive makeBinary ''DataFamily)
+$(derive makeBinary ''Constructor)
+$(derive makeBinary ''Slot)
+$(derive makeMonoid ''DataTable)

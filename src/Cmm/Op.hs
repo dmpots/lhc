@@ -1,8 +1,10 @@
 module Cmm.Op where
 
+import Data.DeriveTH
+import Data.Derive.All
 import Data.Binary
 import Util.Gen
-
+import Control.Monad
 {-
 
 Basic operations. These are chosen to be roughly equivalent to c-- operations,
@@ -91,7 +93,6 @@ data BinOp
     -- whether two values can be compared at all.
     | FOrdered
     deriving(Eq,Show,Ord,Read)
-    {-! derive: Binary !-}
 
 data UnOp
     = Neg   -- ^ 2s compliment negation
@@ -112,7 +113,6 @@ data UnOp
     | Exp
     | Sqrt
     deriving(Eq,Show,Ord,Read)
-    {-! derive: Binary !-}
 
 
 -- conversion ops
@@ -130,7 +130,6 @@ data ConvOp
     | U2U         -- ^ perform a 'Lobits' or a 'Zx' depending on the sizes of the arguments
     | B2B         -- ^ a nop, useful for coercing hints (bits 2 bits)
     deriving(Eq,Show,Ord,Read)
-    {-! derive: Binary !-}
 
 
 data ValOp
@@ -140,15 +139,13 @@ data ValOp
     | PZero
     | NZero
     deriving(Eq,Show,Ord,Read)
-    {-! derive: Binary !-}
 
 data ArchBits = BitsMax | BitsPtr | BitsUnknown
     deriving(Eq,Ord)
-    {-! derive: Binary !-}
+
 
 data TyBits = Bits !Int | BitsArch !ArchBits |  BitsExt String
     deriving(Eq,Ord)
-    {-! derive: Binary !-}
 
 data TyHint
     = HintSigned
@@ -157,13 +154,12 @@ data TyHint
     | HintCharacter    -- a unicode character, implies unsigned
     | HintNone         -- no hint
     deriving(Eq,Ord)
-    {-! derive: Binary !-}
 
 data Ty
     = TyBits !TyBits !TyHint
     | TyBool
     deriving(Eq,Ord)
-    {-! derive: Binary !-}
+
 
 readTy :: Monad m => String -> m Ty
 readTy "bool" = return TyBool
@@ -228,7 +224,6 @@ data Op v
     | ValOp ValOp
     | ConvOp ConvOp v
     deriving(Eq,Show,Ord)
-    {-! derive: Binary !-}
 
 
 binopType :: BinOp -> Ty -> Ty -> Ty
@@ -382,3 +377,12 @@ instance IsOperator (Op v) where
     isEagerSafe (ConvOp o _) = isEagerSafe o
     isEagerSafe _ = False
 
+$(derive makeBinary ''BinOp)
+$(derive makeBinary ''UnOp)
+$(derive makeBinary ''ConvOp)
+$(derive makeBinary ''ValOp)
+$(derive makeBinary ''ArchBits)
+$(derive makeBinary ''TyBits)
+$(derive makeBinary ''TyHint)
+$(derive makeBinary ''Ty)
+$(derive makeBinary ''Op)

@@ -7,6 +7,8 @@ import Data.IORef
 import Text.Printf
 import List hiding(insert)
 
+import Data.DeriveTH
+import Data.Derive.All
 import StringTable.Atom
 import Doc.PPrint
 import E.Annotate
@@ -84,7 +86,7 @@ data S = S {
     isStrict :: Bool,
     declEnv :: [(TVr,E)]
     }
-    {-! derive: update !-}
+$(derive makeUpdate ''S)
 
 etaReduce :: E -> (E,Int)
 etaReduce e = case f e 0 of

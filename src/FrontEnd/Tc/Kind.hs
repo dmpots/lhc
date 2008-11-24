@@ -12,7 +12,8 @@ module FrontEnd.Tc.Kind(
     isSubsumedBy,
     unfoldKind
     ) where
-
+import Data.DeriveTH
+import Data.Derive.All
 import Data.Monoid
 import Control.Monad
 import Data.IORef
@@ -53,7 +54,6 @@ data KBase =
         | KQuest
         | KNamed Name
     deriving(Eq, Ord)   -- but we need them for kind inference
-    {-! derive: Binary !-}
 
 KNamed s1 `isSubsumedBy2` KNamed s2   = s1 == s2
 _         `isSubsumedBy2` KQuest      = True
@@ -71,7 +71,6 @@ data Kind  = KBase KBase
            | Kfun Kind Kind
            | KVar Kindvar               -- variables aren't really allowed in haskell in kinds
              deriving(Eq, Ord)   -- but we need them for kind inference
-    {-! derive: Binary !-}
 
 KBase kb    `isSubsumedBy` KBase kb'    = isSubsumedBy2 kb kb'
 Kfun  k1 k2 `isSubsumedBy` Kfun k1' k2' = isSubsumedBy k1 k1' && isSubsumedBy k2 k2'
@@ -169,3 +168,5 @@ unfoldKind :: Kind -> [Kind]
 unfoldKind (Kfun k1 k2) = k1 : unfoldKind k2
 unfoldKind v = [v]
 
+$(derive makeBinary ''KBase)
+$(derive makeBinary ''Kind)

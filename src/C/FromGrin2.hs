@@ -14,6 +14,8 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.HughesPJ as P
 
+import Data.DeriveTH
+import Data.Derive.All
 
 import C.Arch
 import C.FFI
@@ -53,7 +55,7 @@ data Written = Written {
     wEnums :: Map.Map Name Int,
     wFunctions :: Map.Map Name Function
     }
-    {-! derive: Monoid !-}
+$(derive makeMonoid ''Written)
 
 data Env = Env {
     rTodo :: Todo,
@@ -63,7 +65,7 @@ data Env = Env {
     rCPR  :: Set.Set Atom,
     rGrin :: Grin
     }
-    {-! derive: update !-}
+$(derive makeUpdate ''Env)
 
 
 newtype C a = C (RWST Env Written HcHash Uniq a)

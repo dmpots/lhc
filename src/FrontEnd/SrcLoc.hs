@@ -7,6 +7,8 @@ import Control.Applicative
 import Data.Traversable
 import Data.Foldable
 
+import Data.DeriveTH
+import Data.Derive.All
 import Data.Monoid
 import Data.Generics
 import Data.Binary
@@ -14,11 +16,12 @@ import Data.Binary
 
 data SrcLoc = SrcLoc { srcLocFileName :: String, srcLocLine :: !Int, srcLocColumn :: !Int}
     deriving(Data,Typeable,Eq,Ord)
-    {-! derive: update, Binary !-}
+$(derive makeBinary ''SrcLoc)
+$(derive makeUpdate ''SrcLoc)
 
 data SrcSpan = SrcSpan { srcSpanBegin :: !SrcLoc, srcSpanEnd :: !SrcLoc }
     deriving(Data,Typeable,Eq,Ord)
-    {-! derive: update !-}
+$(derive makeUpdate ''SrcSpan)
 
 bogusASrcLoc = SrcLoc "bogus#" (-1) (-1)
 bogusSrcSpan = SrcSpan bogusASrcLoc bogusASrcLoc

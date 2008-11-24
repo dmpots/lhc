@@ -4,6 +4,8 @@ import Data.Traversable
 import Data.Foldable
 import Control.Applicative
 import Data.Monoid
+import Data.DeriveTH
+import Data.Derive.All
 
 -- This is much more verbose/complicated than it needs be.
 
@@ -109,7 +111,6 @@ data FuncNames a = FuncNames {
     func_inRange :: a,
     func_runNoWrapper :: a
     }
-    {-! derive: Functor, Traversable, Foldable !-}
-
-
-
+$(derive makeFunctor ''FuncNames)
+$(derive makeFoldable ''FuncNames)
+$(derive makeTraversable ''FuncNames)

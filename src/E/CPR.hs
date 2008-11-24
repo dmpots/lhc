@@ -6,6 +6,8 @@ import Data.Typeable
 import Data.Monoid()
 import qualified Data.Map as Map
 
+import Data.DeriveTH
+import Data.Derive.All
 import DataConstructors
 import Doc.DocLike
 import E.E
@@ -31,7 +33,7 @@ data Val =
     | Tag [Name]      -- A nullary constructor, like True, False
     | Bot             -- the bottom
     deriving(Eq,Ord,Typeable)
-    {-! derive: Binary !-}
+$(derive makeBinary ''Val)
 
 toVal c = case conSlots c of
     [] -> Tag [conName c]

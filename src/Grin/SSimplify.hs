@@ -5,6 +5,8 @@ import qualified Data.IntMap as IM
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
+import Data.DeriveTH
+import Data.Derive.All
 import StringTable.Atom
 import Grin.Grin
 import Grin.Noodle
@@ -32,7 +34,7 @@ data SEnv = SEnv {
     envPapp  :: IM.IntMap (Atom,[Val]),
     envPush  :: IM.IntMap Exp
     }
-    {-! derive: Monoid !-}
+$(derive makeMonoid ''SEnv)
 
 newtype SState = SState { usedVars :: IS.IntSet }
 
@@ -40,7 +42,7 @@ data SCol = SCol {
     colStats :: Stats.Stat,
     colFreeVars :: Set.Set Var
     }
-    {-! derive: Monoid !-}
+$(derive makeMonoid ''SCol)
 
 newtype S a = S (RWS SEnv SCol SState a)
     deriving(Monad,Functor,MonadWriter SCol, MonadReader SEnv,MonadState SState)

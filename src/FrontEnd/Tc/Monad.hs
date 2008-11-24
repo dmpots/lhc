@@ -52,6 +52,8 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 import qualified Data.Traversable as T
 
+import Data.DeriveTH
+import Data.Derive.All
 import Data.IORef
 import Data.Monoid
 import List
@@ -102,7 +104,6 @@ data TcEnv = TcEnv {
     tcInstanceEnv       :: InstanceEnv,
     tcOptions           :: Opt  -- module specific options
     }
-   {-! derive: update !-}
 
 data Output = Output {
     collectedPreds   :: Preds,
@@ -112,10 +113,6 @@ data Output = Output {
     existentialVars  :: [Tyvar],
     outKnots         :: [(Name,Name)]
     }
-   {-! derive: update, Monoid !-}
-
-newtype Tc a = Tc (ReaderT TcEnv (WriterT Output IO) a)
-    deriving(MonadFix,MonadIO,MonadReader TcEnv,MonadWriter Output,Functor)
 
 -- | information that is passed into the type checker.
 data TcInfo = TcInfo {
@@ -126,7 +123,12 @@ data TcInfo = TcInfo {
     tcInfoClassHierarchy :: ClassHierarchy
     }
 
+$(derive makeUpdate ''TcEnv)
+$(derive makeUpdate ''Output)
+$(derive makeMonoid ''Output)
 
+newtype Tc a = Tc (ReaderT TcEnv (WriterT Output IO) a)
+    deriving(MonadFix,MonadIO,MonadReader TcEnv,MonadWriter Output,Functor)
 
 -- | run a computation with a local environment
 localEnv :: TypeEnv -> Tc a -> Tc a
@@ -554,4 +556,3 @@ withMetaVars mv ks sfunc bsfunc  = do
     taus <- mapM (newMetaVar Tau) ks
     varBind mv (sfunc taus)
     bsfunc taus
-

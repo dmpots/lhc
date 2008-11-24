@@ -21,6 +21,8 @@ import Data.Maybe
 import qualified Data.Set as Set
 import qualified Data.Traversable as T
 
+import Data.DeriveTH
+import Data.Derive.All
 import StringTable.Atom
 import C.Prims
 import DataConstructors
@@ -79,13 +81,6 @@ data UseInfo = UseInfo {
 noUseInfo = UseInfo { useOccurance = Many, minimumArgs = 0 }
 notUsedInfo = UseInfo { useOccurance = Unused, minimumArgs = maxBound }
 
-programPruneOccurance :: Program -> Program
-programPruneOccurance prog =
-    let dsIn = progCombinators prog -- (runIdentity $ programMapBodies (return . subst (tVr (-1) Unknown) Unknown) prog)
-        (dsIn',(OMap fvs,uids)) = runReaderWriter (unOM $ collectDs dsIn mempty) (progEntry prog)
-    in --trace ("dsIn: "++show (length dsIn)) $
-       (progCombinators_s dsIn' prog) { progFreeIds = idMapToIdSet fvs, progUsedIds = uids }
-
 
 newtype OM a = OM (ReaderWriter IdSet (OMap,IdSet) a)
     deriving(Monad,Functor,MonadWriter (OMap,IdSet),MonadReader IdSet)
@@ -95,9 +90,49 @@ unOM (OM a) = a
 newtype OMap = OMap (IdMap UseInfo)
    deriving(HasSize,SetLike,BuildSet (Id,UseInfo),MapLike Id UseInfo,Show,IsEmpty,Eq,Ord)
 
+andOM x y = munionWith andOcc x y
+andOcc UseInfo { useOccurance = Unused } x = x
+andOcc x UseInfo { useOccurance = Unused } = x
+andOcc x y = UseInfo { useOccurance = Many, minimumArgs = min (minimumArgs x) (minimumArgs y) }
+
+
 instance Monoid OMap where
     mempty = OMap mempty
     mappend (OMap a) (OMap b) = OMap (andOM a b)
+
+data Range = Done OutE | Susp InE Subst
+    deriving(Show,Eq,Ord)
+type Subst = IdMap Range
+
+data Forced = ForceInline | ForceNoinline | NotForced
+    deriving(Eq,Ord)
+
+type InE = E
+type OutE = E
+type InTVr = TVr
+type OutTVr = TVr
+
+data Binding =
+    NotAmong [Name]
+    | IsBoundTo {
+        bindingOccurance :: Occurance,
+        bindingE :: OutE,
+        bindingCheap :: Bool,
+        inlineForced :: Forced,
+        bindingAtomic :: Bool
+        }
+    | NotKnown
+    deriving(Ord,Eq)
+
+data Env = Env {
+    envCachedSubst :: IdMap E,
+    envSubst :: Subst,
+    envRules :: IdMap ARules,
+    envInScope :: IdMap Binding,
+    envInScopeCache :: IdMap E
+    }
+$(derive makeMonoid ''Env)
+$(derive makeUpdate ''Env)
 
 
 maybeLetRec [] e = e
@@ -192,37 +227,6 @@ collectOccurance e = f e  where
         tt <- f (tvrType tvr)
         return tvr { tvrType = tt }
 
--- delete any occurance info for non-let-bound vars to be safe
-annb' tvr = tvrInfo_u (Info.delete noUseInfo) tvr
-annbind' idm tvr = case mlookup (tvrIdent tvr) idm of
-    Nothing | sortTermLike (getType tvr) -> annb' tvr { tvrIdent = 0 }
-    _ -> annb' tvr
-
--- add ocucrance info
-annbind idm tvr = case mlookup (tvrIdent tvr) idm of
-    Nothing -> annb notUsedInfo tvr { tvrIdent = 0 }
-    Just x -> annb x tvr
-annb x tvr = tvrInfo_u (Info.insert x) tvr
-
-mapLitBinds f lc@LitCons { litArgs = es } = lc { litArgs = map f es }
-mapLitBinds f (LitInt e t) = LitInt e t
-mapLitBindsM f lc@LitCons { litArgs = es } = do
-    es <- mapM f es
-    return lc { litArgs = es }
-mapLitBindsM f (LitInt e t) = return $  LitInt e t
-
-collectBinding :: Comb -> OM (Comb,OMap)
-collectBinding comb = do
-    e' <- collectOccurance $ combBody comb
-    let rvars = freeVars (combRules comb)  :: IdSet
-        romap = OMap (idSetToIdMap (const noUseInfo) rvars)
-    return (combBody_s e' comb,romap)
-
-unOMap (OMap x) = x
-
-collectCombs :: [Comb] -> OMap -> OM [Comb]
-collectCombs cs _ = return cs
-
 collectDs :: [Comb] -> OMap -> OM [Comb]
 collectDs ds (OMap fve) = do
     ds' <- mapM (grump . collectBinding) ds
@@ -254,6 +258,45 @@ collectDs ds (OMap fve) = do
     tell $ ((OMap $ nfid' `andOM` fids) S.\\ ffids,fromList (map combIdent ds''''))
     return (ds'''')
 
+programPruneOccurance :: Program -> Program
+programPruneOccurance prog =
+    let dsIn = progCombinators prog -- (runIdentity $ programMapBodies (return . subst (tVr (-1) Unknown) Unknown) prog)
+        (dsIn',(OMap fvs,uids)) = runReaderWriter (unOM $ collectDs dsIn mempty) (progEntry prog)
+    in --trace ("dsIn: "++show (length dsIn)) $
+       (progCombinators_s dsIn' prog) { progFreeIds = idMapToIdSet fvs, progUsedIds = uids }
+
+
+-- delete any occurance info for non-let-bound vars to be safe
+annb' tvr = tvrInfo_u (Info.delete noUseInfo) tvr
+annbind' idm tvr = case mlookup (tvrIdent tvr) idm of
+    Nothing | sortTermLike (getType tvr) -> annb' tvr { tvrIdent = 0 }
+    _ -> annb' tvr
+
+-- add ocucrance info
+annbind idm tvr = case mlookup (tvrIdent tvr) idm of
+    Nothing -> annb notUsedInfo tvr { tvrIdent = 0 }
+    Just x -> annb x tvr
+annb x tvr = tvrInfo_u (Info.insert x) tvr
+
+mapLitBinds f lc@LitCons { litArgs = es } = lc { litArgs = map f es }
+mapLitBinds f (LitInt e t) = LitInt e t
+mapLitBindsM f lc@LitCons { litArgs = es } = do
+    es <- mapM f es
+    return lc { litArgs = es }
+mapLitBindsM f (LitInt e t) = return $  LitInt e t
+
+collectBinding :: Comb -> OM (Comb,OMap)
+collectBinding comb = do
+    e' <- collectOccurance $ combBody comb
+    let rvars = freeVars (combRules comb)  :: IdSet
+        romap = OMap (idSetToIdMap (const noUseInfo) rvars)
+    return (combBody_s e' comb,romap)
+
+unOMap (OMap x) = x
+
+collectCombs :: [Comb] -> OMap -> OM [Comb]
+collectCombs cs _ = return cs
+
 -- TODO this should use the occurance info
 -- loopFunc t _ | getProperty prop_PLACEHOLDER t = -100  -- we must not choose the placeholder as the loopbreaker
 loopFunc t e = negate (baseInlinability t e)
@@ -264,10 +307,6 @@ inLam (OMap om) = OMap (fmap il om) where
     il ui = ui { useOccurance = Many }
 
 --andOM :: IdMap UseInfo -> IdMap UseInfo -> IdMap UseInfo
-andOM x y = munionWith andOcc x y
-andOcc UseInfo { useOccurance = Unused } x = x
-andOcc x UseInfo { useOccurance = Unused } = x
-andOcc x y = UseInfo { useOccurance = Many, minimumArgs = min (minimumArgs x) (minimumArgs y) }
 
 orMaps ms = OMap $ fmap orMany $ foldl (munionWith (++)) mempty (map (fmap (:[])) (map unOMap ms)) where
     unOMap (OMap m) = m
@@ -313,25 +352,6 @@ cacheSimpOpts opts = opts {
     f Comb { combRules = rs } = if null rs then Nothing else Just $ arules rs
 
 
-data Range = Done OutE | Susp InE Subst
-    deriving(Show,Eq,Ord)
-type Subst = IdMap Range
-
-data Forced = ForceInline | ForceNoinline | NotForced
-    deriving(Eq,Ord)
-
-data Binding =
-    NotAmong [Name]
-    | IsBoundTo {
-        bindingOccurance :: Occurance,
-        bindingE :: OutE,
-        bindingCheap :: Bool,
-        inlineForced :: Forced,
-        bindingAtomic :: Bool
-        }
-    | NotKnown
-    deriving(Ord,Eq)
-
 isBoundTo o e = IsBoundTo {
     bindingOccurance = useOccurance o,
     bindingE = e,
@@ -359,16 +379,6 @@ calcForced finalPhase v =
             (False,True,_) -> NotForced
             (False,False,True) -> ForceInline
             (False,False,False) -> NotForced
-
-
-data Env = Env {
-    envCachedSubst :: IdMap E,
-    envSubst :: Subst,
-    envRules :: IdMap ARules,
-    envInScope :: IdMap Binding,
-    envInScopeCache :: IdMap E
-    }
-    {-! derive: Monoid, update !-}
 
 susp:: E -> Subst -> Range
 susp e sub =  Susp e sub
@@ -448,11 +458,6 @@ programSSimplifyPStat sopts prog = do
     dsIn <- simplifyDs prog sopts (progCombinators prog)
     return (progCombinators_s dsIn prog)
 
-
-type InE = E
-type OutE = E
-type InTVr = TVr
-type OutTVr = TVr
 
 data Cont =
     ApplyTo {
@@ -1088,5 +1093,4 @@ smAddBoundNamesIdSet nset = --trace ("addBoundNamesIdSet: "++show (size nset)) $
    do modifyIds (\ (used,bound) -> (nset `union` used, nset `union` bound) )
 
 smAddBoundNamesIdMap = smAddNamesIdSet . idMapToIdSet
-
 
