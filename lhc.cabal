@@ -26,9 +26,8 @@ flag threaded
 Executable lhc
  main-is:             Main.hs
  Hs-Source-Dirs:      src
- C-Sources:           src/StringTable/StringTable_cbits.c
  Includes:            cbits/_stdint.h
- Include-dirs:        cbits, src/StringTable
+ Include-dirs:        cbits
  cc-Options:          -std=c99 -O2 -Wall
  ghc-prof-options:    -auto-all
  Extensions:          DeriveDataTypeable, ForeignFunctionInterface, EmptyDataDecls, GeneralizedNewtypeDeriving
@@ -38,7 +37,7 @@ Executable lhc
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
                       binary, directory, haskeline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
-                      utf8-string
+                      utf8-string, stringtable-atom
 
 
  if flag(base4)
@@ -50,6 +49,7 @@ Executable lhc
   ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
  if flag(threaded)
   ghc-options:        -threaded
+
  Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
@@ -71,7 +71,7 @@ Executable lhc
   Grin.HashConst Grin.Interpret Grin.Lint Grin.NodeAnalyze Grin.Noodle Grin.Optimize
   Grin.SSimplify Grin.Show Grin.Simplify Grin.Unboxing Grin.Val Grin.Whiz Ho.Collected
   Ho.Binary Ho.Build Ho.Library Ho.Type Info.Binary Info.Info Info.Types Info.Properties
-  Name.Prim Name.Binary Name.Id Name.Name Name.Names Name.VConsts StringTable.Atom
+  Name.Prim Name.Binary Name.Id Name.Name Name.Names Name.VConsts
   Support.Tuple Support.CFF Support.FreeVars Support.CanType Support.ShowTable
   Support.Tickle Support.Transform Support.Unparse Support.MapBinaryInstance Util.Graph
   Util.Gen Util.ArbitraryInstances Util.BitSet Util.BooleanSolver Util.ContextMonad
