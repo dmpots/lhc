@@ -15,7 +15,9 @@ homepage:            http://lhc.seize.it/
 build-type:          Simple
 Extra-Source-Files:  cbits/_stdint.h, cbits/config.h, arch/generic.arch
                      arch/i686.arch, arch/x86_64.arch
-
+data-dir:            data
+data-files:          HsFFI.h names.txt operators.txt prelude.m4 primitives.txt props.txt wsize.h ViaGhc.hs
+                     rts/lhc_rts.c rts/lhc_rts2.c rts/lhc_rts_alloc.c rts/lhc_rts_header.h 
 
 flag base4
 flag hpc
@@ -37,7 +39,8 @@ Executable lhc
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
                       binary, directory, haskeline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
-                      utf8-string, stringtable-atom, derive >= 0.1.4
+                      utf8-string, stringtable-atom, derive >= 0.1.4,
+                      filepath
 
 
  if flag(base4)
