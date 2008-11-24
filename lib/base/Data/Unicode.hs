@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -fffi #-}
+{-# OPTIONS_LHC -fffi #-}
 module Data.Unicode(
     CType(),
     ctype,

@@ -1,6 +1,6 @@
-{-# OPTIONS_JHC -N #-}
+{-# OPTIONS_LHC -N #-}
 module System.Info where
 
 
-compilerName = "jhc"
+compilerName = "lhc"
 compilerVersion = "0"

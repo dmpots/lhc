@@ -3,11 +3,11 @@ module Name.Prim where
 import Name.Name
 
 {-# NOINLINE tc_Int #-}
-tc_Int = toName TypeConstructor ("Jhc.Prim","Int")
+tc_Int = toName TypeConstructor ("Lhc.Prim","Int")
 {-# NOINLINE dc_Int #-}
 dc_Int = toName DataConstructor "Int#"
 {-# NOINLINE tc_Integer #-}
-tc_Integer = toName TypeConstructor ("Jhc.Basics","Integer")
+tc_Integer = toName TypeConstructor ("Lhc.Basics","Integer")
 {-# NOINLINE dc_Integer #-}
 dc_Integer = toName DataConstructor "Integer#"
 {-# NOINLINE tc_Int8 #-}
@@ -116,31 +116,31 @@ rt_bits_size_t_ = toName RawType "bits<size_t>"
 {-# NOINLINE rt_bits_time_t_ #-}
 rt_bits_time_t_ = toName RawType "bits<time_t>"
 {-# NOINLINE tc_JumpPoint #-}
-tc_JumpPoint = toName TypeConstructor ("Jhc.JumpPoint","JumpPoint")
+tc_JumpPoint = toName TypeConstructor ("Lhc.JumpPoint","JumpPoint")
 {-# NOINLINE tc_Char #-}
-tc_Char = toName TypeConstructor ("Jhc.Prim","Char")
+tc_Char = toName TypeConstructor ("Lhc.Prim","Char")
 {-# NOINLINE tc_IO #-}
-tc_IO = toName TypeConstructor ("Jhc.Prim","IO")
+tc_IO = toName TypeConstructor ("Lhc.Prim","IO")
 {-# NOINLINE tc_World__ #-}
-tc_World__ = toName TypeConstructor ("Jhc.Prim","World__")
+tc_World__ = toName TypeConstructor ("Lhc.Prim","World__")
 {-# NOINLINE tc_Bool #-}
-tc_Bool = toName TypeConstructor ("Jhc.Order","Bool")
+tc_Bool = toName TypeConstructor ("Lhc.Order","Bool")
 {-# NOINLINE tc_Target #-}
-tc_Target = toName TypeConstructor ("Jhc.Options","Target")
+tc_Target = toName TypeConstructor ("Lhc.Options","Target")
 {-# NOINLINE tc_Ptr #-}
-tc_Ptr = toName TypeConstructor ("Jhc.Addr","Ptr")
+tc_Ptr = toName TypeConstructor ("Lhc.Addr","Ptr")
 {-# NOINLINE tc_Addr #-}
-tc_Addr = toName TypeConstructor ("Jhc.Addr","Addr")
+tc_Addr = toName TypeConstructor ("Lhc.Addr","Addr")
 {-# NOINLINE tc_FunAddr #-}
-tc_FunAddr = toName TypeConstructor ("Jhc.Addr","FunAddr")
+tc_FunAddr = toName TypeConstructor ("Lhc.Addr","FunAddr")
 {-# NOINLINE tc_Ratio #-}
-tc_Ratio = toName TypeConstructor ("Jhc.Num","Ratio")
+tc_Ratio = toName TypeConstructor ("Lhc.Num","Ratio")
 {-# NOINLINE tc_Unit #-}
-tc_Unit = toName TypeConstructor ("Jhc.Basics","()")
+tc_Unit = toName TypeConstructor ("Lhc.Basics","()")
 {-# NOINLINE tc_Float #-}
-tc_Float = toName TypeConstructor ("Jhc.Float","Float")
+tc_Float = toName TypeConstructor ("Lhc.Float","Float")
 {-# NOINLINE tc_Double #-}
-tc_Double = toName TypeConstructor ("Jhc.Float","Double")
+tc_Double = toName TypeConstructor ("Lhc.Float","Double")
 {-# NOINLINE tc_CLong #-}
 tc_CLong = toName TypeConstructor ("Foreign.C.Types","CLong")
 {-# NOINLINE tc_CSChar #-}
@@ -152,77 +152,77 @@ tc_CUShort = toName TypeConstructor ("Foreign.C.Types","CUShort")
 {-# NOINLINE tc_CULong #-}
 tc_CULong = toName TypeConstructor ("Foreign.C.Types","CULong")
 {-# NOINLINE tc_Bits1 #-}
-tc_Bits1 = toName TypeConstructor ("Jhc.Types","Bits1_")
+tc_Bits1 = toName TypeConstructor ("Lhc.Types","Bits1_")
 {-# NOINLINE tc_Bits8 #-}
-tc_Bits8 = toName TypeConstructor ("Jhc.Types","Bits8_")
+tc_Bits8 = toName TypeConstructor ("Lhc.Types","Bits8_")
 {-# NOINLINE tc_Bits16 #-}
-tc_Bits16 = toName TypeConstructor ("Jhc.Types","Bits16_")
+tc_Bits16 = toName TypeConstructor ("Lhc.Types","Bits16_")
 {-# NOINLINE tc_Bits32 #-}
-tc_Bits32 = toName TypeConstructor ("Jhc.Types","Bits32_")
+tc_Bits32 = toName TypeConstructor ("Lhc.Types","Bits32_")
 {-# NOINLINE tc_Bits64 #-}
-tc_Bits64 = toName TypeConstructor ("Jhc.Types","Bits64_")
+tc_Bits64 = toName TypeConstructor ("Lhc.Types","Bits64_")
 {-# NOINLINE tc_Bits128 #-}
-tc_Bits128 = toName TypeConstructor ("Jhc.Types","Bits128_")
+tc_Bits128 = toName TypeConstructor ("Lhc.Types","Bits128_")
 {-# NOINLINE tc_BitsPtr #-}
-tc_BitsPtr = toName TypeConstructor ("Jhc.Types","BitsPtr_")
+tc_BitsPtr = toName TypeConstructor ("Lhc.Types","BitsPtr_")
 {-# NOINLINE tc_BitsMax #-}
-tc_BitsMax = toName TypeConstructor ("Jhc.Types","BitsMax_")
+tc_BitsMax = toName TypeConstructor ("Lhc.Types","BitsMax_")
 {-# NOINLINE tc_Float32 #-}
-tc_Float32 = toName TypeConstructor ("Jhc.Types","Float32_")
+tc_Float32 = toName TypeConstructor ("Lhc.Types","Float32_")
 {-# NOINLINE tc_Float64 #-}
-tc_Float64 = toName TypeConstructor ("Jhc.Types","Float64_")
+tc_Float64 = toName TypeConstructor ("Lhc.Types","Float64_")
 {-# NOINLINE tc_Float80 #-}
-tc_Float80 = toName TypeConstructor ("Jhc.Types","Float80_")
+tc_Float80 = toName TypeConstructor ("Lhc.Types","Float80_")
 {-# NOINLINE tc_Float128 #-}
-tc_Float128 = toName TypeConstructor ("Jhc.Types","Float128_")
+tc_Float128 = toName TypeConstructor ("Lhc.Types","Float128_")
 {-# NOINLINE dc_Rational #-}
-dc_Rational = toName DataConstructor ("Jhc.Num",":%")
+dc_Rational = toName DataConstructor ("Lhc.Num",":%")
 {-# NOINLINE dc_Cons #-}
-dc_Cons = toName DataConstructor ("Jhc.Prim",":")
+dc_Cons = toName DataConstructor ("Lhc.Prim",":")
 {-# NOINLINE dc_EmptyList #-}
-dc_EmptyList = toName DataConstructor ("Jhc.Prim","[]")
+dc_EmptyList = toName DataConstructor ("Lhc.Prim","[]")
 {-# NOINLINE dc_Unit #-}
-dc_Unit = toName DataConstructor ("Jhc.Basics","()")
+dc_Unit = toName DataConstructor ("Lhc.Basics","()")
 {-# NOINLINE dc_Boolzh #-}
-dc_Boolzh = toName DataConstructor ("Jhc.Order","Bool#")
+dc_Boolzh = toName DataConstructor ("Lhc.Order","Bool#")
 {-# NOINLINE dc_Target #-}
-dc_Target = toName DataConstructor ("Jhc.Options","Target#")
+dc_Target = toName DataConstructor ("Lhc.Options","Target#")
 {-# NOINLINE dc_Char #-}
-dc_Char = toName DataConstructor ("Jhc.Prim","Char")
+dc_Char = toName DataConstructor ("Lhc.Prim","Char")
 {-# NOINLINE dc_Addr #-}
-dc_Addr = toName DataConstructor ("Jhc.Addr","Addr")
+dc_Addr = toName DataConstructor ("Lhc.Addr","Addr")
 {-# NOINLINE class_Eq #-}
-class_Eq = toName ClassName ("Jhc.Order","Eq")
+class_Eq = toName ClassName ("Lhc.Order","Eq")
 {-# NOINLINE class_Ord #-}
-class_Ord = toName ClassName ("Jhc.Order","Ord")
+class_Ord = toName ClassName ("Lhc.Order","Ord")
 {-# NOINLINE class_Enum #-}
-class_Enum = toName ClassName ("Jhc.Enum","Enum")
+class_Enum = toName ClassName ("Lhc.Enum","Enum")
 {-# NOINLINE class_Bounded #-}
-class_Bounded = toName ClassName ("Jhc.Enum","Bounded")
+class_Bounded = toName ClassName ("Lhc.Enum","Bounded")
 {-# NOINLINE class_Show #-}
-class_Show = toName ClassName ("Jhc.Show","Show")
+class_Show = toName ClassName ("Lhc.Show","Show")
 {-# NOINLINE class_Read #-}
-class_Read = toName ClassName ("Jhc.Text","Read")
+class_Read = toName ClassName ("Lhc.Text","Read")
 {-# NOINLINE class_Ix #-}
 class_Ix = toName ClassName ("Data.Ix","Ix")
 {-# NOINLINE class_Functor #-}
-class_Functor = toName ClassName ("Jhc.Monad","Functor")
+class_Functor = toName ClassName ("Lhc.Monad","Functor")
 {-# NOINLINE class_Monad #-}
-class_Monad = toName ClassName ("Jhc.Monad","Monad")
+class_Monad = toName ClassName ("Lhc.Monad","Monad")
 {-# NOINLINE class_Num #-}
-class_Num = toName ClassName ("Jhc.Num","Num")
+class_Num = toName ClassName ("Lhc.Num","Num")
 {-# NOINLINE class_Real #-}
-class_Real = toName ClassName ("Jhc.Num","Real")
+class_Real = toName ClassName ("Lhc.Num","Real")
 {-# NOINLINE class_Integral #-}
-class_Integral = toName ClassName ("Jhc.Num","Integral")
+class_Integral = toName ClassName ("Lhc.Num","Integral")
 {-# NOINLINE class_Fractional #-}
-class_Fractional = toName ClassName ("Jhc.Num","Fractional")
+class_Fractional = toName ClassName ("Lhc.Num","Fractional")
 {-# NOINLINE class_Floating #-}
-class_Floating = toName ClassName ("Jhc.Float","Floating")
+class_Floating = toName ClassName ("Lhc.Float","Floating")
 {-# NOINLINE class_RealFrac #-}
-class_RealFrac = toName ClassName ("Jhc.Float","RealFrac")
+class_RealFrac = toName ClassName ("Lhc.Float","RealFrac")
 {-# NOINLINE class_RealFloat #-}
-class_RealFloat = toName ClassName ("Jhc.Float","RealFloat")
+class_RealFloat = toName ClassName ("Lhc.Float","RealFloat")
 {-# NOINLINE rt_bits128 #-}
 rt_bits128 = toName RawType "bits128"
 {-# NOINLINE rt_bool #-}
@@ -236,77 +236,77 @@ rt_float80 = toName RawType "fbits80"
 {-# NOINLINE rt_float128 #-}
 rt_float128 = toName RawType "fbits128"
 {-# NOINLINE v_eqString #-}
-v_eqString = toName Val ("Jhc.String","eqString")
+v_eqString = toName Val ("Lhc.String","eqString")
 {-# NOINLINE v_eqUnpackedString #-}
-v_eqUnpackedString = toName Val ("Jhc.String","eqUnpackedString")
+v_eqUnpackedString = toName Val ("Lhc.String","eqUnpackedString")
 {-# NOINLINE v_unpackString #-}
-v_unpackString = toName Val ("Jhc.String","unpackString")
+v_unpackString = toName Val ("Lhc.String","unpackString")
 {-# NOINLINE v_target #-}
-v_target = toName Val ("Jhc.Options","target")
+v_target = toName Val ("Lhc.Options","target")
 {-# NOINLINE v_error #-}
-v_error = toName Val ("Jhc.IO","error")
+v_error = toName Val ("Lhc.IO","error")
 {-# NOINLINE v_minBound #-}
-v_minBound = toName Val ("Jhc.Enum","minBound")
+v_minBound = toName Val ("Lhc.Enum","minBound")
 {-# NOINLINE v_maxBound #-}
-v_maxBound = toName Val ("Jhc.Enum","maxBound")
+v_maxBound = toName Val ("Lhc.Enum","maxBound")
 {-# NOINLINE v_fail #-}
-v_fail = toName Val ("Jhc.Monad","fail")
+v_fail = toName Val ("Lhc.Monad","fail")
 {-# NOINLINE v_map #-}
-v_map = toName Val ("Jhc.Basics","map")
+v_map = toName Val ("Lhc.Basics","map")
 {-# NOINLINE v_and #-}
-v_and = toName Val ("Jhc.Order","&&")
+v_and = toName Val ("Lhc.Order","&&")
 {-# NOINLINE v_filter #-}
-v_filter = toName Val ("Jhc.List","filter")
+v_filter = toName Val ("Lhc.List","filter")
 {-# NOINLINE v_foldr #-}
-v_foldr = toName Val ("Jhc.Basics","foldr")
+v_foldr = toName Val ("Lhc.Basics","foldr")
 {-# NOINLINE v_undefined #-}
-v_undefined = toName Val ("Jhc.Basics","undefined")
+v_undefined = toName Val ("Lhc.Basics","undefined")
 {-# NOINLINE v_bind #-}
-v_bind = toName Val ("Jhc.Monad",">>=")
+v_bind = toName Val ("Lhc.Monad",">>=")
 {-# NOINLINE v_bind_ #-}
-v_bind_ = toName Val ("Jhc.Monad",">>")
+v_bind_ = toName Val ("Lhc.Monad",">>")
 {-# NOINLINE v_return #-}
-v_return = toName Val ("Jhc.Monad","return")
+v_return = toName Val ("Lhc.Monad","return")
 {-# NOINLINE v_concatMap #-}
-v_concatMap = toName Val ("Jhc.Basics","concatMap")
+v_concatMap = toName Val ("Lhc.Basics","concatMap")
 {-# NOINLINE v_fromInteger #-}
-v_fromInteger = toName Val ("Jhc.Num","fromInteger")
+v_fromInteger = toName Val ("Lhc.Num","fromInteger")
 {-# NOINLINE v_fromInt #-}
-v_fromInt = toName Val ("Jhc.Num","fromInt")
+v_fromInt = toName Val ("Lhc.Num","fromInt")
 {-# NOINLINE v_fromRational #-}
-v_fromRational = toName Val ("Jhc.Num","fromRational")
+v_fromRational = toName Val ("Lhc.Num","fromRational")
 {-# NOINLINE v_negate #-}
-v_negate = toName Val ("Jhc.Num","negate")
+v_negate = toName Val ("Lhc.Num","negate")
 {-# NOINLINE v_leq #-}
-v_leq = toName Val ("Jhc.Order","<=")
+v_leq = toName Val ("Lhc.Order","<=")
 {-# NOINLINE v_geq #-}
-v_geq = toName Val ("Jhc.Order",">=")
+v_geq = toName Val ("Lhc.Order",">=")
 {-# NOINLINE v_lt #-}
-v_lt = toName Val ("Jhc.Order","<")
+v_lt = toName Val ("Lhc.Order","<")
 {-# NOINLINE v_gt #-}
-v_gt = toName Val ("Jhc.Order",">")
+v_gt = toName Val ("Lhc.Order",">")
 {-# NOINLINE v_compare #-}
-v_compare = toName Val ("Jhc.Order","compare")
+v_compare = toName Val ("Lhc.Order","compare")
 {-# NOINLINE v_equals #-}
-v_equals = toName Val ("Jhc.Order","==")
+v_equals = toName Val ("Lhc.Order","==")
 {-# NOINLINE v_neq #-}
-v_neq = toName Val ("Jhc.Order","/=")
+v_neq = toName Val ("Lhc.Order","/=")
 {-# NOINLINE v_fromEnum #-}
-v_fromEnum = toName Val ("Jhc.Enum","fromEnum")
+v_fromEnum = toName Val ("Lhc.Enum","fromEnum")
 {-# NOINLINE v_toEnum #-}
-v_toEnum = toName Val ("Jhc.Enum","toEnum")
+v_toEnum = toName Val ("Lhc.Enum","toEnum")
 {-# NOINLINE v_enumFrom #-}
-v_enumFrom = toName Val ("Jhc.Enum","enumFrom")
+v_enumFrom = toName Val ("Lhc.Enum","enumFrom")
 {-# NOINLINE v_enumFromTo #-}
-v_enumFromTo = toName Val ("Jhc.Enum","enumFromTo")
+v_enumFromTo = toName Val ("Lhc.Enum","enumFromTo")
 {-# NOINLINE v_enumFromThenTo #-}
-v_enumFromThenTo = toName Val ("Jhc.Enum","enumFromThenTo")
+v_enumFromThenTo = toName Val ("Lhc.Enum","enumFromThenTo")
 {-# NOINLINE v_enumFromThen #-}
-v_enumFromThen = toName Val ("Jhc.Enum","enumFromThen")
+v_enumFromThen = toName Val ("Lhc.Enum","enumFromThen")
 {-# NOINLINE v_succ #-}
-v_succ = toName Val ("Jhc.Enum","succ")
+v_succ = toName Val ("Lhc.Enum","succ")
 {-# NOINLINE v_pred #-}
-v_pred = toName Val ("Jhc.Enum","pred")
+v_pred = toName Val ("Lhc.Enum","pred")
 {-# NOINLINE v_range #-}
 v_range = toName Val ("Data.Ix","range")
 {-# NOINLINE v_index #-}
@@ -316,24 +316,24 @@ v_inRange = toName Val ("Data.Ix","inRange")
 {-# NOINLINE v_runExpr #-}
 v_runExpr = toName Val ("Prelude.IO","runExpr")
 {-# NOINLINE v_runRaw #-}
-v_runRaw = toName Val ("Jhc.Prim","runRaw")
+v_runRaw = toName Val ("Lhc.Prim","runRaw")
 {-# NOINLINE v_runMain #-}
-v_runMain = toName Val ("Jhc.IO","runMain")
+v_runMain = toName Val ("Lhc.IO","runMain")
 {-# NOINLINE v_runNoWrapper #-}
-v_runNoWrapper = toName Val ("Jhc.Prim","runNoWrapper")
+v_runNoWrapper = toName Val ("Lhc.Prim","runNoWrapper")
 {-# NOINLINE v_enum_succ #-}
-v_enum_succ = toName Val ("Jhc.Inst.PrimEnum","enum_succ")
+v_enum_succ = toName Val ("Lhc.Inst.PrimEnum","enum_succ")
 {-# NOINLINE v_enum_pred #-}
-v_enum_pred = toName Val ("Jhc.Inst.PrimEnum","enum_pred")
+v_enum_pred = toName Val ("Lhc.Inst.PrimEnum","enum_pred")
 {-# NOINLINE v_enum_from #-}
-v_enum_from = toName Val ("Jhc.Inst.PrimEnum","enum_from")
+v_enum_from = toName Val ("Lhc.Inst.PrimEnum","enum_from")
 {-# NOINLINE v_enum_fromTo #-}
-v_enum_fromTo = toName Val ("Jhc.Inst.PrimEnum","enum_fromTo")
+v_enum_fromTo = toName Val ("Lhc.Inst.PrimEnum","enum_fromTo")
 {-# NOINLINE v_enum_fromThen #-}
-v_enum_fromThen = toName Val ("Jhc.Inst.PrimEnum","enum_fromThen")
+v_enum_fromThen = toName Val ("Lhc.Inst.PrimEnum","enum_fromThen")
 {-# NOINLINE v_enum_fromThenTo #-}
-v_enum_fromThenTo = toName Val ("Jhc.Inst.PrimEnum","enum_fromThenTo")
+v_enum_fromThenTo = toName Val ("Lhc.Inst.PrimEnum","enum_fromThenTo")
 {-# NOINLINE v_enum_toEnum #-}
-v_enum_toEnum = toName Val ("Jhc.Inst.PrimEnum","enum_toEnum")
+v_enum_toEnum = toName Val ("Lhc.Inst.PrimEnum","enum_toEnum")
 
 

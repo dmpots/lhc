@@ -428,12 +428,12 @@ data HsKind = HsKind HsName | HsKindFn HsKind HsKind
   deriving(Data,Typeable,Eq,Ord,Show)
   {-! derive: Binary !-}
 
-hsKindStar = HsKind (Qual (Module "Jhc@") (HsIdent "*"))
-hsKindHash = HsKind (Qual (Module "Jhc@") (HsIdent "#"))
-hsKindBang = HsKind (Qual (Module "Jhc@") (HsIdent "!"))
-hsKindQuest = HsKind (Qual (Module "Jhc@") (HsIdent "?"))
-hsKindQuestQuest = HsKind (Qual (Module "Jhc@") (HsIdent "??"))
-hsKindStarBang   = HsKind (Qual (Module "Jhc@") (HsIdent "*!"))
+hsKindStar = HsKind (Qual (Module "Lhc@") (HsIdent "*"))
+hsKindHash = HsKind (Qual (Module "Lhc@") (HsIdent "#"))
+hsKindBang = HsKind (Qual (Module "Lhc@") (HsIdent "!"))
+hsKindQuest = HsKind (Qual (Module "Lhc@") (HsIdent "?"))
+hsKindQuestQuest = HsKind (Qual (Module "Lhc@") (HsIdent "??"))
+hsKindStarBang   = HsKind (Qual (Module "Lhc@") (HsIdent "*!"))
 
 -----------------------------------------------------------------------------
 -- Builtin names.

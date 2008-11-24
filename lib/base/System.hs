@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -fffi #-}
+{-# OPTIONS_LHC -fffi #-}
 module System (
     ExitCode(ExitSuccess,ExitFailure),
     getArgs, getProgName, getEnv, system, exitWith, exitFailure
@@ -9,8 +9,8 @@ import Foreign.Ptr
 import Foreign.Storable
 import Foreign.Marshal.Alloc
 import Foreign.C.Types
-import Jhc.IO(exitFailure)
-import qualified Jhc.Options
+import Lhc.IO(exitFailure)
+import qualified Lhc.Options
 
 data ExitCode = ExitSuccess | ExitFailure !Int
             deriving (Eq, Ord, Read, Show)
@@ -31,15 +31,15 @@ exitWith (ExitFailure n) = do
     return undefined
 
 
-getProgName = case Jhc.Options.target of
-    Jhc.Options.GhcHs -> ghc_getProgName
-    _ -> peek jhc_progname >>= peekCString
+getProgName = case Lhc.Options.target of
+    Lhc.Options.GhcHs -> ghc_getProgName
+    _ -> peek lhc_progname >>= peekCString
 
-getArgs = case Jhc.Options.target of
-    Jhc.Options.GhcHs -> ghc_getArgs
+getArgs = case Lhc.Options.target of
+    Lhc.Options.GhcHs -> ghc_getArgs
     _ -> do
-        argc <- peek jhc_argc
-        argv <- peek jhc_argv
+        argc <- peek lhc_argc
+        argv <- peek lhc_argv
         let f n = peekElemOff argv n >>= peekCString
         mapM f [0 .. fromIntegral argc - 1]
 
@@ -56,9 +56,9 @@ foreign import unsafe ccall "exit" c_exit :: Int -> IO ()
 foreign import unsafe ccall "system" c_system :: CString -> IO CInt
 foreign import unsafe ccall "stdlib.h getenv" c_getenv :: Ptr CChar -> IO (Ptr CChar)
 
-foreign import ccall "&jhc_progname" jhc_progname :: Ptr CString
-foreign import ccall "&jhc_argc" jhc_argc :: Ptr CInt
-foreign import ccall "&jhc_argv" jhc_argv :: Ptr (Ptr CString)
+foreign import ccall "&lhc_progname" lhc_progname :: Ptr CString
+foreign import ccall "&lhc_argc" lhc_argc :: Ptr CInt
+foreign import ccall "&lhc_argv" lhc_argv :: Ptr (Ptr CString)
 
 ghc_getArgs :: IO [String]
 ghc_getArgs =

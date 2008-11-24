@@ -100,8 +100,8 @@ tvrShowName :: TVr -> String
 tvrShowName t = maybe ('x':(show $ tvrIdent t)) show (tvrName t)
 
 
-modAbsurd = "Jhc@.Absurd"
-modBox    = "Jhc@.Box"
+modAbsurd = "Lhc@.Absurd"
+modBox    = "Lhc@.Box"
 
 
 nameConjured :: String -> E -> Name

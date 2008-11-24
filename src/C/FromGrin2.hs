@@ -95,7 +95,7 @@ localTodo todo (C act) = C $ local (\ r -> r { rTodo = todo }) act
 
 {-# NOINLINE compileGrin #-}
 compileGrin :: Grin -> (String,[String])
-compileGrin grin = (hsffi_h ++ jhc_rts_header_h ++ jhc_rts_alloc_c ++ jhc_rts_c ++ jhc_rts2_c ++ generateArchAssertions ++ P.render ans ++ "\n", snub (reqLibraries req))  where
+compileGrin grin = (hsffi_h ++ lhc_rts_header_h ++ lhc_rts_alloc_c ++ lhc_rts_c ++ lhc_rts2_c ++ generateArchAssertions ++ P.render ans ++ "\n", snub (reqLibraries req))  where
     ans = vcat $ includes ++ [text "", enum_tag_t, header, cafs,buildConstants grin finalHcHash, body]
     includes =  map include (snub $ reqIncludes req)
     include fn = text "#include <" <> text fn <> text ">"
@@ -378,8 +378,8 @@ convertBody (Case v@(Var _ t) ls) = do
     return $ profile_case_inc & switch' scrut ls'
 convertBody (Error s t) = do
     x <- asks rTodo
-    let jerr | null s    = toStatement $ functionCall (name "jhc_exit") [constant $ number 255]
-             | otherwise = toStatement $ functionCall (name "jhc_error") [string s]
+    let jerr | null s    = toStatement $ functionCall (name "lhc_exit") [constant $ number 255]
+             | otherwise = toStatement $ functionCall (name "lhc_error") [string s]
     let f (TyPtr _) = return nullPtr
         f TyNode = return nullPtr
         f (TyPrim x) = return $ cast (opTyToC x) (constant $ number 0)
@@ -538,7 +538,7 @@ convertExp Alloc { expValue = v, expCount = c, expRegion = r } | r == region_hea
     v' <- convertVal v
     c' <- convertVal c
     tmp <- newVar (ptrType sptr_t)
-    let malloc = tmp =* jhc_malloc (operator "*" (sizeof sptr_t) c')
+    let malloc = tmp =* lhc_malloc (operator "*" (sizeof sptr_t) c')
     fill <- case v of
         ValUnknown _ -> return mempty
         _ -> do
@@ -720,7 +720,7 @@ newNode ty ~(NodeC t as) = do
       Nothing -> do
         st <- nodeType t
         as' <- mapM convertVal as
-        let wmalloc = if not sf && all (nonPtr . getType) as then jhc_malloc_atomic else jhc_malloc
+        let wmalloc = if not sf && all (nonPtr . getType) as then lhc_malloc_atomic else lhc_malloc
             malloc =  wmalloc (sizeof st)
             nonPtr TyPtr {} = False
             nonPtr TyNode = False
@@ -787,7 +787,7 @@ declareEvalFunc n = do
     declareStruct n
     nt <- nodeType n
     let ts = runIdentity $ findArgs (grinTypeEnv grin) n
-        fname = toName $ "jhc_eval_" ++ show fn
+        fname = toName $ "lhc_eval_" ++ show fn
         aname = name "arg";
         rvar = localVariable wptr_t (name "r");
         atype = ptrType nt
@@ -820,7 +820,7 @@ castFunc _ _ tb e = cast (opTyToC tb) e
 -- c constants and utilities
 ----------------------------
 
-jhc_malloc sz = functionCall (name "jhc_malloc") [sz]
+lhc_malloc sz = functionCall (name "lhc_malloc") [sz]
 f_assert e    = functionCall (name "assert") [e]
 f_DETAG e     = functionCall (name "DETAG") [e]
 f_NODEP e     = functionCall (name "NODEP") [e]
@@ -837,10 +837,10 @@ f_RAWWHAT e   = functionCall (name "RAWWHAT") [e]
 f_demote e    = functionCall (name "demote") [e]
 f_follow e    = functionCall (name "follow") [e]
 f_update x y  = functionCall (name "update") [x,y]
-jhc_malloc_atomic sz = functionCall (name "jhc_malloc_atomic") [sz]
-profile_update_inc   = toStatement $ functionCall (name "jhc_update_inc") []
-profile_case_inc     = toStatement $ functionCall (name "jhc_case_inc") []
-profile_function_inc = toStatement $ functionCall (name "jhc_function_inc") []
+lhc_malloc_atomic sz = functionCall (name "lhc_malloc_atomic") [sz]
+profile_update_inc   = toStatement $ functionCall (name "lhc_update_inc") []
+profile_case_inc     = toStatement $ functionCall (name "lhc_case_inc") []
+profile_function_inc = toStatement $ functionCall (name "lhc_function_inc") []
 
 arg i = name $ 'a':show i
 
@@ -879,7 +879,7 @@ generateArchAssertions = unlines (h:map f (filter notVoid as) ++ [t]) where
     (_,_,as,_) = unsafePerformIO determineArch
     notVoid pt = primTypeName pt /= "void"
     f pt = printf "      assert(sizeof(%s) == %d);" (primTypeName pt) (primTypeSizeOf pt)
-    h = "static void\njhc_arch_assert(void)\n{"
+    h = "static void\nlhc_arch_assert(void)\n{"
     t = "}"
 
 

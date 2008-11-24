@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N -fffi -funboxed-tuples #-}
+{-# OPTIONS_LHC -N -fffi -funboxed-tuples #-}
 
 module Foreign.Ptr(
     Ptr(),
@@ -16,14 +16,14 @@ module Foreign.Ptr(
     ) where
 
 
-import Jhc.Show
-import Jhc.Inst.Show
-import Jhc.Monad
-import Jhc.Order
-import Jhc.IO
-import Jhc.Basics
-import Jhc.Num
-import Jhc.Addr
+import Lhc.Show
+import Lhc.Inst.Show
+import Lhc.Monad
+import Lhc.Order
+import Lhc.IO
+import Lhc.Basics
+import Lhc.Num
+import Lhc.Addr
 import Foreign.Storable
 
 

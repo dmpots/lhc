@@ -951,14 +951,14 @@ prelude_mod	      = Module "Prelude"
 main_mod	      = Module "Main"
 
 unit_con_name	      = UnQual (HsIdent "()")
-tuple_con_name i      = Qual (Module "Jhc.Basics") (HsIdent ("("++replicate i ','++")"))
+tuple_con_name i      = Qual (Module "Lhc.Basics") (HsIdent ("("++replicate i ','++")"))
 
 unit_con	      = HsCon { {-hsExpSrcSpan = bogusSrcSpan,-} hsExpName = unit_con_name }
 tuple_con i	      = HsCon { {-hsExpSrcSpan = bogusSrcSpan,-} hsExpName = (tuple_con_name i) }
 
 
 unit_tycon_name       = unit_con_name
-fun_tycon_name        = Qual (Module "Jhc.Basics") (HsIdent "->")
+fun_tycon_name        = Qual (Module "Lhc.Basics") (HsIdent "->")
 list_tycon_name       = UnQual (HsIdent "[]")
 tuple_tycon_name i    = tuple_con_name i
 

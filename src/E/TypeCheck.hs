@@ -36,10 +36,10 @@ import {-# SOURCE #-} DataConstructors
 
 {-@Internals
 
-# Jhc Core Type System
+# Lhc Core Type System
 
-Jhc's core is based on a pure type system. A pure type system (also called a
-PTS) is actually a parameterized set of type systems. Jhc's version is
+Lhc's core is based on a pure type system. A pure type system (also called a
+PTS) is actually a parameterized set of type systems. Lhc's version is
 described by the following.
 
     Sorts  = (*,!,**,#,(#),##)

@@ -5,8 +5,8 @@ module  Data.Ratio (
 
 import Prelude.Text
 import Prelude.Float(doubleToRational)
-import Jhc.Num
-import Jhc.Float
+import Lhc.Num
+import Lhc.Float
 
 infixl 7  %
 

@@ -1,12 +1,12 @@
-{-# OPTIONS_JHC -N #-}
+{-# OPTIONS_LHC -N #-}
 module Data.Ix ( Ix(range, index, inRange, rangeSize) ) where
 
-import Jhc.Int
-import Jhc.Enum
-import Jhc.Order
-import Jhc.Basics
-import Jhc.Num
-import Jhc.IO
+import Lhc.Int
+import Lhc.Enum
+import Lhc.Order
+import Lhc.Basics
+import Lhc.Num
+import Lhc.IO
 
 class  Ord a => Ix a  where
     range     :: (a,a) -> [a]

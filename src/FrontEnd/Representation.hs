@@ -199,11 +199,11 @@ instance Binary Tyvar where
 
 
 instance FromTupname HsName where
-    fromTupname (Qual (Module "Jhc.Basics") (HsIdent xs))  = fromTupname xs
+    fromTupname (Qual (Module "Lhc.Basics") (HsIdent xs))  = fromTupname xs
     fromTupname _ = fail "fromTupname: not Prelude"
 
 instance ToTuple HsName where
-    toTuple n = (Qual (Module "Jhc.Basics") (HsIdent $ toTuple n))
+    toTuple n = (Qual (Module "Lhc.Basics") (HsIdent $ toTuple n))
 
 -- pretty printing a HsName, Module and HsIdentifier
 

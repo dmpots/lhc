@@ -14,7 +14,7 @@ module Data.Char (
 --import Array         -- Used for character name table.
 import Numeric (readDec, readOct, lexDigits, readHex)
 import Prelude.Text
-import Jhc.Basics
+import Lhc.Basics
 import Data.Word(Word())
 import Prelude.CType
 

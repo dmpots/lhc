@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -funboxed-tuples #-}
+{-# OPTIONS_LHC -funboxed-tuples #-}
 module  Data.Array (
     module Ix,  -- export all of Ix
     Array(),
@@ -16,8 +16,8 @@ module  Data.Array (
     ) where
 
 import Data.Ix
-import Jhc.Array
-import Jhc.Int
+import Lhc.Array
+import Lhc.Int
 
 infixl 9  !, //
 

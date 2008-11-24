@@ -774,14 +774,14 @@ compileGrinToC grin = do
     progress ("Writing " ++ show cf)
     (argstring,sversion) <- getArgString
     let
-        boehmOpts | fopts FO.Boehm = ["-D_JHC_GC=2", "-lgc"]
+        boehmOpts | fopts FO.Boehm = ["-D_LHC_GC=2", "-lgc"]
                   | otherwise = []
-        profileOpts | fopts FO.Profile = ["-D_JHC_PROFILE=1"]
+        profileOpts | fopts FO.Profile = ["-D_LHC_PROFILE=1"]
                   | otherwise = []
         comm = shellQuote $ [optCC options, "-std=gnu99", "-D_GNU_SOURCE", "-falign-functions=4", "-ffast-math", "-Wshadow", "-Wextra", "-Wall", "-Wno-unused-parameter", "-o", fn, cf ] ++ (map ("-l" ++) rls) ++ debug ++ optCCargs options  ++ boehmOpts ++ profileOpts
         debug = if fopts FO.Debug then ["-g"] else ["-DNDEBUG", "-O3", "-fomit-frame-pointer"]
         globalvar n c = "char " ++ n ++ "[] = \"" ++ c ++ "\";"
-    writeFile cf $ unlines [globalvar "jhc_c_compile" comm, globalvar "jhc_command" argstring,globalvar "jhc_version" sversion,"",cg]
+    writeFile cf $ unlines [globalvar "lhc_c_compile" comm, globalvar "lhc_command" argstring,globalvar "lhc_version" sversion,"",cg]
     progress ("Running: " ++ comm)
     r <- System.system comm
     when (r /= System.ExitSuccess) $ fail "C code did not compile."
@@ -789,7 +789,7 @@ compileGrinToC grin = do
 
 
 dumpCore pname prog = do
-    let fn = optOutName options ++ "_" ++ pname ++ ".jhc_core"
+    let fn = optOutName options ++ "_" ++ pname ++ ".lhc_core"
     putErrLn $ "Writing: " ++ fn
     h <- IO.openFile fn IO.WriteMode
     (argstring,sversion) <- getArgString

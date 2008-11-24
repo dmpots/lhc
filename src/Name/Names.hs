@@ -52,7 +52,7 @@ fromUnboxedNameTuple n = case show n of
     _ -> fail $ "Not unboxed tuple: " ++ show n
 
 instance FromTupname Name where
-    fromTupname name | m == "Jhc.Basics" = fromTupname (nn::String) where
+    fromTupname name | m == "Lhc.Basics" = fromTupname (nn::String) where
         (_,(m,nn)) = fromName name
     fromTupname _ = fail "not a tuple"
 
@@ -61,19 +61,19 @@ instance FromTupname Name where
 -- The constructors
 
 
-tc_Arrow = toName TypeConstructor  ("Jhc.Basics","->")
-tc_Int__ = toName TypeConstructor  ("Jhc.Prim","Int__")
-tc_Array__ = toName TypeConstructor  ("Jhc.Array","Array__")
-tc_MutArray__ = toName TypeConstructor  ("Jhc.Array","MutArray__")
+tc_Arrow = toName TypeConstructor  ("Lhc.Basics","->")
+tc_Int__ = toName TypeConstructor  ("Lhc.Prim","Int__")
+tc_Array__ = toName TypeConstructor  ("Lhc.Array","Array__")
+tc_MutArray__ = toName TypeConstructor  ("Lhc.Array","MutArray__")
 tc_Ref__ = toName TypeConstructor ("Data.IORef","Ref__")
 
 
-tc_Boolzh = toName TypeConstructor ("Jhc.Order","Bool#")
-tc_List = toName TypeConstructor  ("Jhc.Prim","[]")
+tc_Boolzh = toName TypeConstructor ("Lhc.Order","Bool#")
+tc_List = toName TypeConstructor  ("Lhc.Prim","[]")
 
 
-s_Star = toName SortName ("Jhc@","*")
-s_Hash = toName SortName ("Jhc@","#")
+s_Star = toName SortName ("Lhc@","*")
+s_Hash = toName SortName ("Lhc@","#")
 
 
 sFuncNames = FuncNames {

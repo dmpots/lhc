@@ -187,35 +187,35 @@ foreach my $d (@ds) {
     #my $t =  "(ELit (LitCons $nn [] eStar) )";
     my $tycon = tycon($d->[0]);
     my $cncons = dcon($d->[0]);
-    my $prelude_bounded = hsname("Jhc.Enum.Bounded");
+    my $prelude_bounded = hsname("Lhc.Enum.Bounded");
     my $foreign_storable = hsname("Foreign.Storable.Storable");
-    my $c_num = hsname("Jhc.Num.Num");
+    my $c_num = hsname("Lhc.Num.Num");
     push @inst, "[] :=> IsIn $prelude_bounded $tycon" if $vtype ne 'f';
     push @inst, "[] :=> IsIn $foreign_storable $tycon";
     push @cmeth, "($foreign_storable, toInstName \"Foreign.Storable.sizeOf.$d->[0]\", ELam (v0 $t) \$ prim_sizeof \"$d->[1]\")";
     push @cmeth, "($foreign_storable, toInstName \"Foreign.Storable.poke.$d->[0]\", buildPoke $cncons $t \"$d->[1]\")";
     push @cmeth, "($foreign_storable, toInstName \"Foreign.Storable.peek.$d->[0]\", buildPeek $cncons $t \"$d->[1]\")";
-    push @cmeth, "($prelude_bounded, toInstName \"Jhc.Enum.maxBound.$d->[0]\", " . "prim_${vtype}maxbound $cncons $t \"$d->[1]\")" if $vtype ne 'f';;
-    push @cmeth, "($prelude_bounded, toInstName \"Jhc.Enum.minBound.$d->[0]\", " . "prim_${vtype}minbound $cncons $t \"$d->[1]\")" if $vtype ne 'f';;
+    push @cmeth, "($prelude_bounded, toInstName \"Lhc.Enum.maxBound.$d->[0]\", " . "prim_${vtype}maxbound $cncons $t \"$d->[1]\")" if $vtype ne 'f';;
+    push @cmeth, "($prelude_bounded, toInstName \"Lhc.Enum.minBound.$d->[0]\", " . "prim_${vtype}minbound $cncons $t \"$d->[1]\")" if $vtype ne 'f';;
     my $ivar = "v2_Int";
     my $ivart = "v2_Integer";
     my $tvar = "(v2 $t)";
-    if ($d->[0] eq "Jhc.Prim.Int") {
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.fromInt.$d->[0]\", ELam $ivar (EVar $ivar))";
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.toInt.$d->[0]\", ELam $ivar (EVar $ivar))";
+    if ($d->[0] eq "Lhc.Prim.Int") {
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.fromInt.$d->[0]\", ELam $ivar (EVar $ivar))";
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.toInt.$d->[0]\", ELam $ivar (EVar $ivar))";
     } else {
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.fromInt.$d->[0]\", ELam $ivar (create_${vtype}integralCast_fromInt $cncons $rtype (EVar $ivar) $t))";
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.toInt.$d->[0]\", ELam $tvar (create_${vtype}integralCast_toInt $cncons $rtype (EVar $tvar)))" if $d->[2] =~ /int/ ;
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.fromInt.$d->[0]\", ELam $ivar (create_${vtype}integralCast_fromInt $cncons $rtype (EVar $ivar) $t))";
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.toInt.$d->[0]\", ELam $tvar (create_${vtype}integralCast_toInt $cncons $rtype (EVar $tvar)))" if $d->[2] =~ /int/ ;
     }
-    if ($d->[0] eq "Jhc.Basics.Integer") {
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.fromInteger.$d->[0]\", ELam $ivart (EVar $ivart))";
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.toInteger.$d->[0]\", ELam $ivart (EVar $ivart))";
+    if ($d->[0] eq "Lhc.Basics.Integer") {
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.fromInteger.$d->[0]\", ELam $ivart (EVar $ivart))";
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.toInteger.$d->[0]\", ELam $ivart (EVar $ivart))";
     } else {
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.fromInteger.$d->[0]\", ELam $ivart (create_${vtype}integralCast_fromInteger $cncons $rtype (EVar $ivart) $t))";
-        push @cmeth, "($c_num, toInstName \"Jhc.Num.toInteger.$d->[0]\", ELam $tvar (create_${vtype}integralCast_toInteger $cncons $rtype (EVar $tvar)))" if $d->[2] =~ /int/ ;
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.fromInteger.$d->[0]\", ELam $ivart (create_${vtype}integralCast_fromInteger $cncons $rtype (EVar $ivart) $t))";
+        push @cmeth, "($c_num, toInstName \"Lhc.Num.toInteger.$d->[0]\", ELam $tvar (create_${vtype}integralCast_toInteger $cncons $rtype (EVar $tvar)))" if $d->[2] =~ /int/ ;
     }
-    push @cmeth, "($c_num, toInstName \"Jhc.Num.abs.$d->[0]\", ELam $tvar (build_${vtype}abs \"$d->[1]\" $cncons (EVar $tvar)  ))";
-    push @cmeth, "($c_num, toInstName \"Jhc.Num.signum.$d->[0]\", ELam $tvar (build_${vtype}signum \"$d->[1]\" $cncons (EVar $tvar) ))";
+    push @cmeth, "($c_num, toInstName \"Lhc.Num.abs.$d->[0]\", ELam $tvar (build_${vtype}abs \"$d->[1]\" $cncons (EVar $tvar)  ))";
+    push @cmeth, "($c_num, toInstName \"Lhc.Num.signum.$d->[0]\", ELam $tvar (build_${vtype}signum \"$d->[1]\" $cncons (EVar $tvar) ))";
     #push @names, "(\"$d->[0]\", \"$d->[1]\", \"$d->[2]\")\n";
     my $sname = $d->[0];
     $sname =~ s/^.*\.//;
@@ -243,7 +243,7 @@ print "constantMethods = [\n   ", join("\n  ,",@cmeth), " ]\n\n";
 print "theMethods = [\n   ", join("\n  ,",@meth), " ]\n\n";
 #push @names, "(dc_Unit, tc_Unit, undefined,\"void\",\"void\")\n";
 #push @names, "(undefined, tc_World__, undefined,\"void\",\"void\")\n";
-#push @names, "(\"Jhc.IO.World__\",\"void\",\"void\")";
+#push @names, "(\"Lhc.IO.World__\",\"void\",\"void\")";
 print "allCTypes = [\n   ", join("  ,",@names), " ]\n\n";
 
 print join("\n",map { $_->[1] } values %tcon) . "\n\n";

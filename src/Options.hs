@@ -190,7 +190,7 @@ postProcessFO o = case FlagOpts.process (optFOptsSet o) (optFOpts o) of
                         ++ unwords xs ++ "\nValid flags:\n\n" ++ FlagOpts.helpMsg)
 
 getArguments = do
-    x <- lookupEnv "JHCOPTS"
+    x <- lookupEnv "LHCOPTS"
     let eas = maybe [] words x
     as <- System.getArgs
     return (eas ++ as)
@@ -268,17 +268,17 @@ wdump f = when (dump f)
 flint :: Bool
 flint = FlagOpts.Lint `S.member` optFOptsSet options
 
--- | Include directories taken from JHCPATH enviroment variable.
+-- | Include directories taken from LHCPATH enviroment variable.
 initialIncludes :: [String]
 initialIncludes = unsafePerformIO $ do
-    p <- lookupEnv "JHCPATH"
+    p <- lookupEnv "LHCPATH"
     let x = maybe "" id p
     return (".":(tokens (== ':') x))
 
--- | Include directories taken from JHCLIBPATH enviroment variable.
+-- | Include directories taken from LHCLIBPATH enviroment variable.
 initialLibIncludes :: [String]
 initialLibIncludes = unsafePerformIO $ do
-    ps <- lookupEnv "JHCLIBPATH"
+    ps <- lookupEnv "LHCLIBPATH"
     h <- lookupEnv "HOME"
     l <- getAppUserDataDirectory "lhc"
     let paths = h ++ ["/usr/local","/usr"]

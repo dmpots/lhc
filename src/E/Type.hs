@@ -1,4 +1,4 @@
--- | The definitions related to jhc core
+-- | The definitions related to lhc core
 
 module E.Type where
 
@@ -22,9 +22,9 @@ import qualified Info.Info as Info
 
 {-@Internals
 
-# Jhc core normalized forms
+# Lhc core normalized forms
 
-Jhc core has a number of 'normalized forms' in which certain invarients are
+Lhc core has a number of 'normalized forms' in which certain invarients are
 met. many routines expect code to be in a certain form, and guarentee theier
 output is also in a given form. The type system also can change with each form
 by adding/removing terms from the PTS axioms and rules.

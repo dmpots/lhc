@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N #-}
+{-# OPTIONS_LHC -N #-}
 module Prelude.CType (
     isAscii, isLatin1, isControl, isPrint, isSpace, isUpper, isLower,
     isAlpha, isDigit, isOctDigit, isHexDigit, isAlphaNum,
@@ -6,12 +6,12 @@ module Prelude.CType (
     toUpper, toLower
     ) where
 
-import Jhc.Basics
-import Jhc.Order
-import Jhc.Num
+import Lhc.Basics
+import Lhc.Order
+import Lhc.Num
 import Data.Word
-import Jhc.IO
-import Jhc.List
+import Lhc.IO
+import Lhc.List
 
 -- Character-testing operations
 isAscii, isLatin1, isControl, isPrint, isSpace, isUpper, isLower,

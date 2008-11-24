@@ -42,7 +42,7 @@ type ChunkLength = Word
 -- the file's magic number is as follows:
 --
 -- 0x89      - high bit set, to check for 8 bit transmission errors and to avoid being treated as a text file
--- 3 bytes   - identifies the particular file format. i.e. 'PNG' or 'JHC'
+-- 3 bytes   - identifies the particular file format. i.e. 'PNG' or 'LHC'
 -- 0x0D 0x0A - DOS style line ending, to detect errors.
 -- 0x1A      - EOF marker, to avoid corrupting the screen when typed under dos/windows
 -- 0x0A      - unix EOL marker, to detect line conversion errors

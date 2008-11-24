@@ -1,7 +1,7 @@
-/* HsFFI.h for jhc */
+/* HsFFI.h for lhc */
 
-#ifndef _JHC_HSFFI_H
-#define _JHC_HSFFI_H
+#ifndef _LHC_HSFFI_H
+#define _LHC_HSFFI_H
 
 #include <inttypes.h>
 

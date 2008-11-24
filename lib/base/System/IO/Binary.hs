@@ -1,8 +1,8 @@
-{-# OPTIONS_JHC -fffi #-}
+{-# OPTIONS_LHC -fffi #-}
 module System.IO.Binary(readBinaryFile,putWord8,getWord8) where
 
 import Data.Word
-import Jhc.IO
+import Lhc.IO
 import Foreign.C.Types
 import Foreign.C.String
 import Foreign.Ptr

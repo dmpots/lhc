@@ -2,9 +2,9 @@
 
 # limits.h, float.h, inttypes.h
 
-# Jhc.Prim.Char, ubits32, char, UINT32_MAX, 0
-Jhc.Prim.Int, sbits32, int, INT_MAX, INT_MIN
-Jhc.Basics.Integer, sbits<max>, int, INTMAX_MAX, INTMAX_MIN
+# Lhc.Prim.Char, ubits32, char, UINT32_MAX, 0
+Lhc.Prim.Int, sbits32, int, INT_MAX, INT_MIN
+Lhc.Basics.Integer, sbits<max>, int, INTMAX_MAX, INTMAX_MIN
 
 Data.Int.Int8, sbits8, int, INT8_MAX, INT8_MIN
 Data.Int.Int16, sbits16, int, INT16_MAX, INT16_MIN
@@ -21,11 +21,11 @@ Data.Word.Word64, ubits64, int, UINT64_MAX, 0
 Data.Word.WordMax, ubits<max>, int, UINTMAX_MAX, 0
 Data.Word.WordPtr, ubits<ptr>, int, UINTPTR_MAX, 0
 
-#Jhc.Float.Float, fbits<float>, float, FLT_MAX, FLT_MIN
-#Jhc.Float.Double, fbits<double>, float, DBL_MAX, DBL_MIN
+#Lhc.Float.Float, fbits<float>, float, FLT_MAX, FLT_MIN
+#Lhc.Float.Double, fbits<double>, float, DBL_MAX, DBL_MIN
 
-#Jhc.Addr.Addr, ubits<ptr>, ptr,UINTPTR_MAX, 0
-#Jhc.Addr.FunAddr, ubits<ptr>, ptr,UINTPTR_MAX,0
+#Lhc.Addr.Addr, ubits<ptr>, ptr,UINTPTR_MAX, 0
+#Lhc.Addr.FunAddr, ubits<ptr>, ptr,UINTPTR_MAX,0
 
 Foreign.C.Types.CChar, sbits8, int, CHAR_MAX, CHAR_MIN
 Foreign.C.Types.CShort, sbits<short>, int, SHORT_MAX, SHORT_MIN

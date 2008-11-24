@@ -57,8 +57,8 @@ addr2Word__ x = int2Word# (addr2Int# x)
 word2Addr__ x = int2Addr# (word2Int# x)
 
 convertString :: [Char] -> ListTCon Char
-convertString [] = jhc_EmptyList
-convertString (x:xs) = jhc_Cons x (convertString xs)
+convertString [] = lhc_EmptyList
+convertString (x:xs) = lhc_Cons x (convertString xs)
 
 {-
 error__ :: Addr# -> a

@@ -7,7 +7,7 @@ open IN, "<$ARGV[0]";
 shift @ARGV;
 
 while (<IN>) {
-    /jhc_c_compile\[\] = \"(.*)\";/ or next;
+    /lhc_c_compile\[\] = \"(.*)\";/ or next;
     my $cmd = ("$1 " . (join " ",@ARGV));
     print "; $cmd\n";
     exec $cmd or die "can't exec";

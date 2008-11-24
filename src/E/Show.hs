@@ -59,7 +59,7 @@ newtype SEM a = SEM { _unSEM :: VarNameT E Id String Identity a }
 
 enumList = [
     (tc_Boolzh,["False#","True#"]),
-    (toName TypeConstructor ("Jhc.Order","Ordering#"),["LT#","EQ#","GT#"])
+    (toName TypeConstructor ("Lhc.Order","Ordering#"),["LT#","EQ#","GT#"])
     ]
 
 showLit ::

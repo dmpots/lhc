@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N -funboxed-tuples -fffi #-}
+{-# OPTIONS_LHC -N -funboxed-tuples -fffi #-}
 module Data.IORef(
     IORef(),	      -- abstract, instance of: Eq
     newIORef,	      -- :: a -> IO (IORef a)
@@ -8,10 +8,10 @@ module Data.IORef(
     atomicModifyIORef,-- :: IORef a -> (a -> (a,b)) -> IO b
     ) where
 
-import Jhc.Basics
-import Jhc.Order
-import Jhc.IO
-import Jhc.Int
+import Lhc.Basics
+import Lhc.Order
+import Lhc.IO
+import Lhc.Int
 
 data IORef a = IORef (Ref__ a)
 data Ref__ a :: #

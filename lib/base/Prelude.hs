@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -funboxed-tuples #-}
+{-# OPTIONS_LHC -funboxed-tuples #-}
 module Prelude(
     -- export everything here
     module Prelude,
@@ -37,11 +37,11 @@ module Prelude(
     sequence,
     sequence_,
     -- submodules
-    module Jhc.Basics,
-    module Jhc.Float,
-    module Jhc.Enum,
-    module Jhc.Order,
-    module Jhc.Show,
+    module Lhc.Basics,
+    module Lhc.Float,
+    module Lhc.Enum,
+    module Lhc.Order,
+    module Lhc.Show,
     Num(..),
     fromIntegral,
     elem,notElem,
@@ -52,7 +52,7 @@ module Prelude(
     Floating(..),
     RealFrac(properFraction,truncate,round,ceiling,floor),
     RealFloat(..),
-    module Jhc.Monad,
+    module Lhc.Monad,
     Int(),
 
     module Prelude.IO,
@@ -60,25 +60,25 @@ module Prelude(
     ) where
 
 
-import Jhc.Basics
-import Jhc.Float
+import Lhc.Basics
+import Lhc.Float
 import Data.Int(Int())
 
-import Jhc.Inst.Enum
-import Jhc.Inst.Read
-import Jhc.Inst.Show
-import Jhc.Inst.Storable
+import Lhc.Inst.Enum
+import Lhc.Inst.Read
+import Lhc.Inst.Show
+import Lhc.Inst.Storable
 
 import Data.Ratio
-import Jhc.Enum
-import Jhc.IO
-import Jhc.List
-import Jhc.Monad
-import Jhc.Num
-import Jhc.Order
-import Jhc.Show
-import Jhc.Maybe
-import Jhc.Tuples
+import Lhc.Enum
+import Lhc.IO
+import Lhc.List
+import Lhc.Monad
+import Lhc.Num
+import Lhc.Order
+import Lhc.Show
+import Lhc.Maybe
+import Lhc.Tuples
 import Prelude.Float
 import Prelude.IO
 import Prelude.IOError

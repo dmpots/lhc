@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N -fffi -funboxed-values #-}
+{-# OPTIONS_LHC -N -fffi -funboxed-values #-}
 module Prelude.IO(
     IO(),
     ioError,
@@ -23,12 +23,12 @@ module Prelude.IO(
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Ptr
-import Jhc.Addr
-import Jhc.Basics
-import Jhc.IO
-import Jhc.Monad
-import Jhc.Order
-import Jhc.Show
+import Lhc.Addr
+import Lhc.Basics
+import Lhc.IO
+import Lhc.Monad
+import Lhc.Order
+import Lhc.Show
 import Prelude.IOError
 
 
@@ -80,7 +80,7 @@ readFile fn = do
 
 foreign import ccall "stdio.h fopen" c_fopen :: CString -> CString -> IO (Ptr ())
 foreign import ccall "stdio.h fclose" c_fclose :: Ptr () -> IO CInt
-foreign import ccall "wchar.h jhc_utf8_getc" c_fgetwc :: Ptr () -> IO Int
+foreign import ccall "wchar.h lhc_utf8_getc" c_fgetwc :: Ptr () -> IO Int
 
 -- | The 'interact' function takes a function of type @String->String@
 -- as its argument.  The entire input from the standard input device is
@@ -125,7 +125,7 @@ getChar = do
 foreign import primitive "I2I" cwintToChar :: CWint -> Char
 foreign import primitive "U2U" charToCWchar :: Char -> CWchar
 
-foreign import ccall "stdio.h jhc_utf8_putchar" c_putwchar :: Int -> IO ()
-foreign import ccall "wchar.h jhc_utf8_getchar" c_getwchar :: IO Int
+foreign import ccall "stdio.h lhc_utf8_putchar" c_putwchar :: Int -> IO ()
+foreign import ccall "wchar.h lhc_utf8_getchar" c_getwchar :: IO Int
 
 

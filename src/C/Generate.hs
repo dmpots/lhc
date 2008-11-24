@@ -194,7 +194,7 @@ instance Draw Stmt where
     draw (SSwitch e ts) = text "switch" <+> parens (draw e) <+> char '{' <$> vcat (map sc ts) <$> md <$>  char '}' where
         sc (Just x,ss) = do ss <- draw (SBlock ss); x <- draw x; return $ text "case" <+> x <> char ':' $$ nest 4 (ss $$ text "break;")
         sc (Nothing,ss) = do ss <- draw (SBlock ss); return $ text "default:"  $$  ( nest 4 ss $$ text "break;")
-        md = if any isNothing (fsts ts) then empty else text "default: jhc_case_fell_off(__LINE__);"
+        md = if any isNothing (fsts ts) then empty else text "default: lhc_case_fell_off(__LINE__);"
 
 --subBlockBody s = draw s
 subBlockBody s = do

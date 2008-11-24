@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -fffi #-}
+{-# OPTIONS_LHC -fffi #-}
 module System.IO(
     BufferMode(..),
     Handle,
@@ -27,8 +27,8 @@ module System.IO(
 
     ) where
 
-import Jhc.IO
-import Jhc.Handle
+import Lhc.IO
+import Lhc.Handle
 import Prelude.IOError
 import Foreign.Ptr
 import Foreign.Storable
@@ -145,8 +145,8 @@ foreign import primitive "I2I" cwintToChar :: CWint -> Char
 
 foreign import ccall "stdio.h fflush" c_fflush :: Ptr Handle -> IO ()
 
-foreign import ccall "wchar.h jhc_utf8_getc" c_fgetwc :: Ptr Handle -> IO Int
-foreign import ccall "wchar.h jhc_utf8_putc" c_fputwc :: Int -> Ptr Handle -> IO Int
+foreign import ccall "wchar.h lhc_utf8_getc" c_fgetwc :: Ptr Handle -> IO Int
+foreign import ccall "wchar.h lhc_utf8_putc" c_fputwc :: Int -> Ptr Handle -> IO Int
 
 foreign import ccall "stdio.h feof" c_feof :: Ptr Handle -> IO CInt
 foreign import ccall "stdio.h ftell" c_ftell :: Ptr Handle -> IO IntMax                  -- XXX

@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -fffi #-}
+{-# OPTIONS_LHC -fffi #-}
 module Data.Dynamic(Dynamic,toDyn,fromDyn,fromDynamic,dynApply,dynApp) where
 
 

@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N -fffi #-}
+{-# OPTIONS_LHC -N -fffi #-}
 module Unsafe.Coerce(unsafeCoerce) where
 
 

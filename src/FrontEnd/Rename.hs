@@ -97,9 +97,9 @@ addTopLevels  hsDecls action = do
         nm = Map.fromList $ foldl f [] (fsts ns)
         tm = Map.fromList $ foldl f [] (fsts ts)
         f r hsName@Qual {}
-            | Just _ <- V.fromTupname hsName, Module "Jhc.Basics" <- mod
+            | Just _ <- V.fromTupname hsName, Module "Lhc.Basics" <- mod
                 = let nn = hsName in (nn,nn):r
-            | nameName tc_Arrow == hsName, Module "Jhc.Basics" == mod
+            | nameName tc_Arrow == hsName, Module "Lhc.Basics" == mod
                 = let nn = hsName in (nn,nn):r
             | otherwise = error $ "strong bad: " ++ show hsName
         f r z@(UnQual n) = let nn = Qual mod n in (z,nn):(nn,nn):r

@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N -fffi #-}
+{-# OPTIONS_LHC -N -fffi #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Foreign.C.String
@@ -88,11 +88,11 @@ module Foreign.C.String (   -- representation of strings in C
 
   ) where
 
-import Jhc.Basics
-import Jhc.Monad
-import Jhc.Order
-import Jhc.List
-import Jhc.Num
+import Lhc.Basics
+import Lhc.Monad
+import Lhc.Order
+import Lhc.List
+import Lhc.Num
 import Foreign.Marshal.Array
 import Foreign.C.Types
 import Foreign.Ptr

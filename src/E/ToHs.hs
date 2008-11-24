@@ -83,8 +83,8 @@ restate = vcat $ map f restated where
     g DataConstructor = empty
     g TypeConstructor = text "type "
     restated = [
-        (dc_Cons,0,"jhc_Cons"),
-        (dc_EmptyList,0,"jhc_EmptyList"),
+        (dc_Cons,0,"lhc_Cons"),
+        (dc_EmptyList,0,"lhc_EmptyList"),
         (tc_List,1,"ListTCon")
         ]
 

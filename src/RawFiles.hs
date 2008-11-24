@@ -5,10 +5,10 @@ module RawFiles where
 {-# NOINLINE hsffi_h #-}
 hsffi_h :: String
 hsffi_h = "\
- \/* HsFFI.h for jhc */\n\
+ \/* HsFFI.h for lhc */\n\
  \\n\
- \#ifndef _JHC_HSFFI_H\n\
- \#define _JHC_HSFFI_H\n\
+ \#ifndef _LHC_HSFFI_H\n\
+ \#define _LHC_HSFFI_H\n\
  \\n\
  \#include <inttypes.h>\n\
  \\n\
@@ -48,89 +48,89 @@ hsffi_h = "\
  \#endif\n\
  \"
 
--- | Generated from data\/rts\/jhc_rts.c on Tue Nov 18 04:44:37 CET 2008
-{-# NOINLINE jhc_rts_c #-}
-jhc_rts_c :: String
-jhc_rts_c = "\
+-- | Generated from data\/rts\/lhc_rts.c on Tue Nov 18 04:44:37 CET 2008
+{-# NOINLINE lhc_rts_c #-}
+lhc_rts_c :: String
+lhc_rts_c = "\
  \\n\
  \static void _amain(void);\n\
- \static void jhc_arch_assert(void);\n\
- \static int jhc_argc;\n\
- \static char **jhc_argv;\n\
- \static char *jhc_progname;\n\
- \static jmp_buf jhc_uncaught;\n\
+ \static void lhc_arch_assert(void);\n\
+ \static int lhc_argc;\n\
+ \static char **lhc_argv;\n\
+ \static char *lhc_progname;\n\
+ \static jmp_buf lhc_uncaught;\n\
  \\n\
- \static HsInt jhc_stdrnd[2] A_UNUSED = { 1 , 1 };\n\
+ \static HsInt lhc_stdrnd[2] A_UNUSED = { 1 , 1 };\n\
  \\n\
- \#if _JHC_PROFILE\n\
+ \#if _LHC_PROFILE\n\
  \\n\
- \static uintmax_t jhc_prof_function_calls;\n\
- \static uintmax_t jhc_prof_case_statements;\n\
- \static uintmax_t jhc_prof_updates;\n\
+ \static uintmax_t lhc_prof_function_calls;\n\
+ \static uintmax_t lhc_prof_case_statements;\n\
+ \static uintmax_t lhc_prof_updates;\n\
  \\n\
- \#define jhc_update_inc()   jhc_prof_updates++\n\
- \#define jhc_function_inc() jhc_prof_function_calls++\n\
- \#define jhc_case_inc()     jhc_prof_case_statements++\n\
+ \#define lhc_update_inc()   lhc_prof_updates++\n\
+ \#define lhc_function_inc() lhc_prof_function_calls++\n\
+ \#define lhc_case_inc()     lhc_prof_case_statements++\n\
  \\n\
  \#else\n\
  \\n\
- \#define jhc_update_inc()    do { } while(0)\n\
- \#define jhc_function_inc()  do { } while(0)\n\
- \#define jhc_case_inc()      do { } while(0)\n\
+ \#define lhc_update_inc()    do { } while(0)\n\
+ \#define lhc_function_inc()  do { } while(0)\n\
+ \#define lhc_case_inc()      do { } while(0)\n\
  \\n\
  \#endif\n\
  \\n\
  \static void A_COLD\n\
- \jhc_print_profile(void) {\n\
+ \lhc_print_profile(void) {\n\
  \        struct tms tm;\n\
  \        times(&tm);\n\
- \        if(!(_JHC_PROFILE || getenv(\"JHC_RTS_PROFILE\"))) return;\n\
+ \        if(!(_LHC_PROFILE || getenv(\"LHC_RTS_PROFILE\"))) return;\n\
  \\n\
  \        fprintf(stderr, \"\\n-----------------\\n\");\n\
- \        fprintf(stderr, \"Profiling: %s\\n\", jhc_progname);\n\
- \        fprintf(stderr, \"Command: %s\\n\", jhc_command);\n\
- \        fprintf(stderr, \"Complie: %s\\n\", jhc_c_compile);\n\
- \        fprintf(stderr, \"Version: %s\\n\\n\", jhc_version);\n\
- \        jhc_alloc_print_stats();\n\
+ \        fprintf(stderr, \"Profiling: %s\\n\", lhc_progname);\n\
+ \        fprintf(stderr, \"Command: %s\\n\", lhc_command);\n\
+ \        fprintf(stderr, \"Complie: %s\\n\", lhc_c_compile);\n\
+ \        fprintf(stderr, \"Version: %s\\n\\n\", lhc_version);\n\
+ \        lhc_alloc_print_stats();\n\
  \        float cpt = (float)sysconf(_SC_CLK_TCK);\n\
  \        fprintf(stderr, \"User Time:   %.2fs\\n\", (float)tm.tms_utime/cpt);\n\
  \        fprintf(stderr, \"System Time: %.2fs\\n\", (float)tm.tms_stime/cpt);\n\
  \        fprintf(stderr, \"Total Time:  %.2fs\\n\", (float)(tm.tms_stime + tm.tms_utime)/cpt);\n\
  \\n\
- \#if _JHC_PROFILE\n\
- \        fprintf(stderr, \"\\nFunction Calls:   %llu\\n\", (unsigned long long)jhc_prof_function_calls);\n\
- \        fprintf(stderr, \"Case Statements:  %llu\\n\", (unsigned long long)jhc_prof_case_statements);\n\
- \        fprintf(stderr, \"Updates:          %llu\\n\", (unsigned long long)jhc_prof_updates);\n\
+ \#if _LHC_PROFILE\n\
+ \        fprintf(stderr, \"\\nFunction Calls:   %llu\\n\", (unsigned long long)lhc_prof_function_calls);\n\
+ \        fprintf(stderr, \"Case Statements:  %llu\\n\", (unsigned long long)lhc_prof_case_statements);\n\
+ \        fprintf(stderr, \"Updates:          %llu\\n\", (unsigned long long)lhc_prof_updates);\n\
  \#endif\n\
  \        fprintf(stderr, \"-----------------\\n\");\n\
  \}\n\
  \\n\
  \\n\
  \static void A_NORETURN A_UNUSED A_COLD\n\
- \jhc_exit(int n) {\n\
- \        jhc_print_profile();\n\
+ \lhc_exit(int n) {\n\
+ \        lhc_print_profile();\n\
  \        exit(n);\n\
  \}\n\
  \\n\
  \static void  A_NORETURN A_UNUSED  A_COLD\n\
- \jhc_error(char *s) {\n\
+ \lhc_error(char *s) {\n\
  \        fputs(s,stderr);\n\
  \        fputs(\"\\n\",stderr);\n\
- \        jhc_print_profile();\n\
+ \        lhc_print_profile();\n\
  \        exit(255);\n\
  \}\n\
  \\n\
  \static void  A_NORETURN A_UNUSED  A_COLD\n\
- \jhc_case_fell_off(int n) {\n\
+ \lhc_case_fell_off(int n) {\n\
  \        fflush(stdout);\n\
  \        fprintf(stderr, \"\\n%s:%i: case fell off\\n\", __FILE__, n);\n\
  \        abort();\n\
  \}\n\
  \\n\
- \#define jhc_setjmp(jb) sigsetjmp(*(jmp_buf *)jb,0)\n\
- \#define jhc_longjmp(jb) siglongjmp(*(jmp_buf *)jb,1)\n\
+ \#define lhc_setjmp(jb) sigsetjmp(*(jmp_buf *)jb,0)\n\
+ \#define lhc_longjmp(jb) siglongjmp(*(jmp_buf *)jb,1)\n\
  \\n\
- \struct jhc_continuation {\n\
+ \struct lhc_continuation {\n\
  \    void *argument;\n\
  \    jmp_buf jump_buf;\n\
  \};\n\
@@ -141,25 +141,25 @@ jhc_rts_c = "\
  \\n\
  \\n\
  \inline static int A_UNUSED\n\
- \jhc_utf8_getchar(void)\n\
+ \lhc_utf8_getchar(void)\n\
  \{\n\
  \    return getchar_unlocked();\n\
  \}\n\
  \\n\
  \inline static int A_UNUSED\n\
- \jhc_utf8_getc(FILE *f)\n\
+ \lhc_utf8_getc(FILE *f)\n\
  \{\n\
  \    return getc_unlocked(f);\n\
  \}\n\
  \\n\
  \inline static int A_UNUSED\n\
- \jhc_utf8_putchar(int ch)\n\
+ \lhc_utf8_putchar(int ch)\n\
  \{\n\
  \    return putchar_unlocked(ch);\n\
  \}\n\
  \\n\
  \inline static int A_UNUSED\n\
- \jhc_utf8_putc(int ch, FILE *f)\n\
+ \lhc_utf8_putc(int ch, FILE *f)\n\
  \{\n\
  \    return putc_unlocked(ch,f);\n\
  \}\n\
@@ -178,17 +178,17 @@ jhc_rts_c = "\
  \        assert(CHAR_BIT == 8);\n\
  \        assert(EOF == -1);\n\
  \\n\
- \        jhc_arch_assert();\n\
- \        jhc_malloc_init();\n\
- \        jhc_argc = argc - 1;\n\
- \        jhc_argv = argv + 1;\n\
- \        jhc_progname = argv[0];\n\
+ \        lhc_arch_assert();\n\
+ \        lhc_malloc_init();\n\
+ \        lhc_argc = argc - 1;\n\
+ \        lhc_argv = argv + 1;\n\
+ \        lhc_progname = argv[0];\n\
  \        setlocale(LC_ALL,\"\");\n\
- \        if (sigsetjmp(jhc_uncaught,0))\n\
- \                jhc_error(\"Uncaught Exception\");\n\
+ \        if (sigsetjmp(lhc_uncaught,0))\n\
+ \                lhc_error(\"Uncaught Exception\");\n\
  \        else\n\
  \                _amain();\n\
- \        jhc_print_profile();\n\
+ \        lhc_print_profile();\n\
  \        return 0;\n\
  \}\n\
  \\n\
@@ -197,12 +197,12 @@ jhc_rts_c = "\
  \\n\
  \"
 
--- | Generated from data\/rts\/jhc_rts_header.h on Tue Nov 18 04:44:37 CET 2008
-{-# NOINLINE jhc_rts_header_h #-}
-jhc_rts_header_h :: String
-jhc_rts_header_h = "\
+-- | Generated from data\/rts\/lhc_rts_header.h on Tue Nov 18 04:44:37 CET 2008
+{-# NOINLINE lhc_rts_header_h #-}
+lhc_rts_header_h :: String
+lhc_rts_header_h = "\
  \\n\
- \// jhc_rts_header.h\n\
+ \// lhc_rts_header.h\n\
  \\n\
  \#include <stdlib.h>\n\
  \#include <stdio.h>\n\
@@ -220,24 +220,24 @@ jhc_rts_header_h = "\
  \\n\
  \// #define our options\n\
  \\n\
- \#define _JHC_GC_NONE  0\n\
- \#define _JHC_JGC      1\n\
- \#define _JHC_GC_BOEHM 2\n\
+ \#define _LHC_GC_NONE  0\n\
+ \#define _LHC_JGC      1\n\
+ \#define _LHC_GC_BOEHM 2\n\
  \\n\
  \\n\
- \#ifndef _JHC_GC\n\
- \#define _JHC_GC _JHC_GC_NONE\n\
+ \#ifndef _LHC_GC\n\
+ \#define _LHC_GC _LHC_GC_NONE\n\
  \#endif\n\
  \\n\
- \#ifndef _JHC_PROFILE\n\
- \#define _JHC_PROFILE 0\n\
+ \#ifndef _LHC_PROFILE\n\
+ \#define _LHC_PROFILE 0\n\
  \#endif\n\
  \\n\
- \#ifndef _JHC_DEBUG\n\
+ \#ifndef _LHC_DEBUG\n\
  \#ifdef NDEBUG\n\
- \#define _JHC_DEBUG 0\n\
+ \#define _LHC_DEBUG 0\n\
  \#else\n\
- \#define _JHC_DEBUG 1\n\
+ \#define _LHC_DEBUG 1\n\
  \#endif\n\
  \#endif\n\
  \\n\
@@ -356,22 +356,22 @@ wsize_h = "\
  \#endif\n\
  \"
 
--- | Generated from data\/rts\/jhc_rts_alloc.c on Tue Nov 18 04:44:37 CET 2008
-{-# NOINLINE jhc_rts_alloc_c #-}
-jhc_rts_alloc_c :: String
-jhc_rts_alloc_c = "\
+-- | Generated from data\/rts\/lhc_rts_alloc.c on Tue Nov 18 04:44:37 CET 2008
+{-# NOINLINE lhc_rts_alloc_c #-}
+lhc_rts_alloc_c :: String
+lhc_rts_alloc_c = "\
  \\n\
  \// some default definitions\n\
  \\n\
- \#define jhc_malloc_whnf jhc_malloc\n\
- \#define jhc_malloc_suspension jhc_malloc\n\
- \#define jhc_malloc_atomic jhc_malloc\n\
- \#define jhc_malloc_atomic_whnf jhc_malloc_atomic\n\
- \#define jhc_malloc_sanity(p,t) (1)\n\
+ \#define lhc_malloc_whnf lhc_malloc\n\
+ \#define lhc_malloc_suspension lhc_malloc\n\
+ \#define lhc_malloc_atomic lhc_malloc\n\
+ \#define lhc_malloc_atomic_whnf lhc_malloc_atomic\n\
+ \#define lhc_malloc_sanity(p,t) (1)\n\
  \\n\
  \extern void _start,_end;\n\
  \\n\
- \#if _JHC_PROFILE\n\
+ \#if _LHC_PROFILE\n\
  \\n\
  \#define BUCKETS 7\n\
  \\n\
@@ -408,71 +408,71 @@ jhc_rts_alloc_c = "\
  \\n\
  \#endif\n\
  \\n\
- \#if _JHC_GC == _JHC_GC_BOEHM\n\
+ \#if _LHC_GC == _LHC_GC_BOEHM\n\
  \\n\
  \#include <gc/gc.h>\n\
  \\n\
- \#define jhc_malloc GC_malloc\n\
- \#undef  jhc_malloc_atomic\n\
- \#define jhc_malloc_atomic GC_malloc_atomic\n\
- \#define jhc_free GC_free\n\
+ \#define lhc_malloc GC_malloc\n\
+ \#undef  lhc_malloc_atomic\n\
+ \#define lhc_malloc_atomic GC_malloc_atomic\n\
+ \#define lhc_free GC_free\n\
  \\n\
- \static inline void jhc_malloc_init(void) { GC_INIT(); }\n\
- \static inline void jhc_alloc_print_stats(void) { GC_dump(); }\n\
+ \static inline void lhc_malloc_init(void) { GC_INIT(); }\n\
+ \static inline void lhc_alloc_print_stats(void) { GC_dump(); }\n\
  \\n\
- \#elif _JHC_GC == _JHC_GC_NONE\n\
+ \#elif _LHC_GC == _LHC_GC_NONE\n\
  \\n\
  \// memory allocated in 1MB chunks.\n\
- \#define JHC_MEM_CHUNK_SIZE (1 << 20)\n\
+ \#define LHC_MEM_CHUNK_SIZE (1 << 20)\n\
  \\n\
- \static char initial_chunk[JHC_MEM_CHUNK_SIZE];\n\
+ \static char initial_chunk[LHC_MEM_CHUNK_SIZE];\n\
  \\n\
- \static void *jhc_current_chunk = initial_chunk;\n\
+ \static void *lhc_current_chunk = initial_chunk;\n\
  \static unsigned mem_chunks,mem_offset;\n\
  \\n\
  \\n\
  \static inline void\n\
- \jhc_malloc_init(void) { return; }\n\
+ \lhc_malloc_init(void) { return; }\n\
  \\n\
  \static void\n\
- \jhc_alloc_print_stats(void) {\n\
- \        fprintf(stderr, \"Memory Allocated: %u bytes\\n\", (JHC_MEM_CHUNK_SIZE*(mem_chunks)) + mem_offset);\n\
+ \lhc_alloc_print_stats(void) {\n\
+ \        fprintf(stderr, \"Memory Allocated: %u bytes\\n\", (LHC_MEM_CHUNK_SIZE*(mem_chunks)) + mem_offset);\n\
  \        print_alloc_size_stats();\n\
  \}\n\
  \\n\
  \static void\n\
- \jhc_malloc_grow(void) {\n\
- \        void *c = malloc(JHC_MEM_CHUNK_SIZE);\n\
+ \lhc_malloc_grow(void) {\n\
+ \        void *c = malloc(LHC_MEM_CHUNK_SIZE);\n\
  \        if(!c) {\n\
  \                fputs(\"Out of memory!\\n\",stderr);\n\
  \                abort();\n\
  \        }\n\
  \        mem_chunks++;\n\
- \        jhc_current_chunk = c;\n\
+ \        lhc_current_chunk = c;\n\
  \        mem_offset = 0;\n\
  \}\n\
  \\n\
  \static inline void * A_MALLOC\n\
- \jhc_malloc_basic(size_t n) {\n\
+ \lhc_malloc_basic(size_t n) {\n\
  \        n = ALIGN(sizeof(void *),n);\n\
- \        if (n > (JHC_MEM_CHUNK_SIZE - mem_offset))\n\
- \                jhc_malloc_grow();\n\
- \        void *ret = jhc_current_chunk + mem_offset;\n\
+ \        if (n > (LHC_MEM_CHUNK_SIZE - mem_offset))\n\
+ \                lhc_malloc_grow();\n\
+ \        void *ret = lhc_current_chunk + mem_offset;\n\
  \        mem_offset += n;\n\
  \        return ret;\n\
  \}\n\
  \\n\
  \\n\
- \#if _JHC_DEBUG\n\
+ \#if _LHC_DEBUG\n\
  \\n\
- \#define jhc_malloc(n) jhc_malloc_debug(n,__LINE__,0)\n\
- \#undef jhc_malloc_atomic\n\
- \#define jhc_malloc_atomic(n) jhc_malloc_debug(n,__LINE__,1)\n\
+ \#define lhc_malloc(n) lhc_malloc_debug(n,__LINE__,0)\n\
+ \#undef lhc_malloc_atomic\n\
+ \#define lhc_malloc_atomic(n) lhc_malloc_debug(n,__LINE__,1)\n\
  \\n\
  \static void * A_MALLOC\n\
- \jhc_malloc_debug(size_t n,int line,int atomic) {\n\
+ \lhc_malloc_debug(size_t n,int line,int atomic) {\n\
  \        alloc_count(n,atomic);\n\
- \        void *ret = jhc_malloc_basic(n + sizeof(uintptr_t));\n\
+ \        void *ret = lhc_malloc_basic(n + sizeof(uintptr_t));\n\
  \        *((uintptr_t *)ret) = line;\n\
  \        return ret + sizeof(uintptr_t);\n\
  \}\n\
@@ -480,22 +480,22 @@ jhc_rts_alloc_c = "\
  \#else\n\
  \\n\
  \static inline void * A_MALLOC\n\
- \jhc_malloc(size_t n) {\n\
+ \lhc_malloc(size_t n) {\n\
  \        alloc_count(n,0);\n\
- \        return jhc_malloc_basic(n);\n\
+ \        return lhc_malloc_basic(n);\n\
  \}\n\
  \\n\
- \#undef jhc_malloc_atomic\n\
+ \#undef lhc_malloc_atomic\n\
  \static inline void * A_MALLOC\n\
- \jhc_malloc_atomic(size_t n) {\n\
+ \lhc_malloc_atomic(size_t n) {\n\
  \        alloc_count(n,1);\n\
- \        return jhc_malloc_basic(n);\n\
+ \        return lhc_malloc_basic(n);\n\
  \}\n\
  \\n\
  \\n\
  \#endif\n\
  \\n\
- \#elif _JHC_GC == _JHC_GC_JGC\n\
+ \#elif _LHC_GC == _LHC_GC_JGC\n\
  \\n\
  \#error \"jgc not supported yet.\"\n\
  \\n\
@@ -506,10 +506,10 @@ jhc_rts_alloc_c = "\
  \\n\
  \"
 
--- | Generated from data\/rts\/jhc_rts2.c on Tue Nov 18 04:44:37 CET 2008
-{-# NOINLINE jhc_rts2_c #-}
-jhc_rts2_c :: String
-jhc_rts2_c = "\
+-- | Generated from data\/rts\/lhc_rts2.c on Tue Nov 18 04:44:37 CET 2008
+{-# NOINLINE lhc_rts2_c #-}
+lhc_rts2_c :: String
+lhc_rts2_c = "\
  \\n\
  \#define ISLAZY(x)    (((uintptr_t)(x)) & 0x1)\n\
  \#define DETAG(x)     ((uintptr_t)(x) & ~0x3)\n\
@@ -544,16 +544,16 @@ jhc_rts2_c = "\
  \\n\
  \# The Run Time System\n\
  \\n\
- \Jhc is very minimalist in that it does not have a precompiled run time system,\n\
+ \Lhc is very minimalist in that it does not have a precompiled run time system,\n\
  \but rather generates what is needed as part of the compilation process.\n\
  \However, we call whatever conventions and binary layouts used in the generated\n\
- \executable the run time system. Since jhc generates the code anew each time, it\n\
+ \executable the run time system. Since lhc generates the code anew each time, it\n\
  \can build a different 'run time' based on compiler options, trading things like\n\
  \the garbage collector as needed or changing the closure layout when we know we\n\
  \have done full program optimization. This describes the 'native' layout upon\n\
  \which other conventions are layered.\n\
  \\n\
- \A basic value in jhc is represented by a 'smart pointer' of c type sptr_t. a\n\
+ \A basic value in lhc is represented by a 'smart pointer' of c type sptr_t. a\n\
  \smart pointer is the size of a native pointer, but can take on different roles\n\
  \depending on a pair of tag bits.\n\
  \\n\
@@ -645,7 +645,7 @@ jhc_rts2_c = "\
  \        sptr_t rest[];\n\
  \} A_MAYALIAS dnode_t;\n\
  \\n\
- \#if _JHC_DEBUG\n\
+ \#if _LHC_DEBUG\n\
  \\n\
  \// these ensure the type synonyms are available to the debugger\n\
  \uintptr_t _dummy1;\n\
@@ -657,19 +657,19 @@ jhc_rts2_c = "\
  \\n\
  \\n\
  \static int A_UNUSED\n\
- \jhc_valid_whnf(wptr_t s)\n\
+ \lhc_valid_whnf(wptr_t s)\n\
  \{\n\
- \        return ((GETTAG(s) == P_VALUE) || ((GETTAG(s) == P_WHNF) && jhc_malloc_sanity(s,P_WHNF)));\n\
+ \        return ((GETTAG(s) == P_VALUE) || ((GETTAG(s) == P_WHNF) && lhc_malloc_sanity(s,P_WHNF)));\n\
  \}\n\
  \\n\
  \static int A_UNUSED\n\
- \jhc_valid_lazy(sptr_t s)\n\
+ \lhc_valid_lazy(sptr_t s)\n\
  \{\n\
- \        if(jhc_valid_whnf((wptr_t)s))\n\
+ \        if(lhc_valid_whnf((wptr_t)s))\n\
  \                return 1;\n\
  \        assert(GETTAG(s) == P_LAZY);\n\
  \        node_t *ds = (sptr_t)DETAG(s);\n\
- \        assert(jhc_malloc_sanity(ds,P_LAZY));\n\
+ \        assert(lhc_malloc_sanity(ds,P_LAZY));\n\
  \        if(ISLAZY(ds->head)) {\n\
  \                if(ds->head == BLACK_HOLE) return 1;\n\
  \                assert(GETTAG(ds->head) == P_FUNC);\n\
@@ -677,14 +677,14 @@ jhc_rts2_c = "\
  \                assert(dhead >= &_start && dhead < &_end);\n\
  \                return 1;\n\
  \        } else\n\
- \                return jhc_valid_whnf((wptr_t)ds->head);\n\
+ \                return lhc_valid_whnf((wptr_t)ds->head);\n\
  \}\n\
  \\n\
  \\n\
  \#else\n\
  \\n\
- \#define jhc_valid_whnf(x) 1\n\
- \#define jhc_valid_lazy(x) 1\n\
+ \#define lhc_valid_whnf(x) 1\n\
+ \#define lhc_valid_lazy(x) 1\n\
  \\n\
  \#endif\n\
  \\n\
@@ -698,7 +698,7 @@ jhc_rts2_c = "\
  \promote(sptr_t s)\n\
  \{\n\
  \        assert(!ISLAZY(s));\n\
- \        assert(jhc_valid_whnf((wptr_t)s));\n\
+ \        assert(lhc_valid_whnf((wptr_t)s));\n\
  \        return (wptr_t)s;\n\
  \}\n\
  \\n\
@@ -706,7 +706,7 @@ jhc_rts2_c = "\
  \demote(wptr_t s)\n\
  \{\n\
  \        assert(!ISLAZY(s));\n\
- \        assert(jhc_valid_whnf(s));\n\
+ \        assert(lhc_valid_whnf(s));\n\
  \        return (sptr_t)s;\n\
  \}\n\
  \\n\
@@ -714,7 +714,7 @@ jhc_rts2_c = "\
  \static inline wptr_t A_STD A_UNUSED  A_HOT\n\
  \follow(sptr_t s)\n\
  \{\n\
- \        assert(jhc_valid_lazy(s));\n\
+ \        assert(lhc_valid_lazy(s));\n\
  \        if(ISLAZY(s)) {\n\
  \                sptr_t h = (sptr_t)(GETHEAD(DETAG(s)));\n\
  \                assert(!ISLAZY(h));\n\
@@ -726,7 +726,7 @@ jhc_rts2_c = "\
  \static inline wptr_t A_STD A_UNUSED  A_HOT\n\
  \eval(sptr_t s)\n\
  \{\n\
- \        assert(jhc_valid_lazy(s));\n\
+ \        assert(lhc_valid_lazy(s));\n\
  \        if(ISLAZY(s)) {\n\
  \                assert(GETTAG(s) == P_LAZY);\n\
  \                void *ds = (void *)DETAG(s);\n\
@@ -734,18 +734,18 @@ jhc_rts2_c = "\
  \                assert(h != BLACK_HOLE);\n\
  \                if(ISLAZY(h)) {\n\
  \                        eval_fn fn = (eval_fn)DETAG(h);\n\
- \#if _JHC_DEBUG\n\
+ \#if _LHC_DEBUG\n\
  \                        GETHEAD(ds) = BLACK_HOLE;\n\
  \#endif\n\
  \                        wptr_t r = (*fn)(NODEP(ds));\n\
- \#if _JHC_DEBUG\n\
+ \#if _LHC_DEBUG\n\
  \                        assert(GETHEAD(ds) != BLACK_HOLE);\n\
  \#endif\n\
  \                        return r;\n\
  \                }\n\
  \                return (wptr_t)h;\n\
  \        }\n\
- \        assert(jhc_valid_whnf((wptr_t)s));\n\
+ \        assert(lhc_valid_whnf((wptr_t)s));\n\
  \        return (wptr_t)s;\n\
  \}\n\
  \\n\
@@ -753,7 +753,7 @@ jhc_rts2_c = "\
  \static inline void A_STD A_UNUSED A_HOT\n\
  \update(sptr_t thunk, wptr_t new)\n\
  \{\n\
- \        jhc_update_inc();\n\
+ \        lhc_update_inc();\n\
  \        assert(GETHEAD(thunk) == BLACK_HOLE);\n\
  \        assert(!ISLAZY(new));\n\
  \        GETHEAD(thunk) = (fptr_t)new;\n\
@@ -827,8 +827,8 @@ viaghc_hs = "\
  \word2Addr__ x = int2Addr# (word2Int# x)\n\
  \\n\
  \convertString :: [Char] -> ListTCon Char\n\
- \convertString [] = jhc_EmptyList\n\
- \convertString (x:xs) = jhc_Cons x (convertString xs)\n\
+ \convertString [] = lhc_EmptyList\n\
+ \convertString (x:xs) = lhc_Cons x (convertString xs)\n\
  \\n\
  \{-\n\
  \error__ :: Addr# -> a\n\

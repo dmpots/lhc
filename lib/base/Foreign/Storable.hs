@@ -1,10 +1,10 @@
-{-# OPTIONS_JHC -N #-}
+{-# OPTIONS_LHC -N #-}
 module Foreign.Storable(Storable(..)) where
 
-import Jhc.Basics
-import Jhc.Addr
-import Jhc.Int
-import Jhc.IO
+import Lhc.Basics
+import Lhc.Addr
+import Lhc.Int
+import Lhc.IO
 
 plusPtr :: Ptr a -> Int -> Ptr b
 plusPtr (Ptr addr) off = Ptr (plusAddr addr off)

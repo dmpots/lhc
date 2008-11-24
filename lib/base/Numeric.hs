@@ -13,7 +13,7 @@ import Prelude.CType   ( isDigit, isOctDigit, isHexDigit
 import Data.Ratio  ( (%), numerator, denominator )
 --import Array  ( (!), Array, array )
 import Prelude.Text
-import Jhc.Text.Read
+import Lhc.Text.Read
 
 -- This converts a rational to a floating.  This should be used in the
 -- Fractional instances of Float and Double.

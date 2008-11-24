@@ -650,7 +650,7 @@ parseInteger radix ds =
 	foldl1 (\n d -> n * radix + d) (map (toInteger . digitToInt) ds)
 
 -- pragmas for which we just want the raw contents of
-pragmas_raw = [["OPTIONS", "JHC_OPTIONS", "OPTIONS_JHC" ]]
+pragmas_raw = [["OPTIONS", "LHC_OPTIONS", "OPTIONS_LHC" ]]
 
 -- pragmas which just have a simple string based start rule.
 pragmas_std = [
@@ -664,7 +664,7 @@ pragmas_std = [
 
 -- pragmas with a special starting token
 pragmas_parsed = [
-    (["RULES","RULE","RULES_JHC","RULE_JHC"],PragmaRules False),
+    (["RULES","RULE","RULES_LHC","RULE_LHC"],PragmaRules False),
     (["CATALYST","CATALYSTS"],PragmaRules True),
     (["SPECIALIZE", "SPECIALISE"],PragmaSpecialize False),
     (["SUPERSPECIALIZE", "SUPERSPECIALISE"],PragmaSpecialize True)

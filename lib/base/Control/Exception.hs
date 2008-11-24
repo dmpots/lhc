@@ -1,4 +1,4 @@
--- | This is mostly dummy, JHC does not support inexact exceptions.
+-- | This is mostly dummy, LHC does not support inexact exceptions.
 
 module Control.Exception where
 

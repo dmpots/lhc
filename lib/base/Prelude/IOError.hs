@@ -1,8 +1,8 @@
-{-# OPTIONS_JHC -N #-}
+{-# OPTIONS_LHC -N #-}
 module Prelude.IOError(IOError(),showIOError,userError) where
 
-import Jhc.IO
-import Jhc.Show
+import Lhc.IO
+import Lhc.Show
 
 instance Show IOError where
     showsPrec _ s = showString (showIOError s)

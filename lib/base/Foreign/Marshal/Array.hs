@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N  #-}
+{-# OPTIONS_LHC -N  #-}
 module Foreign.Marshal.Array (
   -- * Marshalling arrays
 
@@ -52,12 +52,12 @@ import Foreign.Marshal.Alloc
 import Foreign.Marshal.Utils
 import Foreign.Ptr
 import Foreign.Storable
-import Jhc.Basics
-import Jhc.IO
-import Jhc.List
-import Jhc.Monad
-import Jhc.Num
-import Jhc.Order
+import Lhc.Basics
+import Lhc.IO
+import Lhc.List
+import Lhc.Monad
+import Lhc.Num
+import Lhc.Order
 import Prelude.IOError
 
 -- allocation

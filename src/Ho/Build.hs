@@ -74,7 +74,7 @@ import qualified Codec.Binary.UTF8.String as UTF8
 --
 -- ho files are standard CFF format files (PNG-like) as described in the Support.CFF modules.
 --
--- the CFF magic for the files is the string "JHC"
+-- the CFF magic for the files is the string "LHC"
 --
 -- JHDR - header info, contains a list of modules contained and dependencies that need to be checked to read the file
 -- LIBR - only present if this is a library, contains library metainfo
@@ -87,7 +87,7 @@ import qualified Codec.Binary.UTF8.String as UTF8
 --
 --
 
-cff_magic = chunkType "JHC"
+cff_magic = chunkType "LHC"
 cff_rdrt  = chunkType "RDRT"
 cff_jhdr  = chunkType "JHDR"
 cff_core  = chunkType "CORE"
@@ -520,7 +520,7 @@ recordHoFile ho idep fs header = do
 
 
 
-hsModuleRequires x = Module "Jhc.Prim":ans where
+hsModuleRequires x = Module "Lhc.Prim":ans where
     noPrelude =   or $ not (optPrelude options):[ opt == c | opt <- hsModuleOptions x, c <- ["-N","--noprelude"]]
     ans = snub $ (if noPrelude then id else  (Module "Prelude":)) [  hsImportDeclModule y | y <- hsModuleImports x]
 
@@ -532,7 +532,7 @@ searchPaths m = ans where
 
 
 m4Prelude :: IO FilePath
-m4Prelude = writeFile "/tmp/jhc_prelude.m4" prelude_m4 >> return "/tmp/jhc_prelude.m4"
+m4Prelude = writeFile "/tmp/lhc_prelude.m4" prelude_m4 >> return "/tmp/lhc_prelude.m4"
 
 langmap = [
     "m4" ==> "m4",
@@ -549,13 +549,13 @@ parseHsSource fn lbs = do
     let f s = opt where
             Just opt = fileOptions opts `mplus` Just options
             popts = parseOptions $ if "shl." `isPrefixOf` reverse fn  then unlit fn s else s
-            opts' = concat [ words as | (x,as) <- popts, x `elem` ["OPTIONS","JHC_OPTIONS","OPTIONS_JHC"]]
+            opts' = concat [ words as | (x,as) <- popts, x `elem` ["OPTIONS","LHC_OPTIONS","OPTIONS_LHC"]]
             opts = opts' ++ [ "--noprelude" | ("NOPRELUDE",_) <- popts] ++ langs
             langs = catMaybes $ map (flip lookup langmap) $ concat [ words (map (\c -> if c == ',' then ' ' else toLower c) as) | ("LANGUAGE",as) <- popts ]
     let fopts s = s `member` optFOptsSet initialOpts
         initialOpts = f (take 4096 txt)
         incFlags = [ "-I" ++ d | d <- optIncdirs options ++ optIncs initialOpts]
-        defFlags = ("-D__JHC__=" ++ revision):[ "-D" ++ d | d <- optDefs initialOpts]
+        defFlags = ("-D__LHC__=" ++ revision):[ "-D" ++ d | d <- optDefs initialOpts]
 
     s <- case () of
         _ | fopts FO.Cpp -> readSystem "cpp" $ ["-CC","-traditional"] ++ incFlags ++ defFlags ++ [fn]
@@ -623,7 +623,7 @@ buildLibrary ifunc func = ans where
         let outName = case optOutName options of
                 "hs.out" -> name ++ ".hl"
                 fn -> fn
-        let pdesc = [(n, packString v) | (n,v) <- ("jhc-hl-filename",outName):("jhc-description-file",fp):("jhc-compiled-by",versionString):desc, n /= "exposed-modules" ]
+        let pdesc = [(n, packString v) | (n,v) <- ("lhc-hl-filename",outName):("lhc-description-file",fp):("lhc-compiled-by",versionString):desc, n /= "exposed-modules" ]
         let hoh =  HoHeader {
                 hohHash = lhash,
                 hohDepends = [ (m,Nothing) | m <- Set.toList prvds ],

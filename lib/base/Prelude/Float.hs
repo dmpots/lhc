@@ -1,14 +1,14 @@
-{-# OPTIONS_JHC -N -fffi -fm4  #-}
+{-# OPTIONS_LHC -N -fffi -fm4  #-}
 
 module Prelude.Float(readDouble,doubleToDigits,doubleToRational) where
 
-import Jhc.Order
-import Jhc.Basics
-import Jhc.Monad
-import Jhc.IO
-import Jhc.Float
-import Jhc.Num
-import Jhc.Types
+import Lhc.Order
+import Lhc.Basics
+import Lhc.Monad
+import Lhc.IO
+import Lhc.Float
+import Lhc.Num
+import Lhc.Types
 import Data.Word
 import Foreign.Storable
 import Foreign.C.Types
@@ -16,7 +16,7 @@ import Foreign.Ptr
 import Foreign.Marshal.Alloc
 import Numeric
 import Prelude.Text
-import Jhc.List
+import Lhc.List
 import Prelude((^),(^^),elem,take)
 
 

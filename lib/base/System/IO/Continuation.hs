@@ -1,7 +1,7 @@
 module System.IO.Continuation(IOCont(),newContinuation,callContinuation) where
 
-import Jhc.JumpPoint
-import Jhc.Hole
+import Lhc.JumpPoint
+import Lhc.Hole
 
 data IOCont s a = IOCont (Hole a) JumpPoint
 

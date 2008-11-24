@@ -62,7 +62,7 @@ instance FromTupname String where
     fromTupname xs = fail $ "fromTupname: not tuple " ++ xs
 
 instance FromTupname (String,String) where
-    fromTupname ("Jhc.Basics",n) = fromTupname n
+    fromTupname ("Lhc.Basics",n) = fromTupname n
     fromTupname xs =  fail $ "fromTupname: not tuple " ++ show xs
 
 
@@ -73,7 +73,7 @@ instance ToTuple String where
     toTuple n = '(': replicate (n - 1) ',' ++ ")"
 
 instance ToTuple (String,String) where
-    toTuple n = ("Jhc.Basics",toTuple n)
+    toTuple n = ("Lhc.Basics",toTuple n)
 
 
 

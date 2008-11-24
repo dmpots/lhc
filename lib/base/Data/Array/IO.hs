@@ -1,11 +1,11 @@
-{-# OPTIONS_JHC -N -funboxed-tuples -fffi #-}
+{-# OPTIONS_LHC -N -funboxed-tuples -fffi #-}
 module Data.Array.IO where
 
-import Jhc.Basics
+import Lhc.Basics
 import Data.Ix
-import Jhc.Array
-import Jhc.IO
-import Jhc.Int
+import Lhc.Array
+import Lhc.IO
+import Lhc.Int
 import Data.Array
 
 data IOArray a b = IOA !a !a (MutArray__ b)
