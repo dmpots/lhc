@@ -13,7 +13,7 @@ author:              John Meacham, David Himmelstrup
 maintainer:          lemmih@gmail.com
 homepage:            http://lhc.seize.it/
 build-type:          Custom
-Extra-Source-Files:  cbits/_stdint.h, cbits/config.h, src/StringTable/StringTable_cbits.h, arch/generic.arch
+Extra-Source-Files:  cbits/_stdint.h, cbits/config.h, arch/generic.arch
                      arch/i686.arch, arch/x86_64.arch
 
 
