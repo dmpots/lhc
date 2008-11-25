@@ -37,7 +37,7 @@ Executable lhc
                       UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
                       OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards, TemplateHaskell
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
-                      binary, directory, haskeline, random, regex-compat,
+                      binary >= 0.4.4, directory, haskeline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
                       utf8-string, stringtable-atom, derive >= 0.1.4,
                       filepath
