@@ -1,0 +1,14 @@
+== 0.6.*
+* No longer uses autoconf etc - we have a cabal build system.
+* Now uses the stringtable-atom package from hackage,
+  although ultimately we would like to delete this dependency
+  entirely.
+* Now uses utf8-string from hackage.
+* Now uses pureMD5 from hackage.
+* Now requires binary >= 0.4.4
+* Now uses haskeline from hackage for the (dull) interactive mode
+  instead of readline.
+* We now use the derive package >= 0.1.4 instead of DrIFT,
+  because derive allows us to use template haskell, thus avoiding
+  a need for preprocessing.
+* Random code cleanups, etc.
