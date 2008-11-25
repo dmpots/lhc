@@ -180,6 +180,7 @@ sortTermLike e = sortTypeLike (getType e)
 
 withContextDoc s a = withContext (render s) a
 
+-- Lemmih 08.11.25: Why use a list instead of map? This list is always null, btw.
 -- | Perform a full typecheck, evaluating type terms as necessary.
 
 inferType :: ContextMonad String m => DataTable -> [(TVr,E)] -> E -> m E
