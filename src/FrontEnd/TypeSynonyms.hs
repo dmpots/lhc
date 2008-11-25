@@ -23,15 +23,15 @@ import FrontEnd.HsSyn
 import Name.Name
 import Util.HasSize
 import FrontEnd.Warning
-import Data.Binary
+import Support.MapBinaryInstance
 
 
 newtype TypeSynonyms = TypeSynonyms (Map.Map Name ([HsName], HsType, SrcLoc))
     deriving(Monoid,HasSize)
 
 instance Binary TypeSynonyms where
-    put (TypeSynonyms ts) = put ts
-    get = fmap TypeSynonyms get
+    put (TypeSynonyms ts) = putMap ts
+    get = fmap TypeSynonyms getMap
 
 restrictTypeSynonyms :: (Name -> Bool) -> TypeSynonyms -> TypeSynonyms
 restrictTypeSynonyms f (TypeSynonyms fm) = TypeSynonyms (Map.filterWithKey (\k _ -> f k) fm)

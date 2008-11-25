@@ -76,7 +76,7 @@ Executable lhc
   Ho.Binary Ho.Build Ho.Library Ho.Type Info.Binary Info.Info Info.Types Info.Properties
   Name.Prim Name.Binary Name.Id Name.Name Name.Names Name.VConsts
   Support.Tuple Support.CFF Support.FreeVars Support.CanType Support.ShowTable
-  Support.Tickle Support.Transform Support.Unparse  Util.Graph
+  Support.Tickle Support.Transform Support.Unparse Support.MapBinaryInstance Util.Graph
   Util.Gen Util.ArbitraryInstances Util.BitSet Util.BooleanSolver Util.ContextMonad
   Util.FilterInput Util.ReaderWriter Util.Graphviz Util.HasSize Util.Histogram
   Util.Inst Util.IntBag Util.Interact Util.NameMonad Util.Once Util.Perhaps

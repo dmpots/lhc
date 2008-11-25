@@ -33,7 +33,7 @@ import E.Subst
 import E.Values
 import GenUtil
 import Info.Types
-import Data.Binary
+import Support.MapBinaryInstance()
 import Name.Id
 import Name.Name
 import Name.Names

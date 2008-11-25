@@ -40,7 +40,7 @@ import FrontEnd.SrcLoc
 import FrontEnd.Tc.Type
 import FrontEnd.Utils
 import FrontEnd.HsSyn
-import Data.Binary
+import Support.MapBinaryInstance
 import Maybe
 import Monad
 import Name.Name
@@ -146,8 +146,8 @@ newtype ClassHierarchy = ClassHierarchy (Map.Map Class ClassRecord)
     deriving (HasSize)
 
 instance Binary ClassHierarchy where
-    get = fmap ClassHierarchy get
-    put (ClassHierarchy ch) = put ch
+    get = fmap ClassHierarchy getMap
+    put (ClassHierarchy ch) = putMap ch
 
 instance Monoid ClassHierarchy where
     mempty = ClassHierarchy mempty

@@ -24,7 +24,7 @@ import qualified Data.Map as Map
 
 import Util.HasSize
 import FrontEnd.HsSyn
-import Data.Binary
+import Support.MapBinaryInstance
 import Name.Name
 
 ----------------------------------------------------------------------------
@@ -36,8 +36,8 @@ newtype FixityMap = FixityMap SymbolMap
     deriving(Monoid,HasSize)
 
 instance Binary FixityMap where
-    put (FixityMap ts) = put ts
-    get = fmap FixityMap get
+    put (FixityMap ts) = putMap ts
+    get = fmap FixityMap getMap
 
 restrictFixityMap :: (Name -> Bool) -> FixityMap -> FixityMap
 restrictFixityMap f (FixityMap fm) = FixityMap (Map.filterWithKey (\k _ -> f k) fm)

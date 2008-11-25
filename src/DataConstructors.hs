@@ -65,7 +65,7 @@ import FrontEnd.Tc.Type
 import GenUtil
 import FrontEnd.HsSyn
 import Info.Types
-import Data.Binary
+import Support.MapBinaryInstance
 import Name.Id
 import Name.Name as Name
 import Name.Names
@@ -173,8 +173,8 @@ newtype DataTable = DataTable {
     }
 
 instance Binary DataTable where
-    put (DataTable dt) = put dt
-    get = fmap DataTable get
+    put (DataTable dt) = putMap dt
+    get = fmap DataTable getMap
 
 emptyConstructor = Constructor {
                 conName = error "emptyConstructor.conName",
