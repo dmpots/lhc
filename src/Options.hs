@@ -38,8 +38,7 @@ import Data.Derive.All
 import Util.Gen
 import qualified FlagDump
 import qualified FlagOpts
-import Version.Config
-import Version.Version(versionString)
+import LHCVersion
 
 data Mode = BuildHl String -- ^ Build the specified hl-file given a description file.
           | Interactive    -- ^ Run interactively.

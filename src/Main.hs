@@ -65,7 +65,7 @@ import Support.CanType(getType)
 import Support.Transform
 import Util.Graph
 import Util.SetLike as S
-import Version.Version(versionString,versionSimple)
+import LHCVersion
 import qualified C.FromGrin2 as FG2
 import qualified E.CPR
 import qualified E.Demand as Demand(analyzeProgram)

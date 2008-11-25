@@ -43,7 +43,7 @@ import FrontEnd.TypeSynonyms(showSynonym)
 import FrontEnd.TypeSyns
 import FrontEnd.TypeSigs
 import Util.Interact
-import Version.Version(versionString)
+import LHCVersion(versionString)
 import FrontEnd.Warning
 
 printDoc doc = do

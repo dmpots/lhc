@@ -78,7 +78,4 @@ Executable lhc
   Util.FilterInput Util.ReaderWriter Util.Graphviz Util.HasSize Util.Histogram
   Util.Inst Util.IntBag Util.Interact Util.NameMonad Util.Once Util.Perhaps
   Util.RWS Util.Relation Util.SameShape Util.Seq Util.SetLike Util.TrueSet
-  Util.UnionFind Util.UnionSolve Util.UniqueMonad Util.VarName Util.Util Version.Version
-  Version.Config
-
-
+  Util.UnionFind Util.UnionSolve Util.UniqueMonad Util.VarName Util.Util LHCVersion

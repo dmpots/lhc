@@ -60,8 +60,7 @@ import Support.CFF
 import Util.FilterInput
 import Util.Gen hiding(putErrLn,putErr,putErrDie)
 import Util.SetLike
-import Version.Version(versionString)
-import Version.Config(revision)
+import LHCVersion
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified FlagDump as FD
