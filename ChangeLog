@@ -1,5 +1,7 @@
 == 0.6.*
 * No longer uses autoconf etc - we have a cabal build system.
+* The E simplifier is now O(n) instead of O(n^2) - this cuts down
+  build time.
 * Now uses the stringtable-atom package from hackage,
   although ultimately we would like to delete this dependency
   entirely.
