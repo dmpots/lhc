@@ -48,7 +48,13 @@ eval term = eval' term []  where
 
 
 
-
+{- Lemmih 08.11.26:
+'dsMap' is the current scope with known bindings.
+Inline all lets and perform beta reduction.
+Invariants:
+  All variables must be unique. No shadowing is allowed.
+  All variables must be named.
+-}
 strong :: Monad m => [(TVr,E)] -> E -> m E
 strong dsMap' term = eval' dsMap term [] where
     dsMap = Map.fromList dsMap'
