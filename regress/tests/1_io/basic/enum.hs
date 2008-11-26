@@ -4,6 +4,7 @@ import Data.Word
 data Day = Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday
     deriving(Eq,Ord,Enum,Show,Bounded)
 
+main :: IO ()
 main = do
     print (False,True)
     print (fromEnum False, fromEnum True)

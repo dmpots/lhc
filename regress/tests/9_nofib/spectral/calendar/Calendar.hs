@@ -2,10 +2,10 @@
 -- of Bird and Wadler's ``Introduction to functional programming'', with
 -- two ways of printing the calendar ... as in B+W, or like UNIX `cal':
 
-import IO -- 1.3
+import System.IO -- 1.3
 import System -- 1.3
-import List -- 1.3
-import Char -- 1.3
+import Data.List -- 1.3
+import Data.Char -- 1.3
 
 
 -- Picture handling:

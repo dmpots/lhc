@@ -49,16 +49,16 @@ my $pwd = cwd();
 
 # figure out where we are
 
-my ($regress_dir,$jhc_dir);
+my ($regress_dir,$lhc_dir);
 
 
 
 if (-d "tests" && -d "results") {
     $regress_dir = ".";
-    $jhc_dir = "..";
+    $lhc_dir = "../dist/build/lhc";
 } elsif (-d "regress" && -f "Makefile") {
     $regress_dir = "regress";
-    $jhc_dir = "."
+    $lhc_dir = "."
 } else { die "could not figure out where I am" }
 
 my $test_dir = "$regress_dir/tests";
@@ -68,8 +68,8 @@ my $time = `date +%Y%m%d%H%M%S`;
 chomp $time;
 
 
-my $jhc_version = `$jhc_dir/jhc --version`;
-$? == 0 or die "Could not run $jhc_dir/jhc --version";
+my $lhc_version = `$lhc_dir/lhc --version`;
+$? == 0 or die "Could not run $lhc_dir/lhc --version";
 
 my $rd = "$results_dir/$time";
 mkdir $rd or die "$!: could not make $rd";
@@ -85,7 +85,7 @@ mkdir $ho_dir;
 open RLOG, ">$rd/log.txt" or die "$!: Could not open log";
 
 rlog("$now_string");
-rlog("$jhc_version");
+rlog("$lhc_version");
 rlog("regress ", join " ", @saved_args) if @saved_args;
 rlog("-----------------------------------");
 
@@ -154,13 +154,13 @@ sub do_it {
                 }
             }
             rlog "-- $name";
-            my @libs = $opt_l ? () : ("--noauto", "-i$jhc_dir/lib/base","-i$jhc_dir/lib/haskell98");
+            my @libs = $opt_l ? () : ("", "-i../lib/base/dist/build");
             my @fast = $opt_n ? () : ("-flint");
-            my @jhc  = $opt_p ? ("$jhc_dir/jhcp","+RTS", "-S$rd/$name.jhcp_prof",@opt_rts,"-RTS")  :  ("$jhc_dir/jhc");
-            my @cmd = (@jhc, "-v", '--ho-dir', $ho_dir, @libs , @fast, "-o", "$rd/$name", @flags, @opts, "$cwd/$fn");
-            my $res = join(" ",@cmd) . " > '$rd/$name.jhc_out' 2>&1";
+            my @lhc  = $opt_p ? ("$lhc_dir/lhcp","+RTS", "-S$rd/$name.lhcp_prof",@opt_rts,"-RTS")  :  ("$lhc_dir/lhc");
+            my @cmd = (@lhc, "", '--ho-dir', $ho_dir, @libs , @fast, "-o", "$rd/$name", @flags, @opts, "$cwd/$fn");
+            my $res = join(" ",@cmd) . " > '$rd/$name.lhc_out' 2>&1";
             my ($r,$time) = my_system $res;
-            my $result = { name => $name, compile_command => $res, compile_status => $r, compile_results => "$rd/$name.jhc_out", compile_time => $time };
+            my $result = { name => $name, compile_command => $res, compile_status => $r, compile_results => "$rd/$name.lhc_out", compile_time => $time };
             push @res, $result;
             unless($r == 0) {
                 rlog "Compilation Failed: $r";
@@ -209,7 +209,7 @@ sub done {
     }
     rlog("-----------------------------------");
     rlog("$now_string");
-    rlog("$jhc_version");
+    rlog("$lhc_version");
     rlog("regress ", join " ", @saved_args) if @saved_args;
     rlog "\n--------------------------------------------------------------------";
 

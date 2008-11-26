@@ -1,5 +1,5 @@
 
-import System
+import System.IO
 
 suCC :: Int -> Int
 suCC x = x + 1
