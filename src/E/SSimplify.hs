@@ -650,7 +650,7 @@ simplifyDs prog sopts dsIn = ans where
   Remove the default case if possible.
   case lst of [] -> True; _ -> False
   ==>
-  case lst of [] -> True; (:) _ _ -> False
+  case lst of [] -> True; (:) uniq1 uniq2 -> False
 -}
             doCase e t b as (Just d) | te /= tWorld__, (ELit LitCons { litName = cn }) <- followAliases dt te
                                      , Just Constructor { conChildren = DataNormal cs } <- getConstructor cn dt
