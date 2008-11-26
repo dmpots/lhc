@@ -1,3 +1,12 @@
+{-
+ We can't use the standard instances for serializing maps containing
+ Atoms or Ids. Atoms are compared using their unique  id which depends
+ on the order in which they were created. This completely invalidates
+ the standard map instances which rely on
+ 'fromAscDistinctList . toAscDistinctList = id' to be true.
+ Once we've gotten rid of StringTable.Atoms, we can get rid of this
+ module as well.
+-}
 module Support.MapBinaryInstance where
 
 
