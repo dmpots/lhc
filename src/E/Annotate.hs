@@ -74,6 +74,15 @@ annotateProgram imap idann letann lamann prog = do
 
 type AM m = ReaderT (IdMap (Maybe E)) m
 
+{-
+ This function seems to do two distinct tasks:
+  1) variable substitution.
+  2) annotate TVars in lambdas and lets.
+ Why can't we do this in two separate passes?
+
+ Invariants:
+   'imap' may only contain top-level decls.
+-}
 annotate :: Monad m =>
     (IdMap (Maybe E))
     -> (Id -> Info -> m Info)   -- ^ annotate based on Id map
