@@ -34,6 +34,8 @@ data CollectedHo = CollectedHo {
     choExternalNames :: IdSet,
     choCombinators  :: IdMap Comb,
     -- this is a map of ids to their full TVrs with all rules and whatnot attached.
+    -- 'choVarMap' will never contain any Nothing elements. The Maybe is only there
+    -- because the map is handed over to 'E.Annotate.annotateDs'.
     choVarMap :: IdMap (Maybe E),
     -- these are rules that may need to be retroactively applied to other modules
     choOrphanRules :: Rules,
