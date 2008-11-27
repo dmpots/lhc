@@ -252,7 +252,12 @@ processDecls cho ho' tiData = do
     ds <- return $ ds ++ nds
     wdump FD.CoreInitial $
         mapM_ (\(v,lc) -> printCheckName'' fullDataTable v lc) ds
+
+    -- The only thing this will do is simple variable substitution.
+    -- '\a -> \a -> a'  =>  '\a -> \b -> b'.
+    -- I don't think any functions depends on such shadowing to be removed.
     ds <- annotateDs mempty (\_ nfo -> return nfo) (\_ nfo -> return nfo) (\_ nfo -> return nfo) ds
+
     wdump FD.CoreInitial $
         mapM_ (\(v,lc) -> printCheckName'' fullDataTable v lc) ds
 
