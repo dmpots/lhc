@@ -106,7 +106,7 @@ showLit showBind l = do
 
 app = bop (L,100) (text " ")
 appCon = bop (L,99) (text " ")
-col n x = attrColor (attr oob) n x
+col n x = attrColor attr n x
 attr = if dump FD.Html then html else ansi
 
 showI i = do
@@ -255,7 +255,7 @@ subSEM (SEM act) = SEM $ subVarName act
 retOp x = col "lightgreen" x
 inhabit = bop (N,-2) $ retOp UC.coloncolon
 bold :: Doc -> Doc
-bold = attrBold (attr oob)
+bold = attrBold attr
 
 ePretty e = unparse pe where
     (SEM pe') = showE e

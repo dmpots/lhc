@@ -25,7 +25,7 @@ import System.Posix.Files
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Text.PrettyPrint.HughesPJ as PPrint
+import qualified Text.PrettyPrint.ANSI.Leijen as PPrint
 
 import Data.DeriveTH
 import Data.Derive.All
@@ -705,7 +705,7 @@ dumpHoFile fn = do
          putChar '\n'
     wdump FD.Types $ do
         putStrLn " ---- the types of identifiers ---- "
-        putStrLn $ PPrint.render $ pprint (hoAssumps hoB)
+        putStrLn $ show (pprint (hoAssumps hoB) :: PPrint.Doc)
     wdump FD.Core $ do
         putStrLn " ---- lambdacube  ---- "
         mapM_ (\ (v,lc) -> putChar '\n' >> printCheckName'' (hoDataTable hoB) v lc) (hoEs hoB)
@@ -713,5 +713,5 @@ dumpHoFile fn = do
     printCheckName'' :: DataTable -> TVr -> E -> IO ()
     printCheckName'' _dataTable tvr e = do
         when (dump FD.EInfo || verbose2) $ putStrLn (show $ tvrInfo tvr)
-        putStrLn (render $ hang 4 (pprint tvr <+> text "::" <+> pprint (tvrType tvr)))
-        putStrLn (render $ hang 4 (pprint tvr <+> equals <+> pprint e))
+        putStrLn (show (hang 4 (pprint tvr <+> text "::" <+> pprint (tvrType tvr)) :: PPrint.Doc))
+        putStrLn (show (hang 4 (pprint tvr <+> equals <+> pprint e) :: PPrint.Doc))

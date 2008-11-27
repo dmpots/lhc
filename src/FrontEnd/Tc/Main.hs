@@ -6,7 +6,7 @@ import IO(hFlush,stdout)
 import List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Text.PrettyPrint.HughesPJ as P
+import qualified Text.PrettyPrint.ANSI.Leijen as P
 
 import Control.Monad.Reader
 import FrontEnd.DeclsDepends(getDeclDeps)

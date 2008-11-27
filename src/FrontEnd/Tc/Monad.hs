@@ -61,7 +61,6 @@ import Maybe
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import System
-import Text.PrettyPrint.HughesPJ(Doc)
 
 
 import StringTable.Atom
@@ -504,8 +503,8 @@ elimBox mv = error $ "elimBox: nonboxy" ++ show mv
 -- Declaration of instances, boilerplate
 ----------------------------------------
 
-pretty  :: PPrint Doc a => a -> String
-pretty x  = show (pprint x :: Doc)
+--pretty  :: PPrint Doc a => a -> String
+--pretty x  = show (pprint x :: Doc)
 
 instance Monad Tc where
     return a = Tc $ return a

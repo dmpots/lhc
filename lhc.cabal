@@ -37,7 +37,7 @@ Executable lhc
                       binary >= 0.4.4, directory, haskeline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
                       utf8-string, stringtable-atom, derive >= 0.1.4,
-                      filepath
+                      filepath, ansi-wl-pprint >= 0.5.0, ansi-terminal >= 0.5.0
 
 
  if flag(base4)

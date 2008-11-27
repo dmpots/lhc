@@ -16,7 +16,7 @@ import List(isPrefixOf)
 import Maybe
 import Prelude
 import qualified Data.Map as Map
-import qualified Text.PrettyPrint.HughesPJ as PPrint
+import qualified Text.PrettyPrint.ANSI.Leijen as PPrint
 
 import C.FFI
 import C.Prims as CP
@@ -219,7 +219,7 @@ createInstanceRules dataTable classHierarchy funcs = return $ fromRules ans wher
                     Just (deftvr,_) | null vs -> foldl EAp (EAp (EVar deftvr) vp) (map EVar args)
                     Just (deftvr,_) -> eLet tv vp $ foldl EAp (EAp (EVar deftvr) (EVar tv)) (map EVar args) where
                         tv = tvr { tvrIdent = head [ n | n <- newIds (freeVars vp)], tvrType = getType vp }
-                    Nothing -> foldl EAp (EError ( show methodName ++ ": undefined at type " ++  PPrint.render (pprint t)) (eAp ty (fst $ valToPat' (tipe t)))) (map EVar args)
+                    Nothing -> foldl EAp (EError ( show methodName ++ ": undefined at type " ++  show (pprint t :: PPrint.Doc)) (eAp ty (fst $ valToPat' (tipe t)))) (map EVar args)
     method _ _ = []
     nfuncs = runIdentity $ do
         let f d@(v,_) = case fromId (tvrIdent v) of

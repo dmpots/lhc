@@ -21,7 +21,7 @@ module FrontEnd.HsPretty (PPLayout(..),PPHsMode(..),
 		) where
 
 import Char
-import qualified Text.PrettyPrint.HughesPJ as P
+import qualified Text.PrettyPrint.ANSI.Leijen as P
 
 import Doc.PPrint(pprint)
 import FlagDump as FD
@@ -151,19 +151,19 @@ equals = return P.equals
 -- Combinators
 --
 instance DocLike Doc where
-    aM <> bM = do{a<-aM;b<-bM;return (a P.<> b)}
-    aM <+> bM = do{a<-aM;b<-bM;return (a P.<+> b)}
-    aM <$> bM = do{a<-aM;b<-bM;return (a P.$$ b)}
-    hcat dl = sequence dl >>= return . P.hcat
-    hsep dl = sequence dl >>= return . P.hsep
-    vcat dl = sequence dl >>= return . P.vcat
+    aM <> bM = do{a<-aM;b<-bM;return (a <> b)}
+    aM <+> bM = do{a<-aM;b<-bM;return (a <+> b)}
+    aM <$> bM = do{a<-aM;b<-bM;return (a <$> b)}
+    hcat dl = sequence dl >>= return . hcat
+    hsep dl = sequence dl >>= return . hsep
+    vcat dl = sequence dl >>= return . vcat
 
 ($$) :: Doc -> Doc -> Doc
-aM $$ bM = do{a<-aM;b<-bM;return (a P.$$ b)}
+aM $$ bM = do{a<-aM;b<-bM;return (a <$> b)}
 
 
 fsep :: [Doc] -> Doc
-fsep dl = sequence dl >>= return . P.fsep
+fsep dl = sequence dl >>= return . P.sep -- FIXME: Text.PrettyPrinter.ANSI.Leijen doesn't have fsep.
 
 
 -- Yuk, had to cut-n-paste this one from Pretty.hs
@@ -178,7 +178,7 @@ punctuate p (d:ds) = go d ds
 
 -- this is the equivalent of runM now.
 renderWithMode :: PPHsMode -> Doc -> String
-renderWithMode ppMode d = P.render . unDocM d $ ppMode
+renderWithMode ppMode d = show . unDocM d $ ppMode
 
 render :: Doc -> String
 render = renderWithMode defaultMode

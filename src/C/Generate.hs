@@ -78,7 +78,7 @@ import Data.List(intersperse)
 import Data.Maybe(isNothing)
 import Data.Monoid
 import Numeric
-import Text.PrettyPrint.HughesPJ(Doc,render,nest,($$),($+$))
+import Text.PrettyPrint.ANSI.Leijen(Doc,nest,(<$$>))
 import qualified Data.Foldable as Seq
 import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
@@ -88,6 +88,8 @@ import qualified Data.Set as Set
 import Doc.DocLike
 import Util.Gen
 import Util.SetLike
+
+($+$) = (<$$>)
 
 data Env = Env {
     envUsedLabels :: Set.Set Name,
@@ -192,8 +194,8 @@ instance Draw Stmt where
         els <- subBlockBody els
         return $ text "if" <+> parens exp <+> lbrace <$> nest 4 thn <$> rbrace <+> text "else" <+> lbrace <$> nest 4 els <$> rbrace
     draw (SSwitch e ts) = text "switch" <+> parens (draw e) <+> char '{' <$> vcat (map sc ts) <$> md <$>  char '}' where
-        sc (Just x,ss) = do ss <- draw (SBlock ss); x <- draw x; return $ text "case" <+> x <> char ':' $$ nest 4 (ss $$ text "break;")
-        sc (Nothing,ss) = do ss <- draw (SBlock ss); return $ text "default:"  $$  ( nest 4 ss $$ text "break;")
+        sc (Just x,ss) = do ss <- draw (SBlock ss); x <- draw x; return $ text "case" <+> x <> char ':' <$$> nest 4 (ss <$$> text "break;")
+        sc (Nothing,ss) = do ss <- draw (SBlock ss); return $ text "default:"  <$$>  ( nest 4 ss <$$> text "break;")
         md = if any isNothing (fsts ts) then empty else text "default: lhc_case_fell_off(__LINE__);"
 
 --subBlockBody s = draw s
@@ -205,7 +207,7 @@ subBlockBody s = do
     uv' <- forM [ (x,t) | (x,t) <- snubUnder vcmp uv, (x /= toName "v0") && (x `Set.notMember` is)] $ \ (n,t) -> do
         t <- draw t
         return $ t <+> tshow n <> semi
-    return $ vcat uv' $$ body
+    return $ vcat uv' <$$> body
 
 instance Draw E where
     draw (ED g) = g
@@ -500,10 +502,10 @@ drawFunction f = do
         return $ t <+> n
     let fas' = if null fas then [text "void"] else fas
         proto = static <+> frt <+> name <> tupled fas' <> parms <> semi
-        proto' = static <+> frt <> parms $$ name <> tupled fas'
+        proto' = static <+> frt <> parms <$$> name <> tupled fas'
         static = if Public `elem` functionOptions f then empty else text "static"
         parms = char ' ' <> hsep [ text s | Attribute s <- functionOptions f]
-    return (proto, proto' $+$ lbrace $+$ nest 8 (vcat uv' $$ body) $+$ rbrace)
+    return (proto, proto' $+$ lbrace $+$ nest 8 (vcat uv' <$$> body) $+$ rbrace)
 
 -- types
 anonStructType :: [Type] -> Type
@@ -592,7 +594,7 @@ generateC fs ss = ans where
         let (protos,bodys) = unzip fs
         let shead = vcat [ text "struct" <+> tshow (structureName s) <> (if structureAligned s then text " A_ALIGNED" else empty) <> text ";" | s <- ss ]
         shead2 <- declStructs ss
-        return (shead $$ line $$ shead2, vcat protos $$ line $$  vsep bodys)
+        return (shead <$$> line <$$> shead2, vcat protos <$$> line <$$>  vsep bodys)
     ((hd,fns),(_,ass),_written) = runRWS ga emptyEnv (1,Map.empty)
 
     anons = [ basicStructure { structureName = n, structureFields = fields ts }  | (ts,n) <- Map.toList ass ] where
@@ -600,7 +602,7 @@ generateC fs ss = ans where
         fields ts = [ (name ('t':show tn),t) | t <- ts | tn <- [0::Int .. ]]
     G anons' = declStructs anons
     (anons'',_,_) = runRWS anons' emptyEnv (1,Map.empty)
-    ans = (hd $$ anons'',fns)
+    ans = (hd <$$> anons'',fns)
 
     declStructs ss = liftM vsep $ forM ss $ \ s@Structure { structureName = n, structureFields = ts } -> do
         let tsort [] = []
@@ -621,7 +623,7 @@ generateC fs ss = ans where
         ts' <- forM (tsort ts) $ \ (n,t) -> do
             t <- draw t
             return $ t <+> tshow n <> semi
-        return $ text "struct" <+> tshow n <+> lbrace $$ nest 4 (vcat $ (if structureNeedsDiscriminator s  then text "what_t what;" else empty):ts') $$ rbrace <> semi
+        return $ text "struct" <+> tshow n <+> lbrace <$$> nest 4 (vcat $ (if structureNeedsDiscriminator s  then text "what_t what;" else empty):ts') <$$> rbrace <> semi
 
 
 line = text ""
@@ -631,7 +633,7 @@ vsep xs = vcat $ intersperse line xs
 instance Show Expression where
     show e = renderG e
 
-renderG x = render $ drawG x
+renderG x = show $ drawG x
 
 drawG :: Draw d => d -> Doc
 drawG x = fns where

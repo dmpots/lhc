@@ -26,9 +26,8 @@ import Control.Monad.Writer
 import Data.Monoid
 import Data.Generics
 import Data.List(nub)
-import Text.PrettyPrint.HughesPJ(render,Doc())
+import Text.PrettyPrint.ANSI.Leijen(Doc())
 import qualified Data.Map as Map
-import qualified Text.PrettyPrint.HughesPJ as PPrint
 import Debug.Trace
 
 import Data.Binary
@@ -165,7 +164,7 @@ asksClassRecord (ClassHierarchy ch) cn f = case Map.lookup cn ch of
     Just n -> f n
 
 showInst :: Inst -> String
-showInst = PPrint.render . pprint
+showInst x = show (pprint x :: Doc)
 
 
 aHsTypeSigToAssumps :: KindEnv -> HsDecl -> [(Name,Type)]
@@ -218,7 +217,7 @@ printClassHierarchy (ClassHierarchy h) = mapM_ printClassDetails $  Map.toList h
             putStr $ "method signatures:"
             pnone methodAssumps $ putStr $ "\n" ++ (unlines $ map pretty methodAssumps)
             putStr $ "associated types:"
-            pnone assocs $  putStrLn $ "\n" ++ (unlines $ map (render . passoc) assocs)
+            pnone assocs $  putStrLn $ "\n" ++ (unlines $ map (show . passoc) assocs)
         when (isClassAliasRecord cr) $ do
             putStr $ "alias for:"
             pnone classes $ do putStrLn $ " " ++ (intercalate " " (map show classes))
@@ -226,7 +225,7 @@ printClassHierarchy (ClassHierarchy h) = mapM_ printClassDetails $  Map.toList h
     pnone [] f = putStrLn " none"
     pnone xs f = f
     passoc (nk,as,mt) = text "type" <+> pprint nk <+> hsep (map pprint as) <> case mt of
-        Nothing -> empty
+        Nothing -> empty :: Doc
         Just s -> text " = " <> pprint s
 
 
@@ -561,7 +560,7 @@ showListAndSepInWidth f width sep things = unlines $ groupStringsToWidth width n
    newThings = (map ((\t -> t ++ sep).f) (init things)) ++ [f (last things)]
 
 pretty  :: PPrint Doc a => a -> String
-pretty   = render . pprint
+pretty x = show (pprint x :: Doc)
 
 nameOfTyCon :: NameType -> HsType -> Name
 nameOfTyCon t (HsTyCon n) = toName t n

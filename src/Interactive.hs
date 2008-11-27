@@ -11,7 +11,7 @@ import List(sort)
 import Maybe
 import Monad
 import qualified Data.Map as Map
-import qualified Text.PrettyPrint.HughesPJ as P
+import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Text.Regex
 --import Text.Regex.Posix(regcomp,regExtended)
 
@@ -38,7 +38,6 @@ import Name.Name
 import Options
 import qualified FrontEnd.Infix
 import qualified FrontEnd.HsPretty as HsPretty
-import qualified Text.PrettyPrint.HughesPJ as PP
 import FrontEnd.TypeSynonyms(showSynonym)
 import FrontEnd.TypeSyns
 import FrontEnd.TypeSigs

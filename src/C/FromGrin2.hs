@@ -8,11 +8,11 @@ import Data.List
 import Data.Char
 import Data.Maybe
 import Data.Monoid
-import Text.PrettyPrint.HughesPJ(nest,($$))
+import Text.PrettyPrint.ANSI.Leijen(nest,(<$$>))
 import Text.Printf
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Text.PrettyPrint.HughesPJ as P
+import qualified Text.PrettyPrint.ANSI.Leijen as P
 
 import Data.DeriveTH
 import Data.Derive.All
@@ -39,7 +39,6 @@ import Util.Gen
 import Util.UniqueMonad
 import qualified Cmm.Op as Op
 import qualified FlagOpts as FO
-
 
 ---------------
 -- C Monad
@@ -97,14 +96,14 @@ localTodo todo (C act) = C $ local (\ r -> r { rTodo = todo }) act
 
 {-# NOINLINE compileGrin #-}
 compileGrin :: Grin -> (String,[String])
-compileGrin grin = (hsffi_h ++ lhc_rts_header_h ++ lhc_rts_alloc_c ++ lhc_rts_c ++ lhc_rts2_c ++ generateArchAssertions ++ P.render ans ++ "\n", snub (reqLibraries req))  where
-    ans = vcat $ includes ++ [text "", enum_tag_t, header, cafs,buildConstants grin finalHcHash, body]
+compileGrin grin = (hsffi_h ++ lhc_rts_header_h ++ lhc_rts_alloc_c ++ lhc_rts_c ++ lhc_rts2_c ++ generateArchAssertions ++ show ans ++ "\n", snub (reqLibraries req))  where
+    ans = vcat $ includes ++ [text "", enum_tag_t, header, cafs,buildConstants grin finalHcHash, body] :: P.Doc
     includes =  map include (snub $ reqIncludes req)
     include fn = text "#include <" <> text fn <> text ">"
     (header,body) = generateC (Map.elems fm) (Map.elems sm)
     ((),finalHcHash,Written { wRequires = req, wFunctions = fm, wEnums = wenum, wStructures = sm, wTags = ts }) = runC grin go
     enum_tag_t | null enums = mempty
-               | otherwise  = text "enum {" $$ nest 4 (P.vcat (punctuate P.comma $ enums)) $$ text "};"
+               | otherwise  = text "enum {" <$$> nest 4 (P.vcat (punctuate P.comma $ enums)) <$$> text "};"
         where
             f t n = tshow t <> text " = " <> tshow (n :: Int)
             enums =  map (uncurry f) (Map.toList wenum) ++ (zipWith f (Set.toList (Set.map nodeTagName ts)) [0 ..])
@@ -119,7 +118,7 @@ compileGrin grin = (hsffi_h ++ lhc_rts_header_h ++ lhc_rts_alloc_c ++ lhc_rts_c 
         mapM_ tellAllTags [ v  | (HcNode _ vs,_) <- hconsts, Left v <- vs]
         mapM_ declareStruct  (Set.toList tset)
         mapM_ tellTags (Set.toList $ tset `mappend` tset')
-    cafs = text "/* CAFS */" $$ (vcat $ map ccaf (grinCafs grin))
+    cafs = text "/* CAFS */" <$$> (vcat $ map ccaf (grinCafs grin))
 
 convertFunc :: Maybe (FfiExport, ([ExtType], ExtType)) -> (Atom,Lam) -> C [Function]
 convertFunc ffie (n,as :-> body) = do
@@ -551,7 +550,7 @@ convertExp Alloc { expValue = v, expCount = c, expRegion = r } | r == region_hea
 convertExp e = return (err (show e),err "nothing")
 
 ccaf :: (Var,Val) -> P.Doc
-ccaf (v,val) = text "/* " <> text (show v) <> text " = " <> (text $ P.render (pprint val)) <> text "*/\n" <>
+ccaf (v,val) = text "/* " <> text (show v) <> text " = " <> (text $ show (pprint val :: P.Doc)) <> text "*/\n" <>
      text "static node_t _" <> tshow (varName v) <> text ";\n" <>
      text "#define " <> tshow (varName v) <+>  text "(EVALTAGC(&_" <> tshow (varName v) <> text "))\n";
 
@@ -559,7 +558,7 @@ ccaf (v,val) = text "/* " <> text (show v) <> text " = " <> (text $ P.render (pp
 buildConstants grin fh = P.vcat (map cc (Grin.HashConst.toList fh)) where
     tyenv = grinTypeEnv grin
     comm nn = text "/* " <> tshow (nn) <> text " */"
-    cc nn@(HcNode a zs,i) = comm nn $$ cd $$ def where
+    cc nn@(HcNode a zs,i) = comm nn <$$> cd <$$> def where
         cd = text "static const struct" <+> tshow (nodeStructName a) <+> text "_c" <> tshow i <+> text "= {" <> hsep (punctuate P.comma (ntag ++ rs)) <> text "};"
         Just TyTy { tySiblings = sibs } = findTyTy tyenv a
         ntag = case sibs of

@@ -37,7 +37,6 @@ import Data.DeriveTH
 import Data.Derive.All
 import Control.Monad.Identity
 import Data.IORef
-import Text.PrettyPrint.HughesPJ(Doc)
 
 import StringTable.Atom
 import Data.Binary

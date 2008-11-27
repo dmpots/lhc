@@ -6,7 +6,7 @@ import IO
 import List
 import Maybe
 import Monad
-import Text.PrettyPrint.HughesPJ as PPrint
+import Text.PrettyPrint.ANSI.Leijen as PPrint
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -65,7 +65,8 @@ isGlobal x |  (_,(_::String,(h:_))) <- fromName x =  not $ isDigit h
 isGlobal _ = error "isGlobal"
 
 
-
+render :: Doc -> String
+render = show
 
 buildFieldMap :: Ho -> [ModInfo] -> FieldMap
 buildFieldMap ho ms = (ans',ans) where
@@ -73,7 +74,6 @@ buildFieldMap ho ms = (ans',ans) where
         allDefs = theDefs ++ [ (x,z) | (x,(_,z)) <- Map.toList (hoDefs $ hoExp ho), nameType x == DataConstructor ]
         ans = Map.fromList $ sortGroupUnderFG fst snd $ concat [ [ (y,(x,i)) |  y <- ys | i <- [0..] ]  | (x,ys) <-  allDefs ]
         ans' = Map.fromList $ concatMap modInfoConsArity ms ++ getConstructorArities (hoDataTable $ hoBuild ho)
-
 
 processModule :: FieldMap -> ModInfo -> IO ModInfo
 processModule defs m = do
@@ -138,7 +138,7 @@ tiModules' cho ms = do
 
     when (dump FD.Kind) $
          do {putStrLn " \n ---- kind information ---- \n";
-             putStrLn $ PPrint.render $ pprint kindInfo}
+             putStrLn $ render $ pprint kindInfo }
 
     -- collect types for data constructors
 
@@ -176,7 +176,7 @@ tiModules' cho ms = do
     when (not (null liftedInstances) && (dump FD.Instance) ) $ do
         putStrLn "  ---- lifted instance declarations ---- "
         putStr $ unlines $ map (HsPretty.render . HsPretty.ppHsDecl) liftedInstances
-        putStrLn $ PPrint.render $ pprintEnvMap instanceEnv
+        putStrLn $ render $ pprintEnvMap instanceEnv
 
 
     let funPatBinds =  [ d | d <- ds, or' [isHsFunBind, isHsPatBind, isHsForeignDecl, isHsActionDecl] d]
@@ -192,7 +192,7 @@ tiModules' cho ms = do
     let sigEnv = Map.unions [listSigsToSigEnv kindInfo allTypeSigs,instanceEnv, classEnv]
     when (dump FD.Sigenv) $
          do {putStrLn "  ---- initial sigEnv information ---- ";
-             putStrLn $ PPrint.render $ pprintEnvMap sigEnv}
+             putStrLn $ render $ pprintEnvMap sigEnv}
     let bindings = (funPatBinds ++  liftedInstances)
         --classDefaults  = snub [ getDeclName z | z <- cDefBinds, isHsFunBind z || isHsPatBind z ]
         classNoDefaults = snub (concat [ getDeclNames z | z <- cDefBinds ]) -- List.\\ classDefaults
@@ -208,13 +208,13 @@ tiModules' cho ms = do
     let program = makeProgram sigEnv programBgs
     when (dump FD.Program) $ do
         putStrLn " ---- Program ---- "
-        mapM_ putStrLn $ map (PPrint.render . PPrint.pprint) $  program
+        mapM_ putStrLn $ map (render . PPrint.pprint) $  program
 
     -- type inference/checking for all variables
 
     when (dump FD.AllTypes) $ do
         putStrLn "  ---- all types ---- "
-        putStrLn $ PPrint.render $ pprintEnvMap (sigEnv `mappend` localDConsEnv `mappend` hoAssumps hoB)
+        putStrLn $ render $ pprintEnvMap (sigEnv `mappend` localDConsEnv `mappend` hoAssumps hoB)
 
     wdump FD.Progress $ do
         putErrLn $ "Type inference"

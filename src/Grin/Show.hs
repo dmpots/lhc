@@ -57,8 +57,8 @@ prettyVals xs = tupled (map prettyVal xs)
 attr = if dump FD.Html then html else ansi
 
 bold :: Doc -> Doc
-bold = attrBold (attr oob)
-color n x = attrColor (attr oob) n x
+bold = attrBold attr
+color n x = attrColor attr n x
 
 --color :: Int -> Doc -> Doc
 --color 1 doc = oob (attr [1]) <> doc <> oob (attr [0])
