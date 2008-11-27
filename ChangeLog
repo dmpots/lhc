@@ -13,4 +13,5 @@
 * We now use the derive package >= 0.1.4 instead of DrIFT,
   because derive allows us to use template haskell, thus avoiding
   a need for preprocessing.
+* Now uses ansi-terminal and ansi-wl-pprint from hackage.
 * Random code cleanups, etc.
