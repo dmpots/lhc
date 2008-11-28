@@ -1,6 +1,6 @@
 cabal-version:       >= 1.2
 name:                lhc
-version:             0.6.20081123
+version:             0.6.20081127
 synopsis:            LHC Haskell Compiler
 description:
   lhc is a haskell compiler which aims to produce the most efficient programs possible via whole
