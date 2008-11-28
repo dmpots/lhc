@@ -1,17 +1,19 @@
 -- | Defines some info about the compiler
 module LHCVersion where
 import Data.Version
+import Data.List
 import System.Info
+import qualified Paths_lhc as P
 
 package        = "lhc"
-shortVersion   = "0.6"
-revision       = "20081123"
-version        = concat [shortVersion,".",revision]
-tag            = "ryu"
+tag            = "kami"
+version        = showVersion P.version
+shortVersion   = concat $ intersperse "." $ map show $ init $ versionBranch P.version
+revision       = show $ tail $ versionBranch P.version
 
 -- | Simple version string
 {-# NOINLINE versionSimple #-}
-versionSimple = concat [package, " ", version, " (", tag, ")"]
+versionSimple = unwords [package, version, "("++tag++")"]
 
 -- | Full version string containing OS/compiler info
 {-# NOINLINE versionString #-}
