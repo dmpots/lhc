@@ -189,8 +189,8 @@ nameToEntryPoint dataTable main cname ffi ds = ans where
 
 
 {-# NOINLINE createInstanceRules #-}
-createInstanceRules :: Monad m => DataTable -> ClassHierarchy -> [(TVr,E)] -> m Rules
-createInstanceRules dataTable classHierarchy funcs = return $ fromRules ans where
+createInstanceRules :: DataTable -> ClassHierarchy -> [(TVr,E)] -> Rules
+createInstanceRules dataTable classHierarchy funcs = fromRules ans where
     ans = concatMap cClass (classRecords classHierarchy)
     cClass classRecord =  concat [ method classRecord n | (n,TForAll _ (_ :=> t)) <- classAssumps classRecord ]
     method classRecord methodName | isJust _methodName = as where
@@ -264,7 +264,7 @@ instance GenName String where
    genNames i = map (('x':) . show) [i..]
 
 {-# NOINLINE convertRules #-}
-convertRules :: Module -> TiData -> ClassHierarchy -> Map.Map Name Type -> DataTable -> [HsDecl] -> IO Rules
+convertRules :: Monad m => Module -> TiData -> ClassHierarchy -> Map.Map Name Type -> DataTable -> [HsDecl] -> m Rules
 convertRules mod tiData classHierarchy assumps dataTable hsDecls = ans where
     ans = do
         rawRules <- concatMapM g hsDecls
