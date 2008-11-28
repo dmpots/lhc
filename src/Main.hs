@@ -240,6 +240,7 @@ processDecls cho ho' tiData = do
     -- Convert Haskell decls to E
     let allAssumps = (tiAllAssumptions tiData `mappend` hoAssumps (hoBuild ho))
         theProps = fromList [ (toId x,y) | (x,y) <- Map.toList $ tiProps tiData]
+    -- 'convertDecls' uses its monad for error handling.
     ds' <- convertDecls tiData theProps (hoClassHierarchy $ hoBuild ho') allAssumps  fullDataTable decls
     let ds = [ (v,e) | (v,e) <- classInstances ] ++  [ (v,lc) | (n,v,lc) <- ds', v `notElem` fsts classInstances ]
  --   sequence_ [lintCheckE onerrNone fullDataTable v e | (_,v,e) <- ds ]

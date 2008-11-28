@@ -213,6 +213,7 @@ top_level = Level 0
 --notFloatOut e = isAtomic e || whnfOrBot e
 notFloatOut e = False
 
+-- This function uses IO to generate new unique names.
 floatOutward :: Program -> IO Program
 floatOutward prog = do
     -- set natural levels on all types
@@ -304,7 +305,7 @@ lfName u modName ns x = case fromId x of
 
 mapMSnd f xs = sequence [ (,) x `liftM` f y | (x,y) <- xs]
 
-
+-- This function uses IO to generate new unique names.
 letBindAll ::
     DataTable  -- ^ the data table for expanding newtypes
     -> Module     -- ^ current module name

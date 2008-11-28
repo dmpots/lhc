@@ -8,7 +8,7 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.Identity
 
-
+-- FIXME: We should never rely on IO to generate unique ids.
 instance UniqueProducer IO where
     newUniq = do
         u <- newUnique
