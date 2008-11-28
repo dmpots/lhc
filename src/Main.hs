@@ -318,7 +318,7 @@ processDecls cho ho' tiData = do
     -- quick float inward pass to inline once used functions and prune unused ones
     prog <- transformProgram tparms {
         transformCategory = "FloatInward",
-        transformOperation = programFloatInward
+        transformOperation = return . programFloatInward
         } prog
 
     let fint mprog = do
@@ -346,8 +346,8 @@ processDecls cho ho' tiData = do
         mprog <- barendregtProg mprog
         mprog <- transformProgram tparms { transformCategory = "typeAnalyze", transformOperation = typeAnalyze True } mprog
 
-        mprog <- transformProgram tparms { transformCategory = "FloatInward", transformOperation = programFloatInward } mprog
-        mprog <- Demand.analyzeProgram mprog
+        mprog <- transformProgram tparms { transformCategory = "FloatInward", transformOperation = return . programFloatInward } mprog
+        mprog <- return $ Demand.analyzeProgram mprog
         lintCheckProgram onerrNone mprog
         mprog <- simplifyProgram sopt "Init-Three-AfterDemand" False mprog
         mprog <- barendregtProg mprog
@@ -371,10 +371,10 @@ processDecls cho ho' tiData = do
     prog <- transformProgram tparms {
         transformPass = "Init-Big-One",
         transformCategory = "FloatInward",
-        transformOperation = programFloatInward
+        transformOperation = return . programFloatInward
         } prog
 
-    prog <- Demand.analyzeProgram prog
+    prog <- return $ Demand.analyzeProgram prog
     prog <- simplifyProgram' sopt "Init-Big-One" verbose (IterateMax 4) prog
 
     wdump FD.Progress $
@@ -393,11 +393,11 @@ processDecls cho ho' tiData = do
 
         mprog <- simplifyProgram sopt "Simplify-One" coreMini mprog
         mprog <- barendregtProg mprog
-        mprog <- transformProgram tparms { transformCategory = "FloatInward", transformOperation = programFloatInward } mprog
-        mprog <- Demand.analyzeProgram mprog
+        mprog <- transformProgram tparms { transformCategory = "FloatInward", transformOperation = return . programFloatInward } mprog
+        mprog <- return $ Demand.analyzeProgram mprog
         mprog <- simplifyProgram sopt "Simplify-Two" coreMini mprog
-        mprog <- transformProgram tparms { transformCategory = "FloatInward", transformOperation = programFloatInward } mprog
-        mprog <- Demand.analyzeProgram mprog
+        mprog <- transformProgram tparms { transformCategory = "FloatInward", transformOperation = return . programFloatInward } mprog
+        mprog <- return $ Demand.analyzeProgram mprog
         mprog <- return $ E.CPR.cprAnalyzeProgram mprog
         mprog' <- transformProgram tparms { transformSkipNoStats = True, transformCategory = "WorkWrap", transformOperation = return . workWrapProgram } mprog
         let wws = length (programDs mprog') - length (programDs mprog)
@@ -415,7 +415,7 @@ processDecls cho ho' tiData = do
 
         -- annotate our bindings for further passes
         mprog <- return $ etaAnnotateProgram mprog
-        mprog <- Demand.analyzeProgram mprog
+        mprog <- return $ Demand.analyzeProgram mprog
         mprog <- return $ E.CPR.cprAnalyzeProgram mprog
 
         put $ fromList [ (combIdent c,c) | c <- progCombinators mprog] `S.union` smap
@@ -609,7 +609,7 @@ compileModEnv cho = do
     prog <- transformProgram transformParms { transformCategory = "BoxifyProgram", transformDumpProgress = dump FD.Progress, transformOperation = boxifyProgram } prog
     prog <- programPrune prog
 
-    prog <- Demand.analyzeProgram prog
+    prog <- return $ Demand.analyzeProgram prog
     prog <- return $ E.CPR.cprAnalyzeProgram prog
     prog <- transformProgram transformParms { transformCategory = "Boxy WorkWrap", transformDumpProgress = dump FD.Progress, transformOperation = evaluate . workWrapProgram } prog
     prog <- simplifyProgram SS.emptySimplifyOpts { SS.so_finalPhase = True } "SuperSimplify after Boxy WorkWrap" verbose prog

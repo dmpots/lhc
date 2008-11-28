@@ -98,8 +98,8 @@ canFloatPast t | getProperty prop_ONESHOT t = True
 canFloatPast _ = False
 
 {-# NOINLINE programFloatInward #-}
-programFloatInward :: Program -> IO Program
-programFloatInward prog = do
+programFloatInward :: Program -> Program
+programFloatInward prog =
     let binds = G.scc $  G.newGraph [ (c ,freeVars c) | c <- progCombinators prog, combIdent c  `notElem` map combIdent epoints ] (combIdent . fst) (idSetToList . snd)
         epoints = [ c | c@Comb { combHead = x } <- progCombinators prog, (tvrIdent x `member` progEntry prog) || forceNoinline x || getProperty prop_INSTANCE x || getProperty prop_SPECIALIZATION x ]
         (oall,pints) = sepByDropPoint dpoints  (reverse binds)
@@ -111,11 +111,11 @@ programFloatInward prog = do
     --Prelude.print dpoints
     --Prelude.putStrLn (pprint $ map fst (dsBinds binds))
     --Prelude.putStrLn (pprint $ (map fst $ dsBinds oall,map (\binds -> map fst $ dsBinds binds) pints))
-    let mstats = mconcat [ Stats.singleton $ "FloatInward.{" ++ pprint n ++ "}" | n <- map combHead $ dsBinds (concat pints)]
+        mstats = mconcat [ Stats.singleton $ "FloatInward.{" ++ pprint n ++ "}" | n <- map combHead $ dsBinds (concat pints)]
         mstats' = mconcat [ Stats.singleton $ "FloatInward.all.{" ++ pprint n ++ "}" | n <- map combHead $ dsBinds oall]
         nstats = progStats prog `mappend` mstats `mappend` mstats'
     --nprog <- programMapBodies (return . floatInward) nprog
-    return nprog { progStats = nstats }
+    in nprog { progStats = nstats }
 
 
 --cupbinds bs = f bs where

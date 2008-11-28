@@ -241,8 +241,8 @@ extEnvs ts = local  (\ (env,dt) -> (mappend (fromList [ (tvrIdent t,Left s) |  (
 instance DataTableMonad IM where
     getDataTable = asks snd
 
-runIM :: Monad m => IM a -> DataTable ->  m a
-runIM (IM im) dt = return $ runReader im (mempty,dt)
+runIM :: IM a -> DataTable -> a
+runIM (IM im) dt = runReader im (mempty,dt)
 
 -- returns the demand type and whether it was found in the local environment or guessed
 determineDemandType :: TVr -> Demand -> IM (Either DemandType E)
@@ -383,11 +383,8 @@ fixupDemandSignature (DemandSignature n (DemandEnv _ r :=> dt)) = DemandSignatur
 
 
 {-# NOINLINE solveDs #-}
-solveDs dataTable ds = do
-    nds <- runIM (solveDs' Nothing ds fixupDemandSignature return) dataTable
-    --flip mapM_ nds $ \ (t,_) ->
-    --    putStrLn $ "strictness: " ++ pprint t ++ ": " ++ show (maybe absSig id $ Info.lookup (tvrInfo t))
-    return nds
+solveDs dataTable ds =
+    runIM (solveDs' Nothing ds fixupDemandSignature return) dataTable
 
 
 shouldBind ELit {} = True
@@ -419,9 +416,9 @@ solveDs' (Just True) ds fixup wdone = do
     g True [] ds'
 
 {-# NOINLINE analyzeProgram #-}
-analyzeProgram prog = do
-    dsOut <- solveDs (progDataTable prog) (programDs prog)
-    return $ programSetDs' dsOut prog
+analyzeProgram prog =
+    let dsOut = solveDs (progDataTable prog) (programDs prog)
+    in programSetDs' dsOut prog
 
 $(derive makeBinary ''Demand)
 $(derive makeBinary ''SubDemand)
