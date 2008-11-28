@@ -163,7 +163,7 @@ aM $$ bM = do{a<-aM;b<-bM;return (a <$> b)}
 
 
 fsep :: [Doc] -> Doc
-fsep dl = sequence dl >>= return . P.sep -- FIXME: Text.PrettyPrinter.ANSI.Leijen doesn't have fsep.
+fsep dl = sequence dl >>= return . P.fillSep
 
 
 -- Yuk, had to cut-n-paste this one from Pretty.hs
