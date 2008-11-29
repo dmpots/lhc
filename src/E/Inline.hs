@@ -121,6 +121,9 @@ programMapRecGroups imap idann letann lamann f prog = do
     ds <- g [] imap $ programDecomposedCombs prog
     return $ programUpdate $ prog { progCombinators = ds }
 
+{-
+The boolean value represents whether the bindings are recursive.
+-}
 programDecomposedCombs :: Program -> [(Bool,[Comb])]
 programDecomposedCombs prog = map f $ scc g where
     --g = newGraph (progCombinators prog) combIdent ( toList . (union $ progSeasoning prog) . (freeVars :: Comb -> IdSet))
@@ -134,6 +137,19 @@ programDecomposedDs prog = decomposeDs $ programDs prog
 
 programSubProgram prog rec ds = progCombinators_s ds prog {  progType = SubProgram rec, progEntry = fromList (map combIdent ds) }
 
+{-
+Map recursive program groups.
+
+Consider the program:
+x = y
+y = z
+z = y
+
+This would call 'f [x]' and 'f [y,z]'.
+
+The code is made by the need for substitutions. The names of bindings can't change
+but their types or other associated info might.
+-}
 programMapProgGroups :: Monad m =>
     IdMap (Maybe E)        -- ^ initial map to apply
     -> (Program -> m Program)
