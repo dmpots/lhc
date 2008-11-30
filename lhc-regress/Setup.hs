@@ -106,12 +106,12 @@ printUsage =
 parseArguments :: [String] -> IO (Config, [FilePath])
 parseArguments args
   = case getOpt' Permute globalOptions args of
-      (flags,paths,_,[]) | null paths || hasHelpFlag flags ->
+      (flags,paths,_,[]) | hasHelpFlag flags ->
          do printUsage
             exitWith ExitSuccess
       (flags,paths,_,[]) ->
          do cfg <- emptyConfig
-            return (foldr mkConfig cfg flags, paths)
+            return (foldr mkConfig cfg flags, if null paths then ["."] else paths)
       (_,_,_,errs) ->
          do putStrLn $ "Errors: \n" ++ unlines errs
             exitFailure
