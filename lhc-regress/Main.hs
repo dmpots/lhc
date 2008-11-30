@@ -34,7 +34,7 @@ main = do (cfg,paths) <- parseArguments =<< getArgs
           tests <- forM paths findTestCases
           let nTests = length (concat tests)
           writeList2Chan workChan (concat tests)
-          when (cfgVerbose cfg >= 2) $ putStrLn $ "Testsuite consists of " ++ show nTests ++ " tests."
+          when (cfgVerbose cfg >= 1) $ putStrLn $ "Testsuite consists of " ++ show nTests ++ " tests."
           workers <- replicateM (max 1 (cfgThreads cfg)) $ forkIO $ forever $
             do test <- readChan workChan
                result <- runTestCase cfg test
