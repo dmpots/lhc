@@ -89,4 +89,9 @@ Executable lhc-regress
     Buildable:      False
   main-is:          Main.hs
   hs-source-dirs:   lhc-regress/
-  build-depends:    base, process
+  build-depends:    process
+  if flag(base4)
+    build-depends:  base >= 4 && < 5
+    cpp-options:    -DBASE4
+  else
+    build-depends:  base >= 3 && < 4

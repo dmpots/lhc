@@ -89,7 +89,11 @@ execProcess :: FilePath -> [String] -> B.ByteString -> IO (ExitCode, B.ByteStrin
 execProcess cmd args input = do
   (inh, outh, errh, pid) <- runInteractiveProcess cmd args Nothing Nothing
   handle (\e -> do terminateProcess pid
+#if BASE4
                    throw (e::SomeException)) $ do
+#else
+                   throw e) $ do
+#endif
   outVar <- newEmptyMVar
   forkIO $ B.hGetContents outh >>= putMVar outVar
   errVar <- newEmptyMVar
