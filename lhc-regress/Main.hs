@@ -60,6 +60,7 @@ manager cfg noFailures ((tc,result):rest)
                                                 CompileError str -> printf "%20s: %s\n" (testCaseName tc) str
                                                 ProgramError str -> printf "%20s: %s\n" (testCaseName tc) str
                      | cfgVerbose cfg >= 1 -> if isSuccess result then putStr "." else putStr "*"
+                     | otherwise -> return ()
        hFlush stdout
        manager cfg (noFailures && isSuccess result) rest
 
