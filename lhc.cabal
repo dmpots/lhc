@@ -23,6 +23,8 @@ flag hpc
   default:            False
 flag threaded
   default:            False
+flag lhc-regress
+  default:            False
 
 Executable lhc
  main-is:             Main.hs
@@ -79,3 +81,12 @@ Executable lhc
   Util.Inst Util.IntBag Util.Interact Util.NameMonad Util.Once Util.Perhaps
   Util.RWS Util.Relation Util.SameShape Util.Seq Util.SetLike Util.TrueSet
   Util.UnionFind Util.UnionSolve Util.UniqueMonad Util.VarName Util.Util LHCVersion
+
+Executable lhc-regress
+  if flag(lhc-regress)
+    Buildable:      True
+  else
+    Buildable:      False
+  main-is:          Main.hs
+  hs-source-dirs:   lhc-regress/
+  build-depends:    base, process
