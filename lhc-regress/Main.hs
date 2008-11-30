@@ -51,7 +51,11 @@ manager cfg False [] | cfgVerbose cfg >= 1 = do putStrLn "Some tests failed" >> 
 manager cfg False [] = exitFailure
 
 manager cfg noFailures ((tc,result):rest)
-  = do case () of () | cfgVerbose cfg >= 3 -> printf "%20s: %s\n" (testCaseName tc) (show result)
+  = do case () of () | cfgVerbose cfg >= 3 -> case result of
+                                                Success -> printf "%20s: %s\n" (testCaseName tc) "OK"
+                                                TimeOut -> printf "%20s: %s\n" (testCaseName tc) "TimeOut"
+                                                CompileError str -> printf "%20s: %s\n" (testCaseName tc) str
+                                                ProgramError str -> printf "%20s: %s\n" (testCaseName tc) str
                      | cfgVerbose cfg >= 1 -> if isSuccess result then putStr "." else putStr "*"
        hFlush stdout
        manager cfg (noFailures && isSuccess result) rest
