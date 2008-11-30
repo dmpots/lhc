@@ -20,11 +20,13 @@ import qualified Data.ByteString.Char8 as B
 
 data TestResult = CompileError String
                 | ProgramError String
+                | KnownFailure
                 | TimeOut
                 | Success
                 deriving Show
 
 isSuccess Success = True
+isSuccess KnownFailure = True
 isSuccess _ = False
 
 main :: IO ()
@@ -52,8 +54,9 @@ manager cfg False [] = exitFailure
 
 manager cfg noFailures ((tc,result):rest)
   = do case () of () | cfgVerbose cfg >= 3 -> case result of
-                                                Success -> printf "%20s: %s\n" (testCaseName tc) "OK"
-                                                TimeOut -> printf "%20s: %s\n" (testCaseName tc) "TimeOut"
+                                                Success      -> printf "%20s: %s\n" (testCaseName tc) "OK"
+                                                KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "OK*"
+                                                TimeOut      -> printf "%20s: %s\n" (testCaseName tc) "TimeOut"
                                                 CompileError str -> printf "%20s: %s\n" (testCaseName tc) str
                                                 ProgramError str -> printf "%20s: %s\n" (testCaseName tc) str
                      | cfgVerbose cfg >= 1 -> if isSuccess result then putStr "." else putStr "*"
@@ -64,7 +67,7 @@ manager cfg noFailures ((tc,result):rest)
 runTestCase :: Config -> TestCase -> IO TestResult
 runTestCase cfg tc
   = bracket (createDirectoryIfMissing True testDir)
-            (\_ -> removeDirectoryRecursive testDir) $ \_ -> withTimeout $
+            (\_ -> removeDirectoryRecursive testDir) $ \_ -> checkFail $ withTimeout $
     do let args = [ "-o", progName
                   , "--ho-dir", testDir
                   , testCasePath tc ] ++
@@ -83,6 +86,12 @@ runTestCase cfg tc
   where name = dropExtension (takeFileName (testCasePath tc))
         testDir = cfgTempDir cfg </> name
         progName = testDir </> name
+        checkFail io = do ret <- io
+                          if testCaseMustFail tc
+                             then case ret of
+                                    Success -> return $ ProgramError "Known bug succeeded."
+                                    other   -> return KnownFailure
+                             else return ret
         withTimeout io = do ret <- timeout (10^6 * cfgTestTimeout cfg) io
                             case ret of
                               Nothing  -> return TimeOut

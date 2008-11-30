@@ -14,11 +14,12 @@ A testcase is any Haskell file (.hs or .lhs) that has an associated
 
 -}
 
-data TestCase = TestCase { testCasePath :: String
-                         , testCaseStdin  :: ByteString
-                         , testCaseStdout :: Maybe ByteString
-                         , testCaseStderr :: Maybe ByteString
-                         , testCaseArgs   :: [String]
+data TestCase = TestCase { testCasePath     :: String
+                         , testCaseStdin    :: ByteString
+                         , testCaseStdout   :: Maybe ByteString
+                         , testCaseStderr   :: Maybe ByteString
+                         , testCaseArgs     :: [String]
+                         , testCaseMustFail :: Bool
                          } deriving Show
 
 
@@ -50,11 +51,13 @@ getTestCase path | takeExtension path `elem` [".hs",".lhs"]
                   stdout <- fmap Just (B.readFile stdoutFile) `orElse` return Nothing
                   stderr <- fmap Just (B.readFile stderrFile) `orElse` return Nothing
                   args <- fmap words (readFile argsFile) `orElse` return [] -- FIXME: Use unlines?
-                  return $ Just TestCase { testCasePath = path
-                                         , testCaseStdin = stdin
-                                         , testCaseStdout = stdout
-                                         , testCaseStderr = stderr
-                                         , testCaseArgs = args }
+                  mustFail <- doesFileExist mustFailFile
+                  return $ Just TestCase { testCasePath     = path
+                                         , testCaseStdin    = stdin
+                                         , testCaseStdout   = stdout
+                                         , testCaseStderr   = stderr
+                                         , testCaseArgs     = args
+                                         , testCaseMustFail = mustFail }
           else return Nothing
   where root = takeDirectory path
         name = dropExtension (takeFileName path)
@@ -62,6 +65,7 @@ getTestCase path | takeExtension path `elem` [".hs",".lhs"]
         stdoutFile = root </> name <.> "expected.stdout"
         stderrFile = root </> name <.> "expected.stderr"
         argsFile = root </> name <.> "args"
+        mustFailFile = root </> name <.> "mustfail"
 getTestCase _ = return Nothing
 
 testCaseRoot = takeDirectory . testCasePath
