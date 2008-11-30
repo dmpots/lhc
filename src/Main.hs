@@ -79,7 +79,7 @@ import qualified Interactive
 import qualified Stats
 import qualified System.IO as IO
 
-#if __GLASGOW_HASKELL__ >= 610
+#if BASE4
 runMain action = Control.Exception.catches (action >> return ())
                    [ Handler $ \ (e::Exit.ExitCode) -> throw e
                    , Handler $ \ (e::SomeException) -> putErrDie $ show e ]

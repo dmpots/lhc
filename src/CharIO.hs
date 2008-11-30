@@ -15,7 +15,7 @@ import System
 import qualified IO
 import qualified System.IO.UTF8 as UTF8
 
-#if __GLASGOW_HASKELL__ >= 610
+#if BASE4
 flushOut = Ex.catch  (IO.hFlush IO.stdout) (\(e::SomeException) -> return ())
 #else
 flushOut = Ex.catch  (IO.hFlush IO.stdout) (\_ -> return ())

@@ -135,7 +135,7 @@ interact cho = mre where
                 xs -> f "" xs where
             f opt [x] = (opt,x)
             f opt ~(x:xs) = f (x ++ opt) xs
-#if __GLASGOW_HASKELL__ >= 610
+#if BASE4
         rx <- CE.catch ( Just `fmap` evaluate (mkRegex reg)) (\(e::SomeException) -> return Nothing)
 #else
         rx <- CE.catch ( Just `fmap` evaluate (mkRegex reg)) (\_ -> return Nothing)

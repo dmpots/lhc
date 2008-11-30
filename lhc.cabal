@@ -44,6 +44,7 @@ Executable lhc
 
  if flag(base4)
   build-depends:      base >= 4 && < 5, syb
+  cpp-options:        -DBASE4
  else
   build-depends:      base >= 3 && < 4
   Extensions:         PatternSignatures

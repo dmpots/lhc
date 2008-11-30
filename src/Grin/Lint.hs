@@ -73,7 +73,7 @@ transformGrin tp prog = do
         putErrLn $ "\n>>> Before " ++ name
         dumpGrin ("lint-before-" ++ name) prog
         putErrLn $ "\n>>>"
-#if __GLASGOW_HASKELL__ >= 610
+#if BASE4
         putErrLn (show (e::SomeException))
 #else
         putErrLn (show e)
