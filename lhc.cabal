@@ -41,7 +41,7 @@ Executable lhc
                       utf8-string, stringtable-atom, derive >= 0.1.4,
                       filepath, ansi-wl-pprint >= 0.5.0, ansi-terminal >= 0.5.0
 
-
+ ghc-options:         -fwarn-unused-imports -fwarn-unused-binds
  if flag(base4)
   build-depends:      base >= 4 && < 5, syb
   cpp-options:        -DBASE4
