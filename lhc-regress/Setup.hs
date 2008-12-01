@@ -94,7 +94,7 @@ printUsage =
 
 parseArguments :: [String] -> IO (Config, [FilePath])
 parseArguments args
-  = case getOpt' RequireOrder globalOptions args of
+  = case getOpt' Permute globalOptions args of
       (flags,paths,[],[]) ->
          do cfg <- emptyConfig
             return (foldr (.) id flags cfg, if null paths then ["."] else paths)
