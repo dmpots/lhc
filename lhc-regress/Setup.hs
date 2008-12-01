@@ -32,7 +32,7 @@ emptyConfig = do tmp <- getTemporaryDirectory
                                , cfgTempDir = tmp
                                , cfgLHCPath = fromMaybe "lhc" lhc
                                , cfgLHCOptions = ["+RTS","-M1G","-RTS"]
-                               , cfgTestTimeout = 60 }
+                               , cfgTestTimeout = 120 }
 
 data Flag
     = HelpFlag

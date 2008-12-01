@@ -55,7 +55,7 @@ manager cfg False [] = exitFailure
 manager cfg noFailures ((tc,result):rest)
   = do case () of () | cfgVerbose cfg >= 3 -> case result of
                                                 Success      -> printf "%20s: %s\n" (testCaseName tc) "OK"
-                                                KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "OK*"
+                                                KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "KnownFailure"
                                                 TimeOut      -> printf "%20s: %s\n" (testCaseName tc) "TimeOut"
                                                 CompileError str -> printf "%20s: %s\n" (testCaseName tc) str
                                                 ProgramError str -> printf "%20s: %s\n" (testCaseName tc) str
