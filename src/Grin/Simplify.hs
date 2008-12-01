@@ -1,7 +1,5 @@
 module Grin.Simplify(simplify,renameUniqueGrin) where
 
-import Char
-import Control.Monad.Identity
 import Control.Monad.Writer
 import Control.Monad.State
 import Control.Monad.Trans
@@ -13,7 +11,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import StringTable.Atom
-import C.Prims
 import GenUtil hiding(putErrLn,replicateM_)
 import Grin.Grin
 import Grin.Noodle
@@ -185,10 +182,11 @@ doEval n@(NodeC t xs) typ
     | tagIsSuspFunction t = App (tagFlipFunction t) xs typ
 doEval n typ = error $ show ("doEval", n,typ)
 
-
+{-
 fromBap :: Monad m => Atom -> m Int
 fromBap t | 'B':'a':'p':'_':(n:ns) <- fromAtom t, isDigit n = return $ read (n:takeWhile isDigit ns)
 fromBap t = fail "not Bap"
+-}
 
 -- This only binds variables to variables
 varBind :: Monad m => Val -> Val -> m (Map.Map Var Val)

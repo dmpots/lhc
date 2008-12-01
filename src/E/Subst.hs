@@ -38,15 +38,12 @@ See Name.Id.newId for more information.
 -}
 
 import Control.Monad.Reader
-import Data.Monoid
 import qualified Data.Traversable as T
 import List hiding(union,insert,delete)
 
 import E.E
 import E.FreeVars()
 import Name.Id
-import Name.Names (tc_Arrow)
-import {-# SOURCE #-} E.Show
 import Support.FreeVars
 import GenUtil
 import Util.SetLike as S

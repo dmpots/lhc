@@ -87,7 +87,6 @@ checkAssertion t =  checkAssertion' [] t
 		checkAssertion' _ _ = fail "Illegal class assertion"
                 tast (a,[HsTyVar n]) = return (HsAsst a [n]) -- (a,n)
                 tast _ = fail "Invalid Class. multiparameter classes not yet supported"
-                tast _ = error "tast!"
 --checkAssertion = checkAssertion' []
 --	where	checkAssertion' ts (HsTyCon c) = return (c,ts)
 --		checkAssertion' ts (HsTyApp a t) = checkAssertion' (t:ts) a

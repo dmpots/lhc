@@ -91,9 +91,9 @@ traverseHsExp fn e = f e where
     f (HsExpTypeSig srcLoc hsExp hsQualType)  = withSrcLoc srcLoc $ do
         hsExp' <- fn hsExp
         return (HsExpTypeSig srcLoc hsExp' hsQualType)
-    f (HsAsPat hsName hsExp)  = do
-        hsExp' <- fn hsExp
-        return (HsAsPat hsName hsExp')
+--    f (HsAsPat hsName hsExp)  = do
+--        hsExp' <- fn hsExp
+--        return (HsAsPat hsName hsExp')
     f (HsWildCard x) = do return (HsWildCard x)
     f (HsIrrPat hsExp)  = do
         hsExp' <- fnl hsExp

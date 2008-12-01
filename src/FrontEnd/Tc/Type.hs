@@ -4,7 +4,7 @@ module FrontEnd.Tc.Type(
     MetaVar(..),
     MetaVarType(..),
     Pred(..),
-    Preds(),
+--    Preds(),
     Qual(..),
     Tycon(..),
     Type(..),
@@ -14,16 +14,16 @@ module FrontEnd.Tc.Type(
     kindUTuple,
     unfoldKind,
     fn,
-    followTaus,
+--    followTaus,
     fromTAp,
     fromTArrow,
     module FrontEnd.Tc.Type,
     prettyPrintType,
-    readMetaVar,
+--    readMetaVar,
     tForAll,
     tList,
-    Constraint(..),
-    applyTyvarMap,
+--    Constraint(..),
+--    applyTyvarMap,
     Class(),
     Kindvar(..),
     tTTuple,
@@ -31,7 +31,6 @@ module FrontEnd.Tc.Type(
     tyvar
     ) where
 
-import Control.Monad.Identity
 import Control.Monad.Writer
 import Data.IORef
 import Data.List
@@ -44,10 +43,7 @@ import Doc.PPrint
 import Name.Name
 import FrontEnd.SrcLoc
 import FrontEnd.Tc.Kind
-import Name.Names
-import Name.VConsts
 import FrontEnd.Representation
-import Support.CanType
 import Support.FreeVars
 import Support.Tickle
 

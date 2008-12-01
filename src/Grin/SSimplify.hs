@@ -4,6 +4,7 @@ import qualified Data.IntSet as IS
 import qualified Data.IntMap as IM
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.Monoid
 
 import Data.DeriveTH
 import Data.Derive.All

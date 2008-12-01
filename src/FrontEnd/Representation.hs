@@ -289,7 +289,7 @@ prettyPrintType t  = unparse $ runIdentity (runVarNameT (f t)) where
         t2 <- f t2
         return $ t1 `arr` t2
     f (TMetaVar mv) = return $ atom $ pprint mv
-    f tv = return $ atom $ parens $ text ("FrontEnd.Tc.Type.pp: " ++ show tv)
+--    f tv = return $ atom $ parens $ text ("FrontEnd.Tc.Type.pp: " ++ show tv)
 
 
 instance DocLike d => PPrint d MetaVarType where

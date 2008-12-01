@@ -1,7 +1,5 @@
 module RawFiles where
 import System.IO.Unsafe
-import System.Directory
-import System.FilePath
 import Paths_lhc
 
 {-# NOINLINE hsffi_h #-}

@@ -1043,6 +1043,7 @@ runSM env (SM x) = (r,s) where
 
 instance MonadStats SM where
    mticks' n k = SM $ tell (Stats.singleStat n k) >> return ()
+   mtickStat = error "mtickStat is not defined for SM"
 
 modifyIds fn = SM $ modify f where
     f s@SmState { idsUsed = used, idsBound = bound, smStdGen=gen } = case fn (used,bound) of (used',bound') -> s { idsUsed = used', idsBound = bound', smStdGen = gen }

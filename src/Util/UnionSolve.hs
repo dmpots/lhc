@@ -7,7 +7,6 @@ module Util.UnionSolve(
     islte,isgte,equals
     ) where
 
-import Control.Monad(when)
 import Data.List(intersperse)
 import Data.Monoid
 import qualified Data.Set as Set

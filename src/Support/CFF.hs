@@ -22,18 +22,14 @@ module Support.CFF(
     writeCFF
     )where
 
-import Control.Concurrent.MVar
 import Control.Monad
 import Data.Bits
 import Data.Char
 import Data.List
 import Data.Word
-import System
 import System.IO
-import System.IO.Unsafe
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map as Map
 
 
 type FileOffset = Word

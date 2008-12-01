@@ -93,8 +93,8 @@ fromList xs
   = Seq (\ts -> xs++ts)
 
 
-tell x = W.tell (Util.Seq.singleton x)
-tells xs = W.tell (Util.Seq.fromList xs)
+--tell x = W.tell (Util.Seq.singleton x)
+--tells xs = W.tell (Util.Seq.fromList xs)
 
 --instance Monoid (Seq.Seq a) where
 --    mempty = Seq.empty

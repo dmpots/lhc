@@ -124,28 +124,21 @@ module Util.IntBag  (
 
 import Prelude hiding (lookup,map,filter,foldr,foldl,null)
 import Data.Bits
-import Data.Int
-import qualified Data.IntSet as IntSet
+--import Data.Int
+--import qualified Data.IntSet as IntSet
 import Data.Monoid (Monoid(..))
-import Data.Typeable
-import Data.Foldable (Foldable(foldMap))
+--import Data.Typeable
+--import Data.Foldable (Foldable(foldMap))
 
 
 #if __GLASGOW_HASKELL__
-import Text.Read
-import Data.Generics.Basics
-import Data.Generics.Instances
+--import Text.Read
+--import Data.Generics.Basics
+--import Data.Generics.Instances
 #endif
 
-#if __GLASGOW_HASKELL__ >= 503
-import GHC.Word
 import GHC.Exts ( Word(..), Int(..), shiftRL# )
-#elif __GLASGOW_HASKELL__
-import Word
-import GlaExts ( Word(..), Int(..), shiftRL# )
-#else
-import Data.Word
-#endif
+
 
 --infixl 9 \\{-This comment teaches CPP correct behaviour -}
 
@@ -933,14 +926,14 @@ assocs m = toList m
 toList :: IntBag -> [(Key,Int)]
 toList t
   = foldWithKey (\k x xs -> (k,x):xs) [] t
-
+{-
 -- | /O(n)/. Convert the map to a list of key\/value pairs where the
 -- keys are in ascending order.
 toAscList :: IntBag -> [(Key,Int)]
 toAscList t
   = -- NOTE: the following algorithm only works for big-endian trees
     let (pos,neg) = span (\(k,x) -> k >=0) (foldr (\k x xs -> (k,x):xs) [] t) in neg ++ pos
-
+-}
 -- | /O(n*min(n,W))/. Create a map from a list of key\/value pairs.
 fromList :: [(Key,Int)] -> IntBag
 fromList xs
@@ -1154,12 +1147,12 @@ zero :: Key -> Mask -> Bool
 zero i m
   = (natFromInt i) .&. (natFromInt m) == 0
 
-nomatch,match :: Key -> Prefix -> Mask -> Bool
+nomatch :: Key -> Prefix -> Mask -> Bool
 nomatch i p m
   = (mask i m) /= p
 
-match i p m
-  = (mask i m) == p
+--match i p m
+--  = (mask i m) == p
 
 mask :: Key -> Mask -> Prefix
 mask i m

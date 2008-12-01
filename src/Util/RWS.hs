@@ -21,11 +21,8 @@ module Util.RWS (
 
 import Prelude
 
-import Control.Monad
-import Control.Monad.Fix
-import Control.Monad.Trans
-import Control.Monad.Reader
-import Control.Monad.Writer
+import Control.Monad.Reader ( MonadReader(..), asks )
+import Control.Monad.Writer ( MonadWriter(..), censor, WriterT(..) )
 import Control.Monad.State
 import Data.Monoid
 

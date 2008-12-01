@@ -38,7 +38,6 @@ import Doc.PPrint
 import Doc.Pretty
 import E.E
 import E.Rules
-import E.Show
 import E.Traverse(emapE)
 import E.TypeCheck()
 import FrontEnd.Class

@@ -2,7 +2,6 @@
 
 module Util.ReaderWriter(ReaderWriter(),runReaderWriter) where
 
-import Data.Monoid
 import Control.Monad.Reader
 import Control.Monad.Writer
 -- strict unboxed ReaderWriter monad

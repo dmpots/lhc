@@ -12,7 +12,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 
 import StringTable.Atom
-import C.Arch
+--import C.Arch
 import C.FFI hiding(Primitive)
 import C.Prims
 import Control.Monad.Identity
@@ -38,7 +38,7 @@ import Options
 import Stats(mtick)
 import Support.CanType
 import Support.FreeVars
-import Support.Tuple
+--import Support.Tuple
 import Util.Graph as G
 import Util.Once
 import Util.SetLike
@@ -134,8 +134,8 @@ toEntry (n,as,e) = f (scTag n) where
         f x = (x,map (toType tyINode . tvrType )  as,toTypes TyNode (getType (e::E) :: E))
 
 
-stringNameToTy :: String -> Ty
-stringNameToTy n = TyPrim (archOpTy archInfo n)
+--stringNameToTy :: String -> Ty
+--stringNameToTy n = TyPrim (archOpTy archInfo n)
 
 toType :: Ty -> E -> Ty
 toType node = toty . followAliases mempty where

@@ -44,9 +44,7 @@ import FrontEnd.HsSyn
 import Name.Name
 import Name.Names
 import Name.VConsts
-import Options
 import FrontEnd.Syn.Traverse
-import qualified FlagOpts as FO
 import FrontEnd.SrcLoc
 
 removeSynonymsFromType _ t = t

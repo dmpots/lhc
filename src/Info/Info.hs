@@ -63,6 +63,7 @@ instance Show Info where
 instance Data Info where
     toConstr = undefined
     dataTypeOf = undefined
+    gunfold = undefined
 
 instance Monoid Info where
     mempty = empty

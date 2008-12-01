@@ -47,7 +47,6 @@ module FrontEnd.Tc.Monad(
     withMetaVars
     ) where
 
-import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Monad.Writer
 import qualified Data.Traversable as T
@@ -80,8 +79,6 @@ import Options
 import Support.CanType
 import Support.FreeVars
 import Support.Tickle
-import Util.Inst
-import Util.SetLike
 import FrontEnd.Warning
 import qualified FlagDump as FD
 import {-# SOURCE #-} FrontEnd.Tc.Class(ClassHierarchy,simplify)
@@ -283,7 +280,7 @@ instance Instantiate Type where
     inst mm ts (TMetaVar mv) | Just t <- Map.lookup (metaUniq mv) mm  = t
     inst mm ts (TMetaVar mv) = TMetaVar mv
     inst mm ts (TAssoc tc as bs) = TAssoc tc (map (inst mm ts) as) (map (inst mm ts) bs)
-    inst mm _ t = error $ "inst: " ++ show t
+--    inst mm _ t = error $ "inst: " ++ show t
 
 
 instance Instantiate a => Instantiate [a] where

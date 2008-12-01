@@ -49,20 +49,16 @@ module PackedString (
 
     ) where
 
-import Data.Array.IO
 import Data.Typeable
 import Data.Char
 import Data.Int
 import Data.Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BSUTF8
-import qualified Codec.Binary.UTF8.String as UTF8
 import Bits
 import GHC.Exts
-import Data.Array.Base
 import Word
 import Data.Monoid
-import Foreign.C.Types
 
 instance Monoid PackedString where
     mempty = nilPS

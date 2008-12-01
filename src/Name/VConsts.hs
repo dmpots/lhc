@@ -3,7 +3,6 @@ module Name.VConsts where
 import Data.Traversable
 import Data.Foldable
 import Control.Applicative
-import Data.Monoid
 import Data.DeriveTH
 import Data.Derive.All
 
@@ -29,7 +28,7 @@ class TypeNames a where
     tRational = error "tRational"
     tChar = error "tChar"
     tIntzh = error "tIntzh"
---    tEnumzh = error "tEnumzh"
+    tEnumzh = error "tEnumzh"
     tIntegerzh = error "tIntegerzh"
     tCharzh = error "tCharzh"
     tStar = error "VConsts: tStar"

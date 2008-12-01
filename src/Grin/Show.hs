@@ -18,7 +18,7 @@ import qualified Data.Set as Set
 
 import StringTable.Atom
 import C.Prims
-import Data.Graph.Inductive.Graph(mkGraph,nmap)
+import Data.Graph.Inductive.Graph(mkGraph)
 import Data.Graph.Inductive.Tree
 import Doc.Attr
 import Doc.DocLike
@@ -27,8 +27,6 @@ import Doc.Pretty
 import Grin.Grin
 import Grin.Noodle
 import Grin.Val
-import Name.VConsts
-import Cmm.Number
 import Options
 import Support.CanType
 import Support.FreeVars

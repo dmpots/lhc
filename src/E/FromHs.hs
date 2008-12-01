@@ -7,7 +7,6 @@ module E.FromHs(
     ) where
 
 import Char
-import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.RWS
 import qualified Data.Traversable as T

@@ -26,7 +26,6 @@ import E.Values
 import Fixer.Fixer
 import Fixer.Supply
 import Fixer.VMap
-import Info.Info(infoMapM,infoMap)
 import Info.Types
 import Name.Id
 import Name.Name
@@ -214,7 +213,7 @@ getValue (EVar v)
     -- | otherwise = fail $ "getValue: no varinfo: " ++ show v
 getValue e | Just c <- typConstant e = return $ value c
 getValue e = return $ value $ fuzzyConstant e -- TODO - make more accurate
-getValue e = fail $ "getValue: " ++ show e
+--getValue e = fail $ "getValue: " ++ show e
 
 fuzzyConstant :: E -> Typ
 fuzzyConstant e | Just (n,as) <- toLit e = vmapValue n (map fuzzyConstant as)
@@ -329,7 +328,7 @@ caseCast t ty e = evalState  (f t ty e) (newIds (freeIds e),[]) where
         let t = tvr { tvrIdent = n, tvrType = getType e }
         put (ns,(t,e):es)
         return t
-caseCast t _ty e = e
+--caseCast t _ty e = e
 
 specAlt :: Stats.MonadStats m => SpecEnv -> Alt E -> m (Alt E)
 specAlt env@SpecEnv { senvDataTable = dataTable } (Alt lc@LitCons { litArgs = ts } e) = ans where

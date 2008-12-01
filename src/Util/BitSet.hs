@@ -54,7 +54,7 @@ instance ModifySet Int BitSet where
     toList (BitSet v) = f 0 where
         f c | c >= 32 = []
             | otherwise = if testBit v c then c:f (c + 1) else f (c + 1)
-
+    sfilter = error "sfilter not defined for BitSet"
 
 
 instance Show BitSet where
@@ -73,6 +73,7 @@ instance Enum a => ModifySet a (EnumBitSet a) where
     toList (EnumBitSet s) = map toEnum $ toList s
     member x (EnumBitSet s) = member (fromEnum x) s
     delete x (EnumBitSet s) = EnumBitSet $ delete (fromEnum x) s
+    sfilter = error "sfilter not defined for EnumBitSet"
 
 instance (Enum a,Show a) => Show (EnumBitSet a) where
     showsPrec n bs = showsPrec n (toList bs)

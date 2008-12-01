@@ -8,7 +8,6 @@ module Grin.NodeAnalyze(nodeAnalyze) where
 
 import Control.Monad(forM, forM_, when)
 import Control.Monad.RWS(MonadWriter(..), RWS(..))
-import Control.Monad.Identity(runIdentity)
 import Data.Monoid
 import Data.Maybe
 import qualified Data.Map as Map
