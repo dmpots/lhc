@@ -78,6 +78,7 @@ import qualified Info.Info as Info
 import qualified Interactive
 import qualified Stats
 import qualified System.IO as IO
+import System.FilePath (takeExtension)
 
 #if BASE4
 runMain action = Control.Exception.catches (action >> return ())
@@ -136,10 +137,10 @@ processFiles cs = do processFilesModules (map fileOrModule cs)
 processFilesModules fs = do
     compileModEnv =<< parseFiles fs processInitialHo processDecls
 
-fileOrModule f = case reverse f of
-                   ('s':'h':'.':_)     -> Right f
-                   ('s':'h':'l':'.':_) -> Right f
-                   _                   -> Left $ Module f
+fileOrModule f = case takeExtension f of
+                   ".hs"  -> Right f
+                   ".lhs" -> Right f
+                   _      -> Left $ Module f
 
 
 --barendregtProg prog = transformProgram transBarendregt prog

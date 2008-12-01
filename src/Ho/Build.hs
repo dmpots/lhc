@@ -68,7 +68,7 @@ import qualified FlagOpts as FO
 import qualified Util.Graph as G
 import qualified Data.Digest.Pure.MD5 as MD5
 import qualified Codec.Binary.UTF8.String as UTF8
-
+import System.FilePath (takeExtension)
 
 --
 -- Ho File Format
@@ -142,10 +142,10 @@ data Done = Done {
 $(derive makeMonoid ''Done)
 $(derive makeUpdate ''Done)
 
-fileOrModule f = case reverse f of
-                   ('s':'h':'.':_)     -> Right f
-                   ('s':'h':'l':'.':_) -> Right f
-                   _                   -> Left $ Module f
+fileOrModule f = case takeExtension f of
+                   ".hs"  -> Right f
+                   ".lhs" -> Right f
+                   _      -> Left $ Module f
 
 {-# NOINLINE doDependency #-}
 doDependency :: [String] -> IO ()
