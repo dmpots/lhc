@@ -86,8 +86,11 @@ instance TypeNames Type where
     tChar      = TCon (Tycon tc_Char kindStar)
     tUnit = TCon (Tycon tc_Unit kindStar)
 
-instance Ord (IORef a)
-instance Binary (IORef a)
+-- Dummy instance. We'll never actually serialize a MetaVar.
+-- FIXME: Prove this statically.
+instance Binary MetaVar where
+  get = error "get not defined for MetaVar"
+  put = error "put not defined for MetaVar"
 
 tList = TCon (Tycon tc_List (Kfun kindStar kindStar))
 
@@ -342,9 +345,7 @@ tTTuple ts = foldl TAp (toTuple (length ts)) ts
 tTTuple' ts = foldl TAp (TCon $ Tycon (unboxedNameTuple TypeConstructor  n) (foldr Kfun kindUTuple $ replicate n kindStar)) ts where
     n = length ts
 
-$(derive makeBinary ''MetaVarType)
 $(derive makeBinary ''Type)
-$(derive makeBinary ''MetaVar)
 $(derive makeBinary ''Tycon)
 $(derive makeBinary ''Pred)
 $(derive makeBinary ''Qual)
