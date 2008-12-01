@@ -44,24 +44,25 @@ data Flag
       deriving Show
 
 
-cmd_verbose :: OptDescr Flag
+cmd_verbose :: OptDescr (Config -> Config)
 cmd_verbose = Option "v" ["verbose"] (OptArg verboseFlag "n")
               "Control verbosity (n is 0-5, normal verbosity level is 1, -v alone is equivalent to -v3)"
   where
-    verboseFlag mb_s = Verbose (maybe 3 read mb_s)
+    verboseFlag mb_s cfg = cfg{cfgVerbose = (maybe 3 read mb_s)}
 
-cmd_threads :: OptDescr Flag
+cmd_threads :: OptDescr (Config -> Config)
 cmd_threads = Option "N" ["threads"] (ReqArg threadsFlag "n")
               "Use <n> OS threads (default: 1)"
   where
-    threadsFlag s = Threads (read s)
+    threadsFlag s cfg = cfg{cfgThreads = read s }
 
-cmd_options :: OptDescr Flag
+cmd_options :: OptDescr (Config -> Config)
 cmd_options = Option "" ["lhc-options"] (ReqArg optionsFlag "OPTS")
               "give extra options to lhc"
   where
-    optionsFlag s = Options (words s)
+    optionsFlag s cfg = cfg{cfgLHCOptions = words s ++ cfgLHCOptions cfg}
 
+{-
 cmd_dryrun :: OptDescr Flag
 cmd_dryrun = Option "d" ["dry-run"] (OptArg dryrunFlag "bool")
               "Dry run. Accept values in the line of 'false', '0' and 'no'. Default: false."
@@ -71,28 +72,16 @@ cmd_dryrun = Option "d" ["dry-run"] (OptArg dryrunFlag "bool")
     parse "0" = False
     parse "no" = False
     parse _ = True
+-}
 
-cmd_help :: OptDescr Flag
-cmd_help = Option "h?" ["help"] (NoArg HelpFlag) "Show this help text"
-
-globalOptions :: [OptDescr Flag]
+globalOptions :: [OptDescr (Config -> Config)]
 globalOptions =
-    [ cmd_help
-    , cmd_verbose
+    [-- cmd_help
+      cmd_verbose
     , cmd_threads
     , cmd_options
 --    , cmd_dryrun
     ]
-
-hasHelpFlag :: [Flag] -> Bool
-hasHelpFlag flags = not . null $ [ () | HelpFlag <- flags ]
-
-mkConfig :: Flag -> Config -> Config
-mkConfig (Verbose n) conf = conf { cfgVerbose = n }
---mkConfig (DryRun d) conf = conf { confDryRun = d }
-mkConfig (Threads n) conf = conf { cfgThreads = n }
-mkConfig (Options opts) conf = conf { cfgLHCOptions = opts ++ cfgLHCOptions conf }
-mkConfig _ _ = error "Setup.mkConfig: Invalid flag"
 
 
 printUsage =
@@ -105,13 +94,13 @@ printUsage =
 
 parseArguments :: [String] -> IO (Config, [FilePath])
 parseArguments args
-  = case getOpt' Permute globalOptions args of
-      (flags,paths,_,[]) | hasHelpFlag flags ->
+  = case getOpt' RequireOrder globalOptions args of
+      (flags,paths,[],[]) ->
+         do cfg <- emptyConfig
+            return (foldr (.) id flags cfg, if null paths then ["."] else paths)
+      (flags,paths,warns,[]) ->
          do printUsage
             exitWith ExitSuccess
-      (flags,paths,_,[]) ->
-         do cfg <- emptyConfig
-            return (foldr mkConfig cfg flags, if null paths then ["."] else paths)
       (_,_,_,errs) ->
          do putStrLn $ "Errors: \n" ++ unlines errs
             exitFailure
