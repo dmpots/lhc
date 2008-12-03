@@ -55,7 +55,7 @@ cmd_options = Option "" ["lhc-options"] (ReqArg optionsFlag "OPTS")
     optionsFlag s cfg = cfg{cfgLHCOptions = words s ++ cfgLHCOptions cfg}
 
 cmd_complete :: OptDescr (Config -> Config)
-cmd_complete = Option "-c" ["complete"] (OptArg completeFlag "bool")
+cmd_complete = Option "c" ["complete"] (OptArg completeFlag "bool")
               "Run all tests even if some fail."
   where
     completeFlag mb_s cfg = cfg{cfgComplete = maybe True (parseBool . map toLower) mb_s}
