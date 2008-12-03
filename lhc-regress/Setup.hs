@@ -19,6 +19,7 @@ data Config =
          , cfgLHCPath              :: FilePath
          , cfgLHCOptions           :: [String]
          , cfgTestTimeout          :: Int -- in seconds
+         , cfgComplete             :: Bool
          } deriving Show
 
 
@@ -32,17 +33,8 @@ emptyConfig = do tmp <- getTemporaryDirectory
                                , cfgTempDir = tmp
                                , cfgLHCPath = fromMaybe "lhc" lhc
                                , cfgLHCOptions = ["+RTS","-M1G","-RTS"]
-                               , cfgTestTimeout = 120 }
-
-data Flag
-    = HelpFlag
-    | Verbose Int
-    | DryRun Bool
-    | Threads Int
-    | Options [String]
-    | TimeLimit Int
-      deriving Show
-
+                               , cfgTestTimeout = 120
+                               , cfgComplete = False}
 
 cmd_verbose :: OptDescr (Config -> Config)
 cmd_verbose = Option "v" ["verbose"] (OptArg verboseFlag "n")
@@ -62,17 +54,24 @@ cmd_options = Option "" ["lhc-options"] (ReqArg optionsFlag "OPTS")
   where
     optionsFlag s cfg = cfg{cfgLHCOptions = words s ++ cfgLHCOptions cfg}
 
+cmd_complete :: OptDescr (Config -> Config)
+cmd_complete = Option "-c" ["complete"] (OptArg completeFlag "bool")
+              "Run all tests even if some fail."
+  where
+    completeFlag mb_s cfg = cfg{cfgComplete = maybe True (parseBool . map toLower) mb_s}
+
 {-
 cmd_dryrun :: OptDescr Flag
 cmd_dryrun = Option "d" ["dry-run"] (OptArg dryrunFlag "bool")
               "Dry run. Accept values in the line of 'false', '0' and 'no'. Default: false."
   where
-    dryrunFlag mb_s = DryRun (maybe True (parse.map toLower) mb_s)
-    parse "false" = False
-    parse "0" = False
-    parse "no" = False
-    parse _ = True
--}
+    dryrunFlag mb_s = DryRun (maybe True (parse.map toLower) mb_s)-}
+
+parseBool "false" = False
+parseBool "0" = False
+parseBool "no" = False
+parseBool _ = True
+
 
 globalOptions :: [OptDescr (Config -> Config)]
 globalOptions =
@@ -80,6 +79,7 @@ globalOptions =
       cmd_verbose
     , cmd_threads
     , cmd_options
+    , cmd_complete
 --    , cmd_dryrun
     ]
 
