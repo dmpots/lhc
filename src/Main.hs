@@ -663,7 +663,7 @@ compileModEnv cho = do
 --
 -- also, all rules are deleted.
 
-boxifyProgram :: Program -> IO Program
+boxifyProgram :: Monad m => Program -> m Program
 boxifyProgram prog = ans where
     ans = do programMapDs f (progCombinators_u (map $ combRules_s []) prog)
     f (t,e) = do
