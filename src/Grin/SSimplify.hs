@@ -56,11 +56,11 @@ instance Stats.MonadStats S where
 tellFV v = tell mempty { colFreeVars = freeVars v }
 
 
-simplify :: Grin -> IO Grin
-simplify grin = do
+simplify :: Grin -> Grin
+simplify grin =
     let (fs,_,SCol { colStats = stats}) = runRWS fun mempty SState { usedVars = mempty }
         S fun = simpFuncs (grinFunctions grin)
-    return grin { grinFunctions = fs, grinStats = grinStats grin `mappend` stats }
+    in grin { grinFunctions = fs, grinStats = grinStats grin `mappend` stats }
 
 
 simpFuncs :: [FuncDef] -> S [FuncDef]

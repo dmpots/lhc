@@ -697,7 +697,7 @@ simplifyParms = transformParms {
     transformDumpProgress = verbose,
     transformCategory = "Simplify",
     transformPass = "Grin",
-    transformOperation = Grin.SSimplify.simplify,
+    transformOperation = evaluate . Grin.SSimplify.simplify,
     transformIterate = IterateDone
     }
 
@@ -736,7 +736,7 @@ compileToGrin prog = do
                 False -> opt s grin
 
     x <- deadCode stats (grinEntryPointNames x) x  -- XXX
-    x <- Grin.SSimplify.simplify x
+    x <- evaluate $ Grin.SSimplify.simplify x
     --x <- transformGrin simplifyParms x
 
     x <- pushGrin x
@@ -750,7 +750,7 @@ compileToGrin prog = do
 
     x <- opt "Optimization" x
     --lintCheckGrin x
-    x <- Grin.SSimplify.simplify x
+    x <- evaluate $ Grin.SSimplify.simplify x
 
     wdump FD.OptimizationStats $ Stats.print "Optimization" stats
 
@@ -759,7 +759,7 @@ compileToGrin prog = do
     lintCheckGrin x
     x <- createEvalApply x
     lintCheckGrin x
-    x <- Grin.SSimplify.simplify x
+    x <- evaluate $ Grin.SSimplify.simplify x
 
     lintCheckGrin x
     x <- transformGrin devolveTransform x
