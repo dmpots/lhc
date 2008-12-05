@@ -78,7 +78,7 @@ import Data.List(intersperse)
 import Data.Maybe(isNothing)
 import Data.Monoid
 import Numeric
-import Text.PrettyPrint.ANSI.Leijen(Doc,nest,(<$$>))
+import Text.PrettyPrint.ANSI.Leijen(Doc,indent,(<$$>))
 import qualified Data.Foldable as Seq
 import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
@@ -187,15 +187,15 @@ instance Draw Stmt where
     draw (SGoto (Name s)) = text "goto" <+> text s <> char ';'
     draw (SBlock s) = do
         s <- subBlockBody s
-        return $ vcat [char '{', nest 4 s, char '}']
+        return $ vcat [char '{', indent 4 s, char '}']
     draw (SIf exp thn els) = do
         exp <- draw exp
         thn <- subBlockBody thn
         els <- subBlockBody els
-        return $ text "if" <+> parens exp <+> lbrace <$> nest 4 thn <$> rbrace <+> text "else" <+> lbrace <$> nest 4 els <$> rbrace
+        return $ text "if" <+> parens exp <+> lbrace <$> indent 4 thn <$> rbrace <+> text "else" <+> lbrace <$> indent 4 els <$> rbrace
     draw (SSwitch e ts) = text "switch" <+> parens (draw e) <+> char '{' <$> vcat (map sc ts) <$> md <$>  char '}' where
-        sc (Just x,ss) = do ss <- draw (SBlock ss); x <- draw x; return $ text "case" <+> x <> char ':' <$$> nest 4 (ss <$$> text "break;")
-        sc (Nothing,ss) = do ss <- draw (SBlock ss); return $ text "default:"  <$$>  ( nest 4 ss <$$> text "break;")
+        sc (Just x,ss) = do ss <- draw (SBlock ss); x <- draw x; return $ text "case" <+> x <> char ':' <$$> indent 4 (ss <$$> text "break;")
+        sc (Nothing,ss) = do ss <- draw (SBlock ss); return $ text "default:"  <$$>  ( indent 4 ss <$$> text "break;")
         md = if any isNothing (fsts ts) then empty else text "default: lhc_case_fell_off(__LINE__);"
 
 --subBlockBody s = draw s
@@ -462,7 +462,7 @@ forLoop i from to body = sd $ do
     from <- draw from
     to <- draw to
     body <- draw body
-    return $ text "for" <> parens (i <+> equals <+> from <> semi <+> i <+> text "<" <+> to <> semi <+> i <> text "++" ) <+> lbrace <$> nest 4 body <$> rbrace
+    return $ text "for" <> parens (i <+> equals <+> from <> semi <+> i <+> text "<" <+> to <> semi <+> i <> text "++" ) <+> lbrace <$> indent 4 body <$> rbrace
 
 
 
@@ -505,7 +505,7 @@ drawFunction f = do
         proto' = static <+> frt <> parms <$$> name <> tupled fas'
         static = if Public `elem` functionOptions f then empty else text "static"
         parms = char ' ' <> hsep [ text s | Attribute s <- functionOptions f]
-    return (proto, proto' $+$ lbrace $+$ nest 8 (vcat uv' <$$> body) $+$ rbrace)
+    return (proto, proto' $+$ lbrace $+$ indent 8 (vcat uv' <$$> body) $+$ rbrace)
 
 -- types
 anonStructType :: [Type] -> Type
@@ -623,7 +623,7 @@ generateC fs ss = ans where
         ts' <- forM (tsort ts) $ \ (n,t) -> do
             t <- draw t
             return $ t <+> tshow n <> semi
-        return $ text "struct" <+> tshow n <+> lbrace <$$> nest 4 (vcat $ (if structureNeedsDiscriminator s  then text "what_t what;" else empty):ts') <$$> rbrace <> semi
+        return $ text "struct" <+> tshow n <+> lbrace <$$> indent 4 (vcat $ (if structureNeedsDiscriminator s  then text "what_t what;" else empty):ts') <$$> rbrace <> semi
 
 
 line = text ""
