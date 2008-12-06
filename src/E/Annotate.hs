@@ -76,7 +76,7 @@ type AM m = ReaderT (IdMap (Maybe E)) m
 {-
  This function seems to do two distinct tasks:
   1) variable substitution.
-  2) annotate TVars in lambdas and lets.
+  2) annotate TVrs in lambdas and lets.
  Why can't we do this in two separate passes?
 
  Invariants:
