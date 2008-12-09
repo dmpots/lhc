@@ -1,0 +1,7 @@
+
+lhc-regress is installable from the top-level directory.
+
+  cabal install -f lhc-regress
+
+
+To run the testsuite, simply execute 'lhc-regress'. No command line arguments are required.
