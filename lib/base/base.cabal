@@ -5,6 +5,7 @@ Build-Type: Simple
 
 Library
   Extensions:      ForeignFunctionInterface
+  hs-source-dirs:  src
   Exposed-Modules: Control.Exception,
                  Control.Monad,
                  Data.Array,

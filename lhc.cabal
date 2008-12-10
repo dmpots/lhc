@@ -12,7 +12,7 @@ license-file:        COPYING
 author:              John Meacham, David Himmelstrup
 maintainer:          lemmih@gmail.com
 homepage:            http://lhc.seize.it/
-build-type:          Simple
+build-type:          Custom
 Extra-Source-Files:  src/arch/generic.arch, src/arch/i686.arch, src/arch/x86_64.arch
 data-dir:            data
 data-files:          HsFFI.h names.txt operators.txt prelude.m4 primitives.txt props.txt wsize.h ViaGhc.hs
@@ -38,9 +38,9 @@ Executable lhc
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
                       binary >= 0.4.4, directory, haskeline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
-                      utf8-string, stringtable-atom, derive >= 0.1.4,
+                      utf8-string, stringtable-atom, derive >= 0.1.4, Cabal >= 1.7,
                       filepath, ansi-wl-pprint >= 0.5.0, ansi-terminal >= 0.5.0
-
+                      
  ghc-options:         -fwarn-unused-imports
  if flag(base4)
   build-depends:      base >= 4 && < 5, syb
