@@ -35,7 +35,6 @@ full-int extend Int and Word to 32 bits on a 32 bit machine (rather than 30)
 via-ghc compile via ghc
 wrapper wrap main in exception handler
 boehm use Boehm garbage collector
-jgc   use the jgc garbage collector
 profile enable profiling code in generated executable
 debug enable debugging code in generated executable
 raw just evaluate main to WHNF and nothing else.

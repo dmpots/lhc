@@ -44,7 +44,7 @@ print_alloc_size_stats(void) {
 #define alloc_count(x,y)
 #define print_alloc_size_stats()
 
-#endif
+#endif /* _LHC_PROFILE */
 
 #if _LHC_GC == _LHC_GC_BOEHM
 
@@ -131,13 +131,9 @@ lhc_malloc_atomic(size_t n) {
 }
 
 
-#endif
+#endif /* _LHC_DEBUG */
 
-#elif _LHC_GC == _LHC_GC_JGC
-
-#error "jgc not supported yet."
-
-#endif
+#endif /* _LHC_GC == _LHC_GC_BOEHM */
 
 
 

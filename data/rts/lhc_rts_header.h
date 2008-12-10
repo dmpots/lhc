@@ -18,8 +18,7 @@
 // #define our options
 
 #define _LHC_GC_NONE  0
-#define _LHC_JGC      1
-#define _LHC_GC_BOEHM 2
+#define _LHC_GC_BOEHM 1
 
 
 #ifndef _LHC_GC

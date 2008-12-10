@@ -15,7 +15,6 @@ data Flag =
     | FullInt           -- ^ extend Int and Word to 32 bits on a 32 bit machine (rather than 30)
     | GlobalOptimize    -- ^ perform whole program E optimization
     | InlinePragmas     -- ^ use inline pragmas
-    | Jgc               -- ^ use the jgc garbage collector
     | Lint              -- ^ perform lots of extra type checks
     | M4                -- ^ pass haskell source through m4 preprocessor
     | MonomorphismRestriction -- ^ enforce monomorphism restriction
@@ -53,7 +52,6 @@ instance Show Flag where
     show ViaGhc = "via-ghc"
     show Wrapper = "wrapper"
     show Boehm = "boehm"
-    show Jgc = "jgc"
     show Profile = "profile"
     show Debug = "debug"
     show Raw = "raw"
@@ -62,8 +60,6 @@ one "profile" = Right $ Set.insert Profile
 one "no-profile" = Right $ Set.delete Profile
 one "boehm" = Right $ Set.insert Boehm
 one "no-boehm" = Right $ Set.delete Boehm
-one "jgc" = Right $ Set.insert Jgc
-one "no-jgc" = Right $ Set.delete Jgc
 one "cpr" = Right $ Set.insert Cpr
 one "no-cpr" = Right $ Set.delete Cpr
 one "m4" = Right $ Set.insert M4
@@ -117,6 +113,6 @@ process s xs = foldr f (s,[]) (map one xs) where
    f (Left x) (s,xs) = (s,x:xs)
 
 {-# NOINLINE helpMsg #-}
-helpMsg = "\n-- Code options --\n cpp\n    pass haskell source through c preprocessor\n ffi\n    support foreign function declarations\n m4\n    pass haskell source through m4 preprocessor\n unboxed-tuples\n    allow unboxed tuple syntax to be recognized\n unboxed-values\n    allow unboxed value syntax\n\n-- Typechecking --\n defaulting\n    perform defaulting of ambiguous types\n monomorphism-restriction\n    enforce monomorphism restriction\n\n-- Debugging --\n lint\n    perform lots of extra type checks\n\n-- Optimization Options --\n cpr\n    do CPR analysis\n float-in\n    perform float inward transform\n global-optimize\n    perform whole program E optimization\n inline-pragmas\n    use inline pragmas\n rules\n    use rules\n strictness\n    perform strictness analysis\n type-analysis\n    perhaps a basic points-to analysis on types right after method generation\n\n-- Code Generation --\n boehm\n    use Boehm garbage collector\n debug\n    enable debugging code in generated executable\n full-int\n    extend Int and Word to 32 bits on a 32 bit machine (rather than 30)\n jgc\n    use the jgc garbage collector\n profile\n    enable profiling code in generated executable\n raw\n    just evaluate main to WHNF and nothing else.\n via-ghc\n    compile via ghc\n wrapper\n    wrap main in exception handler\n\n-- Default settings --\n default\n    inline-pragmas rules wrapper float-in strictness defaulting type-analysis monomorphism-restriction boxy eval-optimize global-optimize\n"
-helpFlags = ["boehm", "controlled", "cpp", "cpr", "debug", "default", "defaulting", "ffi", "float-in", "full-int", "global-optimize", "inline-pragmas", "jgc", "lint", "m4", "monomorphism-restriction", "negate", "profile", "raw", "rules", "strictness", "type-analysis", "unboxed-tuples", "unboxed-values", "via-ghc", "wrapper"]
+helpMsg = "\n-- Code options --\n cpp\n    pass haskell source through c preprocessor\n ffi\n    support foreign function declarations\n m4\n    pass haskell source through m4 preprocessor\n unboxed-tuples\n    allow unboxed tuple syntax to be recognized\n unboxed-values\n    allow unboxed value syntax\n\n-- Typechecking --\n defaulting\n    perform defaulting of ambiguous types\n monomorphism-restriction\n    enforce monomorphism restriction\n\n-- Debugging --\n lint\n    perform lots of extra type checks\n\n-- Optimization Options --\n cpr\n    do CPR analysis\n float-in\n    perform float inward transform\n global-optimize\n    perform whole program E optimization\n inline-pragmas\n    use inline pragmas\n rules\n    use rules\n strictness\n    perform strictness analysis\n type-analysis\n    perhaps a basic points-to analysis on types right after method generation\n\n-- Code Generation --\n boehm\n    use Boehm garbage collector\n debug\n    enable debugging code in generated executable\n full-int\n    extend Int and Word to 32 bits on a 32 bit machine (rather than 30)\n profile\n    enable profiling code in generated executable\n raw\n    just evaluate main to WHNF and nothing else.\n via-ghc\n    compile via ghc\n wrapper\n    wrap main in exception handler\n\n-- Default settings --\n default\n    inline-pragmas rules wrapper float-in strictness defaulting type-analysis monomorphism-restriction boxy eval-optimize global-optimize\n"
+helpFlags = ["boehm", "controlled", "cpp", "cpr", "debug", "default", "defaulting", "ffi", "float-in", "full-int", "global-optimize", "inline-pragmas", "lint", "m4", "monomorphism-restriction", "negate", "profile", "raw", "rules", "strictness", "type-analysis", "unboxed-tuples", "unboxed-values", "via-ghc", "wrapper"]
 
