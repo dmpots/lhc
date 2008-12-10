@@ -878,7 +878,7 @@ transformProgram tp prog = liftIO $ do
         putErrLn $ "\n>>> Before " ++ name
         printProgram prog
         putErrLn $ "\n>>>"
-#if __GLASGOW_HASKELL__ >= 610
+#if BASE4
         putErrLn (show (e::SomeException))
 #else
         putErrLn (show e)

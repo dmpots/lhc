@@ -154,7 +154,7 @@ interact cho = mre where
     do_expr act s = case parseStmt (s ++ "\n") of
         Left m -> putStrLn m >> return act
         Right e -> do
-#if __GLASGOW_HASKELL__ >= 610
+#if BASE4
             CE.catch (runIn isStart { stateInteract = act } $ executeStatement e) $ (\e -> putStrLn $ show (e::SomeException))
 #else
             CE.catch (runIn isStart { stateInteract = act } $ executeStatement e) $ (\e -> putStrLn $ show e)
