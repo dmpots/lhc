@@ -1,4 +1,4 @@
-cabal-version:       >= 1.2
+cabal-version:       >= 1.7
 name:                lhc
 version:             0.6.20081210.1
 synopsis:            LHC Haskell Compiler
@@ -131,7 +131,7 @@ Executable lhc
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
                       binary >= 0.4.4, directory, haskeline, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
-                      utf8-string, stringtable-atom, derive >= 0.1.4, Cabal >= 1.7,
+                      utf8-string, stringtable-atom, derive >= 0.1.4,
                       filepath, ansi-wl-pprint >= 0.5.0, ansi-terminal >= 0.5.0
                       
  ghc-options:         -fwarn-unused-imports
