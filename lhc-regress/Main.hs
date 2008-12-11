@@ -47,15 +47,16 @@ main = do (cfg,paths) <- parseArguments =<< getArgs
             `finally` mapM_ killThread workers
 
 
+errMsg = "Some tests failed to perform as expected."
 
 manager cfg False _ | not (cfgComplete cfg)
-  = do when (cfgVerbose cfg >= 1) $ putStrLn "Some tests failed"
+  = do when (cfgVerbose cfg >= 1) $ putStrLn errMsg
        exitFailure
 
-manager cfg True [] | cfgVerbose cfg >= 3 = putStrLn "No failures"
+manager cfg True [] | cfgVerbose cfg >= 3 = putStrLn "No unexpected failures"
 manager cfg True [] | cfgVerbose cfg >= 1 = putStrLn ""
 manager cfg True [] = return ()
-manager cfg False [] = do when (cfgVerbose cfg >= 1) $ putStrLn "Some tests failed" >> exitFailure
+manager cfg False [] = do when (cfgVerbose cfg >= 1) $ putStrLn errMsg >> exitFailure
                           exitFailure
 
 manager cfg noFailures ((tc,result):rest)
