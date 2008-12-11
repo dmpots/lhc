@@ -6,7 +6,7 @@ import System.Info
 import qualified Paths_lhc as P
 
 package        = "lhc"
-tag            = "kami"
+tag            = "zhu"
 version        = showVersion P.version
 shortVersion   = concat $ intersperse "." $ map show $ init $ versionBranch P.version
 revision       = show $ tail $ versionBranch P.version
