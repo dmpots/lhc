@@ -24,7 +24,10 @@ main = defaultMainWithHooks simpleUserHooks { postInst = myPostInst }
         installLhcPkgs cf  = mapM_ (installLhcPkg cf)
         installLhcPkg cf n = do 
             putStrLn $ "\n[installing "++n++" package for lhc]\n"
-            let x = concat ["cd ","lib" </> n," && cabal install ",cf]
+            let x = unwords ["cd","lib" </> n
+                            ,"&&","runghc Setup configure",cf
+                            ,"&&","runghc Setup build"
+                            ,"&&","runghc Setup install"]
             putStrLn $ x
             system x
             return ()
