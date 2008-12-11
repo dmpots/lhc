@@ -1,4 +1,4 @@
-Cabal-version:   >= 1.2
+Cabal-version:   >= 1.7
 Name: base
 Version: 1.0
 Build-Type: Simple

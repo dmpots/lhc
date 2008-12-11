@@ -1,4 +1,4 @@
-cabal-version:       >= 1.7
+cabal-version:       >= 1.6
 name:                lhc
 version:             0.6.20081210.1
 synopsis:            LHC Haskell Compiler
