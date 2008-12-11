@@ -25,6 +25,8 @@ flag threaded
   default:            False
 flag lhc-regress
   default:            False
+flag with-base
+  default:            False
 
 Executable lhc
  main-is:             Main.hs
@@ -52,7 +54,10 @@ Executable lhc
   ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
  if flag(threaded)
   ghc-options:        -threaded
-
+ if flag(with-base)
+  x-build-base:       True
+ else
+  x-build-base:       False
  Other-modules:
   CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
