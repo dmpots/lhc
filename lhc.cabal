@@ -10,7 +10,7 @@ category:            Compiler
 license:             GPL
 license-file:        COPYING
 author:              John Meacham, David Himmelstrup
-maintainer:          lemmih@gmail.com
+maintainer:          lhc@projects.haskell.org
 homepage:            http://lhc.seize.it/
 build-type:          Custom
 Extra-Source-Files:  src/arch/generic.arch, src/arch/i686.arch, src/arch/x86_64.arch
