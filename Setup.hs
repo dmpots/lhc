@@ -11,7 +11,7 @@ main = defaultMainWithHooks simpleUserHooks { postInst = myPostInst }
   where myPostInst _ _ pkgdesc buildinfo = do 
           let dirs  = absoluteInstallDirs pkgdesc buildinfo NoCopyDest
               lhc   = bindir dirs </> "lhc"
-              confargs = "--lhc --with-lhc="++lhc
+              confargs = unwords ["--lhc", "--with-lhc="++lhc, "--prefix="++show (prefix (installDirTemplates buildinfo))]
               lpkgdesc = localPkgDescr buildinfo
               exes     = executables lpkgdesc
               sanity   = any (\(Executable s _ _) -> s == "lhc") exes
@@ -24,7 +24,7 @@ main = defaultMainWithHooks simpleUserHooks { postInst = myPostInst }
         installLhcPkgs cf  = mapM_ (installLhcPkg cf)
         installLhcPkg cf n = do 
             putStrLn $ "\n[installing "++n++" package for lhc]\n"
-            let x = concat ["cd ","lib" </> n," && runghc Setup configure ",cf," && runghc Setup build && runghc Setup install"]
+            let x = concat ["cd ","lib" </> n," && cabal install ",cf]
             putStrLn $ x
             system x
             return ()
