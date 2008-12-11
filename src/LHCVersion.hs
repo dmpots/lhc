@@ -8,8 +8,7 @@ import qualified Paths_lhc as P
 package        = "lhc"
 tag            = "zhu"
 version        = showVersion P.version
-shortVersion   = concat $ intersperse "." $ map show $ init $ versionBranch P.version
-revision       = show $ tail $ versionBranch P.version
+shortVersion   = concat $ intersperse "." $ map show $ take 3 $ versionBranch P.version
 
 -- | Simple version string
 {-# NOINLINE versionSimple #-}

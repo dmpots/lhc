@@ -284,7 +284,7 @@ initialLibIncludes = unsafePerformIO $ do
     h <- lookupEnv "HOME"
     l <- getAppUserDataDirectory "lhc"
     let paths = h ++ ["/usr/local","/usr"]
-        bases = ["/lib","/share"]
+        bases = ["/lib","/share","/.cabal/lib"]
         vers = ["/lhc-" ++ shortVersion, "/lhc"]
     return $ nub $ maybe [] (tokens (':' ==))  ps ++ (l ++ "/lhc-" ++ shortVersion):[ p ++ b ++ v | b <- bases, p <- paths, v <- vers ]
 

@@ -555,7 +555,7 @@ parseHsSource fn lbs = do
     let fopts s = s `member` optFOptsSet initialOpts
         initialOpts = f (take 4096 txt)
         incFlags = [ "-I" ++ d | d <- optIncdirs options ++ optIncs initialOpts]
-        defFlags = ("-D__LHC__=" ++ revision):[ "-D" ++ d | d <- optDefs initialOpts]
+        defFlags = ("-D__LHC__=" ++ version):[ "-D" ++ d | d <- optDefs initialOpts]
 
     s <- case () of
         _ | fopts FO.Cpp -> readSystem "cpp" $ ["-CC","-traditional"] ++ incFlags ++ defFlags ++ [fn]
