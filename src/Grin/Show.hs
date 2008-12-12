@@ -77,7 +77,7 @@ isComplex _ = False
 isOneLine (_ :>>= _) = False
 isOneLine Case {} = False
 isOneLine Let {} = False
-isOneLine MkCont {} = False
+--isOneLine MkCont {} = False
 isOneLine _ = True
 
 {-# NOINLINE prettyExp #-}
@@ -104,7 +104,7 @@ prettyExp vl (Update x y) = vl <> keyword "update" <+> prettyVal x <+> prettyVal
 prettyExp vl (Case v vs) = vl <> keyword "case" <+> prettyVal v <+> keyword "of" <$> indent 2 (vsep (map f vs)) where
     f (~[v] :-> e) | isOneLine e = prettyVal v <+> operator "->" <+> prettyExp empty e
     f (~[v] :-> e) = prettyVal v <+> operator "->" <+> keyword "do" <$> indent 2 (prettyExp empty e)
-prettyExp vl NewRegion { expLam = (r :-> body)} = vl <> keyword "region" <+> text "\\" <> prettyVals r <+> text "-> do" <$> indent 2 (prettyExp empty body)
+--prettyExp vl NewRegion { expLam = (r :-> body)} = vl <> keyword "region" <+> text "\\" <> prettyVals r <+> text "-> do" <$> indent 2 (prettyExp empty body)
 --prettyExp vl MkCont { expCont = (r :-> body) } = vl <> keyword "continuation" <+> text "\\" <> prettyVal r <+> text "-> do" <$> indent 2 (prettyExp empty body)
 prettyExp vl Let { expDefs = defs, expBody = body } = vl <> keyword "let" <$> indent 4 (vsep $ map f defs) <$> text " in" <$> indent 2 (prettyExp empty body) where
     f FuncDef { funcDefName = name, funcDefBody = as :-> body } = func (show name) <+> hsep (map prettyVal as) <+> operator "=" <+> keyword "do" <$> indent 2 (prettyExp empty body)

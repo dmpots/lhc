@@ -159,7 +159,7 @@ data Exp =
                   expJump :: Bool,                                        -- ^ Jump is equivalent to a call except it deallocates the region it resides in before transfering control
                   expFuncProps :: FuncProps,
                   expInfo :: Info.Info }                                  -- ^ Call or jump to a callable
-    | NewRegion { expLam :: Lam, expInfo :: Info.Info }                   -- ^ create a new region and pass it to its argument
+--    | NewRegion { expLam :: Lam, expInfo :: Info.Info }                   -- ^ create a new region and pass it to its argument
     | Alloc     { expValue :: Val,
                   expCount :: Val,
                   expRegion :: Val,
@@ -170,14 +170,14 @@ data Exp =
                   expIsNormal :: Bool,                                    -- ^ cache, True = definitely normal, False = maybe normal
                   expNonNormal :: Set.Set Atom,                           -- ^ cache, a superset of functions called in non-tail call position.
                   expInfo :: Info.Info }                                  -- ^ A let of local functions
-    | MkClosure { expValue :: Val,
+{-    | MkClosure { expValue :: Val,
                   expArgs :: [Val],
                   expRegion :: Val,
                   expType :: [Ty],
-                  expInfo :: Info.Info }                   -- ^ create a closure
-    | MkCont    { expCont :: Lam,                          -- ^ the continuation routine
+                  expInfo :: Info.Info }-}                   -- ^ create a closure
+{-    | MkCont    { expCont :: Lam,                          -- ^ the continuation routine
                   expLam :: Lam,                           -- ^ the computation that is passed the newly created computation
-                  expInfo :: Info.Info }                   -- ^ Make a continuation, always allocated on region encompasing expLam
+                  expInfo :: Info.Info }-}                   -- ^ Make a continuation, always allocated on region encompasing expLam
     deriving(Eq,Show,Ord)
 
 data Val =
@@ -461,12 +461,12 @@ instance CanType Exp [Ty] where
     getType (Update w v) = []
     getType (Case _ []) = error "empty case"
     getType (Case _ ((_ :-> e):_)) = getType e
-    getType NewRegion { expLam = _ :-> body } = getType body
+--    getType NewRegion { expLam = _ :-> body } = getType body
     getType Alloc { expValue = v } = [TyPtr (getType v)]
     getType Let { expBody = body } = getType body
-    getType MkCont { expLam = _ :-> rbody } = getType rbody
+--    getType MkCont { expLam = _ :-> rbody } = getType rbody
     getType Call { expType = ty } = ty
-    getType MkClosure { expType = ty } = ty
+--    getType MkClosure { expType = ty } = ty
 
 instance CanType Val Ty where
     getType (Var _ t) = t
@@ -521,11 +521,11 @@ instance FreeVars Exp (Set.Set Var) where
     freeVars (Prim _ x _) = freeVars x
     freeVars Error {} = Set.empty
     freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (funcFreeVars . funcDefProps) fdefs) `mappend` freeVars body
-    freeVars NewRegion { expLam = l } = freeVars l
+--    freeVars NewRegion { expLam = l } = freeVars l
     freeVars Alloc { expValue = v, expCount = c, expRegion = r } = freeVars (v,c,r)
     freeVars Call { expValue = v, expArgs = as } = freeVars (v:as)
-    freeVars MkClosure { expValue = v, expArgs = as, expRegion = r } = freeVars (v,as,r)
-    freeVars MkCont { expCont = v, expLam = as} = freeVars (v,as)
+--    freeVars MkClosure { expValue = v, expArgs = as, expRegion = r } = freeVars (v,as,r)
+--    freeVars MkCont { expCont = v, expLam = as} = freeVars (v,as)
 
 instance FreeVars Exp (Set.Set (Var,Ty)) where
     freeVars (a :>>= b) = freeVars (a,b)
@@ -538,11 +538,11 @@ instance FreeVars Exp (Set.Set (Var,Ty)) where
     freeVars (Prim _ x _) = freeVars x
     freeVars Error {} = Set.empty
     freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (freeVars . funcDefBody) fdefs) `mappend` freeVars body
-    freeVars NewRegion { expLam = l } = freeVars l
+--    freeVars NewRegion { expLam = l } = freeVars l
     freeVars Alloc { expValue = v, expCount = c, expRegion = r } = freeVars (v,c,r)
     freeVars Call { expValue = v, expArgs = as } = freeVars (v:as)
-    freeVars MkClosure { expValue = v, expArgs = as, expRegion = r } = freeVars (v,as,r)
-    freeVars MkCont { expCont = v, expLam = as} = freeVars (v,as)
+--    freeVars MkClosure { expValue = v, expArgs = as, expRegion = r } = freeVars (v,as,r)
+--    freeVars MkCont { expCont = v, expLam = as} = freeVars (v,as)
 
 instance FreeVars Exp [Var] where
     freeVars e = Set.toList $ freeVars e
@@ -578,11 +578,11 @@ instance FreeVars Exp (Set.Set Tag) where
     freeVars (Prim _ x _) = freeVars x
     freeVars Error {} = Set.empty
     freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (funcTags . funcDefProps) fdefs) `mappend` freeVars body
-    freeVars NewRegion { expLam = l } = freeVars l
+--    freeVars NewRegion { expLam = l } = freeVars l
     freeVars Alloc { expValue = v, expCount = c, expRegion = r } = freeVars (v,c,r)
     freeVars Call { expValue = v, expArgs = as } = freeVars (v:as)
-    freeVars MkClosure { expValue = v, expArgs = as, expRegion = r } = freeVars (v,as,r)
-    freeVars MkCont { expCont = v, expLam = as} = freeVars (v,as)
+--    freeVars MkClosure { expValue = v, expArgs = as, expRegion = r } = freeVars (v,as,r)
+--    freeVars MkCont { expCont = v, expLam = as} = freeVars (v,as)
 
 
 lamExp (_ :-> e) = e

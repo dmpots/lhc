@@ -26,7 +26,7 @@ modifyTail lam@(_ :-> lb) te = f mempty te where
     f lf lt@Let {expDefs = defs, expBody = body, expIsNormal = True } = updateLetProps lt { expBody = f nlf body, expDefs = defs' } where
         nlf = lf `Set.union` Set.fromList (map funcDefName defs)
         defs' = [ updateFuncDefProps d { funcDefBody = g nlf (funcDefBody d) } | d <- defs ]
-    f lf lt@MkCont {expLam = lam, expCont = cont } = lt { expLam = g lf lam, expCont = g lf cont }
+--    f lf lt@MkCont {expLam = lam, expCont = cont } = lt { expLam = g lf lam, expCont = g lf cont }
     f lf (e1 :>>= p :-> e2) = e1 :>>= p :-> f lf e2
     f lf e@(App a as t) | a `Set.member` lf = App a as (getType lb)
     f lf e = e :>>= lam
@@ -75,13 +75,13 @@ mapExpLam fn e = f e where
             b <- fn $ funcDefBody d
             return $ updateFuncDefProps d { funcDefBody = b }
         return $ updateLetProps lt { expDefs = defs' }
-    f nr@NewRegion { expLam = lam } = do
+{-    f nr@NewRegion { expLam = lam } = do
         lam <- fn lam
-        return $ nr { expLam = lam }
-    f e@MkCont { expCont = c, expLam = l } = do
+        return $ nr { expLam = lam }-}
+{-    f e@MkCont { expCont = c, expLam = l } = do
         c <- fn c
         l <- fn l
-        return $ e { expCont = c, expLam = l }
+        return $ e { expCont = c, expLam = l }-}
     f e = return e
 
 
@@ -185,11 +185,11 @@ collectFuncs exp = runWriter (cfunc exp) where
         cfunc Store {} = return mempty
         cfunc Update {} = return mempty
         cfunc Alloc {} = return mempty
-        cfunc NewRegion { expLam = l } = clfunc l
-        cfunc MkCont { expCont = l1, expLam = l2 } = do
+--        cfunc NewRegion { expLam = l } = clfunc l
+{-        cfunc MkCont { expCont = l1, expLam = l2 } = do
             a <- clfunc l1
             b <- clfunc l2
-            return (a `mappend` b)
+            return (a `mappend` b)-}
         cfunc x = error "Grin.Noodle.collectFuncs: unknown"
 
 grinLet defs body = updateLetProps Let {

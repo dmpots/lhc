@@ -215,7 +215,7 @@ isSimple (fn,x) = f (2::Int) x where
     f n (p :-> a :>>= b ) = (f (n - 1) (p :-> a)) &&  (f (n - 1) b)
     f _ (_ :-> Case {}) = False
     f _ (_ :-> Let {}) = False
-    f _ (_ :-> MkCont {}) = False
+--    f _ (_ :-> MkCont {}) = False
     f _ _ = True
 
 
@@ -267,10 +267,10 @@ editTail nty mt te = f mempty te where
     f lf lt@Let {expDefs = defs, expIsNormal = True } = do
         let nlf = lf `union` Set.fromList (map funcDefName defs)
         mapExpExp (f nlf) lt
-    f lf lt@MkCont {expLam = lam, expCont = cont } = do
+{-    f lf lt@MkCont {expLam = lam, expCont = cont } = do
         a <- g lf lam
         b <- g lf cont
-        return $ lt { expLam = a, expCont = b }
+        return $ lt { expLam = a, expCont = b }-}
     f lf (e1 :>>= p :-> e2) = do
         e2 <- f lf e2
         return $ e1 :>>= p :-> e2
@@ -289,7 +289,7 @@ sizeLam (b :-> exp) = sizeExp exp
 sizeExp (x :>>= y) = sizeExp x + sizeLam y
 sizeExp (Case e as) = 1 + sum (map sizeLam as)
 sizeExp Let { expDefs = defs, expBody = body } = sizeExp body + sum (map (sizeLam . funcDefBody) defs)
-sizeExp MkCont { expCont = l1, expLam = l2 } = 1 + sizeLam l1 + sizeLam l2
+--sizeExp MkCont { expCont = l1, expLam = l2 } = 1 + sizeLam l1 + sizeLam l2
 sizeExp x = 1
 
 optimize1 ::  Grin -> Bool -> (Atom,Lam) -> StatT IO Lam

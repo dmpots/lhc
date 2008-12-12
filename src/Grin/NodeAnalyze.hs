@@ -234,7 +234,7 @@ doFunc (name,arg :-> body) = ans where
             convertVal v
             dunno [TyPtr tyINode]
 --            dres [v']
-        f NewRegion { expLam = _ :-> body } = fn ret body
+--        f NewRegion { expLam = _ :-> body } = fn ret body
         f (Update (Var vname ty) v) | ty == TyPtr TyNode  = do
             v' <- convertVal v
             tell $ Left (vr vname ty) `isgte` v'
