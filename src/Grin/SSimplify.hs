@@ -184,10 +184,10 @@ simpExp e = f e [] where
         as <- mapM simpLam as
         return $ Case v as
 
-    g  lt@Let { expDefs = defs, expBody = body } = do
+{-    g  lt@Let { expDefs = defs, expBody = body } = do
         body <- f body []
         defs <- simpFuncs defs
-        return $ updateLetProps lt { expBody = body, expDefs = defs }
+        return $ updateLetProps lt { expBody = body, expDefs = defs }-}
     g x = applySubstE x
 
 

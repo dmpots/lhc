@@ -246,9 +246,9 @@ doFunc (name,arg :-> body) = ans where
             v' <- convertVal v
             v' <- convertVal v1
             dres []
-        f Let { expDefs = ds, expBody = e } = do
+{-        f Let { expDefs = ds, expBody = e } = do
             mapM_ doFunc (map (\x -> (funcDefName x, funcDefBody x)) ds)
-            fn ret e
+            fn ret e-}
         f exp = error $ "NodeAnalyze.f: " ++ show exp
 --        f _ = dres []
 

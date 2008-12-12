@@ -638,6 +638,8 @@ compile' cenv (tvr,as,e) = ans where
             e <- cc e
             v <- f ds x
             return $ e :>>= [toVal t] :-> v
+        -- All recursive lets should have been lifted to the top-level.
+        f (Right bs:ds) x | any (isELam . snd) bs = error "Unlifted let in Grin.FromE.compile'"
         f (Right bs:ds) x | any (isELam . snd) bs = do
             let g (t,e@(~ELam {})) = do
                     let (a,as) = fromLam e

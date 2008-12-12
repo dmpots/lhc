@@ -164,12 +164,12 @@ data Exp =
                   expCount :: Val,
                   expRegion :: Val,
                   expInfo :: Info.Info }                                  -- ^ allocate space for a number of values in the given region
-    | Let       { expDefs :: [FuncDef],
+{-    | Let       { expDefs :: [FuncDef],
                   expBody :: Exp,
                   expFuncCalls :: (Set.Set Atom,Set.Set Atom),            -- ^ cache
                   expIsNormal :: Bool,                                    -- ^ cache, True = definitely normal, False = maybe normal
                   expNonNormal :: Set.Set Atom,                           -- ^ cache, a superset of functions called in non-tail call position.
-                  expInfo :: Info.Info }                                  -- ^ A let of local functions
+                  expInfo :: Info.Info }-}                                  -- ^ A let of local functions
 {-    | MkClosure { expValue :: Val,
                   expArgs :: [Val],
                   expRegion :: Val,
@@ -463,7 +463,7 @@ instance CanType Exp [Ty] where
     getType (Case _ ((_ :-> e):_)) = getType e
 --    getType NewRegion { expLam = _ :-> body } = getType body
     getType Alloc { expValue = v } = [TyPtr (getType v)]
-    getType Let { expBody = body } = getType body
+--    getType Let { expBody = body } = getType body
 --    getType MkCont { expLam = _ :-> rbody } = getType rbody
     getType Call { expType = ty } = ty
 --    getType MkClosure { expType = ty } = ty
@@ -520,7 +520,7 @@ instance FreeVars Exp (Set.Set Var) where
     freeVars (Update x y) = freeVars (x,y)
     freeVars (Prim _ x _) = freeVars x
     freeVars Error {} = Set.empty
-    freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (funcFreeVars . funcDefProps) fdefs) `mappend` freeVars body
+--    freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (funcFreeVars . funcDefProps) fdefs) `mappend` freeVars body
 --    freeVars NewRegion { expLam = l } = freeVars l
     freeVars Alloc { expValue = v, expCount = c, expRegion = r } = freeVars (v,c,r)
     freeVars Call { expValue = v, expArgs = as } = freeVars (v:as)
@@ -537,7 +537,7 @@ instance FreeVars Exp (Set.Set (Var,Ty)) where
     freeVars (Update x y) = freeVars (x,y)
     freeVars (Prim _ x _) = freeVars x
     freeVars Error {} = Set.empty
-    freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (freeVars . funcDefBody) fdefs) `mappend` freeVars body
+--    freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (freeVars . funcDefBody) fdefs) `mappend` freeVars body
 --    freeVars NewRegion { expLam = l } = freeVars l
     freeVars Alloc { expValue = v, expCount = c, expRegion = r } = freeVars (v,c,r)
     freeVars Call { expValue = v, expArgs = as } = freeVars (v:as)
@@ -577,7 +577,7 @@ instance FreeVars Exp (Set.Set Tag) where
     freeVars (Update x y) = freeVars (x,y)
     freeVars (Prim _ x _) = freeVars x
     freeVars Error {} = Set.empty
-    freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (funcTags . funcDefProps) fdefs) `mappend` freeVars body
+--    freeVars Let { expDefs = fdefs, expBody = body } = mconcat (map (funcTags . funcDefProps) fdefs) `mappend` freeVars body
 --    freeVars NewRegion { expLam = l } = freeVars l
     freeVars Alloc { expValue = v, expCount = c, expRegion = r } = freeVars (v,c,r)
     freeVars Call { expValue = v, expArgs = as } = freeVars (v:as)

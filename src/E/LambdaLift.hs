@@ -151,7 +151,7 @@ calculateLiftees prog = do
 
     findFixpoint Nothing {-"Liftees"-} fixer
     vs <- supplyReadValues sup
-    let nlset =  (fromList [ x | (x,False) <- vs])
+    let nlset = (fromList [ x | (x,False) <- vs])
     when verbose $ printf "%d lambdas not lifted\n" (size nlset)
     return nlset
 
@@ -163,7 +163,9 @@ assert x = value True `implies` x
 
 lambdaLift ::  Program -> IO Program
 lambdaLift prog@Program { progDataTable = dataTable, progCombinators = cs } = do
-    noLift <- calculateLiftees prog
+    --noLift <- calculateLiftees prog
+    -- We don't want any local functions in the GRIN code.
+    let noLift = sempty :: IdSet
     let wp =  fromList [ combIdent x | x <- cs ] :: IdSet
     fc <- newIORef []
     fm <- newIORef mempty

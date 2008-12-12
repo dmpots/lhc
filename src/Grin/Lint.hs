@@ -180,10 +180,10 @@ tcExp e = f e where
         tv <- tcVal v
         es <- mapM (tcLam (Just [tv])) as
         foldl1M (same $ "case exp: " ++ show (map head $ sortGroupUnder fst (zip es as)) ) es
-    f (Let { expDefs = defs, expBody = body }) = do
+{-    f (Let { expDefs = defs, expBody = body }) = do
         local (\e -> e { envTyEnv = extendTyEnv defs (envTyEnv e) }) $ do
             mapM_ (tcLam Nothing) [ b | FuncDef { funcDefBody = b } <- defs ]
-            f body
+            f body-}
 
 tcVal :: Val -> Tc Ty
 tcVal v = f v where

@@ -214,7 +214,7 @@ isSimple (fn,x) = f (2::Int) x where
     f n _ | n <= 0 = False
     f n (p :-> a :>>= b ) = (f (n - 1) (p :-> a)) &&  (f (n - 1) b)
     f _ (_ :-> Case {}) = False
-    f _ (_ :-> Let {}) = False
+--    f _ (_ :-> Let {}) = False
 --    f _ (_ :-> MkCont {}) = False
     f _ _ = True
 
@@ -227,7 +227,7 @@ data UnboxingResult = UnboxTup (Atom,[Ty]) | UnboxConst Val
 isCombinable :: Monad m => Bool -> Exp -> m UnboxingResult
 isCombinable postEval e = ans where
     ans = do
-        mn <- f mempty e
+        mn <- f (mempty :: Set.Set Atom) e
         equal mn
     equal [] = fail "empty isCombinable"
     equal [x] = return x
@@ -239,14 +239,14 @@ isCombinable postEval e = ans where
         cs <- Prelude.mapM (f lf) [ e | _ :-> e <- ls ]
         return $ concat cs
     f lf (_ :>>= _ :-> e) = f lf e
-    f lf Let { expBody = body, expIsNormal = False } = f lf body
+--    f lf Let { expBody = body, expIsNormal = False } = f lf body
     f lf (App a _ _) | a `member` lf = return []
-    f lf Let { expBody = body, expDefs = defs, expIsNormal = True } = ans where
+{-    f lf Let { expBody = body, expDefs = defs, expIsNormal = True } = ans where
         nlf = lf `union` Set.fromList (map funcDefName defs)
         ans = do
             xs <- mapM (f nlf . lamExp . funcDefBody) defs
             b <- f nlf body
-            return (concat (b:xs))
+            return (concat (b:xs))-}
     f _ _ = fail "not combinable"
 
 
@@ -258,15 +258,15 @@ combine postEval nty exp = editTail nty f exp where
     f e = fail $ "combine: " ++ show (postEval,nty,e)
 
 editTail :: Monad m => [Ty] -> (Exp -> m Exp) -> Exp -> m Exp
-editTail nty mt te = f mempty te where
+editTail nty mt te = f (mempty :: Set.Set Atom) te where
     f _ (Error s ty) = return $ Error s nty
     f lf (Case x ls) = return (Case x) `ap` mapM (g lf) ls
-    f lf lt@Let {expIsNormal = False, expBody = body } = do
+{-    f lf lt@Let {expIsNormal = False, expBody = body } = do
         body <- f lf body
         return $ updateLetProps lt { expBody = body }
     f lf lt@Let {expDefs = defs, expIsNormal = True } = do
         let nlf = lf `union` Set.fromList (map funcDefName defs)
-        mapExpExp (f nlf) lt
+        mapExpExp (f nlf) lt-}
 {-    f lf lt@MkCont {expLam = lam, expCont = cont } = do
         a <- g lf lam
         b <- g lf cont
@@ -288,7 +288,7 @@ mapExp f (b :-> e) = b :-> f e
 sizeLam (b :-> exp) = sizeExp exp
 sizeExp (x :>>= y) = sizeExp x + sizeLam y
 sizeExp (Case e as) = 1 + sum (map sizeLam as)
-sizeExp Let { expDefs = defs, expBody = body } = sizeExp body + sum (map (sizeLam . funcDefBody) defs)
+--sizeExp Let { expDefs = defs, expBody = body } = sizeExp body + sum (map (sizeLam . funcDefBody) defs)
 --sizeExp MkCont { expCont = l1, expLam = l2 } = 1 + sizeLam l1 + sizeLam l2
 sizeExp x = 1
 
@@ -380,15 +380,15 @@ optimize1 grin postEval (n,l) = execUniqT 1 (g l) where
         return (mc lt :>>= as :-> Return [NodeC t as] :>>= v :-> lr)
         -}
 
-    f lt@Let { expDefs = defs, expBody = e :>>= l :-> r } | Set.null (freeVars r `Set.intersection` (Set.fromList $ map funcDefName defs)) = do
+{-    f lt@Let { expDefs = defs, expBody = e :>>= l :-> r } | Set.null (freeVars r `Set.intersection` (Set.fromList $ map funcDefName defs)) = do
         mtick "Optimize.optimize.let-shrink-tail"
-        return (updateLetProps lt { expBody = e } :>>= l :-> r)
+        return (updateLetProps lt { expBody = e } :>>= l :-> r)-}
 --    f lt@(Let { expDefs = defs, expBody = e :>>= l :-> r } :>>= lr) | Set.null (freeVars r `Set.intersect` (Set.fromList $ map funcDefName defs)) = do
 --        mtick "Optimize.optimize.let-shrink-tail"
 --        f ((updateLetProps lt { expBody = e } :>>= l :-> r) :>>= lr)
-    f lt@Let { expDefs = defs, expBody = e :>>= l :-> r } | Set.null (freeVars e `Set.intersection` (Set.fromList $ map funcDefName defs)) = do
+{-    f lt@Let { expDefs = defs, expBody = e :>>= l :-> r } | Set.null (freeVars e `Set.intersection` (Set.fromList $ map funcDefName defs)) = do
         mtick "Optimize.optimize.let-shrink-head"
-        return (e :>>= l :-> updateLetProps lt { expBody = r })
+        return (e :>>= l :-> updateLetProps lt { expBody = r })-}
 
 {-
     f (Case x as :>>= v@(Var vnum _) :-> rc@(Case v' as') :>>= lr) | v == v', count (== Nothing ) (Prelude.map (isManifestNode . lamExp) as) <= 1, not (vnum `Set.member` freeVars lr) = do
@@ -438,7 +438,7 @@ optimize1 grin postEval (n,l) = execUniqT 1 (g l) where
 --        caseHoist hexp v as' (getType rc)
 
     -- let unboxing
-    f (cs@Let {} :>>= lr) | Just comb <- isCombinable postEval cs = do
+{-    f (cs@Let {} :>>= lr) | Just comb <- isCombinable postEval cs = do
         lr <- g lr
         case comb of
             UnboxTup (t,ts) -> do
@@ -451,7 +451,7 @@ optimize1 grin postEval (n,l) = execUniqT 1 (g l) where
                 mtick $ "Optimize.optimize.let-unbox-const.{" ++ show val
                 cpe <- combine postEval [] cs
                 return ((cpe :>>= [] :-> Return [val]) :>>= lr)
-       where fv = freeVars cs `Set.union` freeVars [ p | p :-> _ <- map funcDefBody (expDefs cs) ]
+       where fv = freeVars cs `Set.union` freeVars [ p | p :-> _ <- map funcDefBody (expDefs cs) ]-}
 
 --    f (hexp@Let {} :>>= v@(Var vnum _) :-> rc@(Case v' as') :>>= lr) | v == v', not (vnum `Set.member` freeVars lr) = do
 --        c <- caseHoist hexp v as' (getType rc)
@@ -470,7 +470,7 @@ optimize1 grin postEval (n,l) = execUniqT 1 (g l) where
     f (Case x as) = do
        as' <- sequence [ f e >>= return . (b :->)| b :-> e <- as ]
        return $ Case x as'
-    f Let { expDefs = [fd], expBody = body } | not (funcDefName fd `Set.member` funcTags (funcDefProps fd)), sizeLTE 1 nocc = ans where
+{-    f Let { expDefs = [fd], expBody = body } | not (funcDefName fd `Set.member` funcTags (funcDefProps fd)), sizeLTE 1 nocc = ans where
         (ne,nocc) = runWriter (c body)
         ans = case nocc of
             [] -> do
@@ -484,7 +484,7 @@ optimize1 grin postEval (n,l) = execUniqT 1 (g l) where
             return $ Return xs :>>= funcDefBody fd
         c e@Let { expDefs = defs } | funcDefName fd `elem` map funcDefName defs = return e
         c e = mapExpExp c e
-    f e@Let {} = mapExpExp f e
+    f e@Let {} = mapExpExp f e-}
     f e = return e
     notReturnNode (ReturnNode (Just _,_)) = False
     notReturnNode _ = True
@@ -670,11 +670,11 @@ renameUniqueGrin grin = res where
         case mlookup fn m of
             Just fn' -> return a { expValue = Item fn' t }
             _ -> return a
-    g (e@Let { expDefs = defs }) = do
+{-    g (e@Let { expDefs = defs }) = do
         (defs',rs) <- liftM unzip $ flip mapM defs $ \d -> do
             (nn,rs) <- newName (funcDefName d)
             return (d { funcDefName = nn },rs)
-        local (fromList rs `mappend`) $  mapExpExp g e { expDefs = defs' }
+        local (fromList rs `mappend`) $  mapExpExp g e { expDefs = defs' }-}
     g b = mapExpExp g b
     newName a = do
         m <- lift get

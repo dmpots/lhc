@@ -84,13 +84,13 @@ whiz sub te tf inState start = res where
         as <- mapM (dc env) as
         return $ Case v as
 --    g env lt@Let { expDefs = defs, expBody = Let { expDefs = defs', expBody = body } } = g env lt { expDefs = defs `mappend` defs', expBody = body }
-    g env lt@Let { expDefs = defs, expBody = body } = do
+{-    g env lt@Let { expDefs = defs, expBody = body } = do
         body <- f body [] env
         let f def@FuncDef { funcDefName = n, funcDefBody = b } = do
                 b <- dc env b
                 return $ createFuncDef True n b
         defs <- mapM f defs
-        return $ updateLetProps lt { expBody = body, expDefs = defs }
+        return $ updateLetProps lt { expBody = body, expDefs = defs }-}
     g env x = applySubstE env x
     dc env (p :-> e) = do
         (p,env') <- renamePattern p
@@ -152,13 +152,13 @@ fizz sub te tf inState start = res where
         v <- applySubst env v
         as <- mapM (dc env) as
         return $ Case v as
-    g env lt@Let { expDefs = defs, expBody = body } = do
+{-    g env lt@Let { expDefs = defs, expBody = body } = do
         body <- f body [] env
         let f def@FuncDef { funcDefName = n, funcDefBody = b } = do
                 b <- dc env b
                 return $ createFuncDef True n b
         defs <- mapM f defs
-        return $ updateLetProps lt { expBody = body, expDefs = defs }
+        return $ updateLetProps lt { expBody = body, expDefs = defs }-}
     g env x = applySubstE env x
     dc env (p :-> e) = do
         (p,env') <- renamePattern p

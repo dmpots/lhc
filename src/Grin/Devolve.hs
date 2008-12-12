@@ -28,7 +28,7 @@ devolveGrin :: Grin -> IO Grin
 devolveGrin grin = do
     col <- newIORef []
     let g (n,l :-> r) = f r >>= \r -> return (n,l :-> r)
-        f lt@Let { expDefs = defs, expBody = body } = do
+        {-f lt@Let { expDefs = defs, expBody = body } = do
             let nonTail = expNonNormal lt
                 (nmaps,rmaps) = splitEither (map z defs)
                 z fd@FuncDef { funcDefName = name, funcDefBody = as :-> r }
@@ -42,7 +42,7 @@ devolveGrin grin = do
             mapM_ print (Map.toList pmap)
             nmaps <- mapM (g . fst) nmaps
             modifyIORef col (++ nmaps)
-            mapExpExp f $  updateLetProps lt { expDefs = rmaps, expBody = proc body }
+            mapExpExp f $  updateLetProps lt { expDefs = rmaps, expBody = proc body }-}
         f e = mapExpExp f e
     nf <- mapM g (grinFuncs grin)
     lf <- readIORef col
@@ -76,10 +76,10 @@ instance Twiddle a => Twiddle [a] where
 
 twiddleExp e = f e where
     f (x :>>= lam) = return (:>>=) `ap` twiddle x `ap` twiddle lam
-    f l@Let {} = do
+    {-f l@Let {} = do
         ds <- twiddle (expDefs l)
         b <- twiddle (expBody l)
-        return . updateLetProps $ l { expDefs = ds, expBody = b }
+        return . updateLetProps $ l { expDefs = ds, expBody = b }-}
     f (Case v as) = return Case `ap` twiddle v `ap` twiddle as
     f n = do e <- mapExpVal twiddleVal n ; mapExpExp twiddle e
 

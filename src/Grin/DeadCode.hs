@@ -127,12 +127,12 @@ go fixer pappFuncs suspFuncs usedFuncs usedArgs usedCafs postInline (fn,as :-> b
             g (Store n) = addRule $ doNode n
             g (Fetch x) = addRule $ doNode x
             g Alloc { expValue = v, expCount = c, expRegion = r } = addRule $ doNode v `mappend` doNode c `mappend` doNode r
-            g Let { expDefs = defs, expBody = body } = do
+{-            g Let { expDefs = defs, expBody = body } = do
                 mapM_ goAgain [ (name,bod) | FuncDef { funcDefBody = bod, funcDefName = name } <- defs]
                 flip mapM_ (map funcDefName defs) $ \n -> do
                     --n' <- supplyValue usedFuncs n
                     --addRule $ fn' `implies` n'
-                    return ()
+                    return ()-}
             g Error {} = return ()
             -- TODO - handle function and case return values smartier.
             g (Return ns) = mapM_ (addRule . doNode) ns
@@ -183,8 +183,8 @@ removeDeadArgs postInline funSet directFuncs usedCafs usedArgs (a,l) =  whizExps
         as <- dff' fn' as
         as <- mapM clearCaf as
         return $ Update p (NodeC fn as)
-    f lt@Let { expDefs = defs }  = return $ updateLetProps lt { expDefs = defs' } where
-        defs' = [ updateFuncDefProps df { funcDefBody = margs name body } | df@FuncDef { funcDefName = name, funcDefBody = body } <- defs, name `Set.member` funSet ]
+{-    f lt@Let { expDefs = defs }  = return $ updateLetProps lt { expDefs = defs' } where
+        defs' = [ updateFuncDefProps df { funcDefBody = margs name body } | df@FuncDef { funcDefName = name, funcDefBody = body } <- defs, name `Set.member` funSet ]-}
     f x = return x
     dff' fn as | fn `Set.member` directFuncs = return as
     dff' fn as = dff'' fn as

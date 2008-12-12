@@ -62,13 +62,13 @@ grinPush stats (l :-> e) = ans where
         (_,exp') <- dropAny Nothing exp
         return exp'
 
-    fixupLet lt@Let { expDefs = defs, expBody = b } = do
+{-    fixupLet lt@Let { expDefs = defs, expBody = b } = do
         let def = (Set.fromList $ map funcDefName defs)
             f (e :>>= l :-> r) | Set.null (freeVars e `Set.intersection` def) = do
                 exp <- f r
                 return (e :>>= l :-> exp)
             f r = return $ updateLetProps lt {  expBody = r }
-        f b
+        f b-}
     fixupLet exp = return exp
     dropAny mv (exp::Exp) = do
         (nn,xs) <- get

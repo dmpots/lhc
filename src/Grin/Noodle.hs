@@ -22,10 +22,10 @@ modifyTail lam@(_ :-> lb) te = f mempty te where
     f lf e | False && trace ("modifyTail: " ++ show (lf,e)) False = undefined
     f _ (Error s ty) = Error s (getType lb)
     f lf (Case x ls) = Case x (map (g lf) ls)
-    f _ lt@Let {expIsNormal = False } = lt :>>= lam
-    f lf lt@Let {expDefs = defs, expBody = body, expIsNormal = True } = updateLetProps lt { expBody = f nlf body, expDefs = defs' } where
+--    f _ lt@Let {expIsNormal = False } = lt :>>= lam
+{-    f lf lt@Let {expDefs = defs, expBody = body, expIsNormal = True } = updateLetProps lt { expBody = f nlf body, expDefs = defs' } where
         nlf = lf `Set.union` Set.fromList (map funcDefName defs)
-        defs' = [ updateFuncDefProps d { funcDefBody = g nlf (funcDefBody d) } | d <- defs ]
+        defs' = [ updateFuncDefProps d { funcDefBody = g nlf (funcDefBody d) } | d <- defs ]-}
 --    f lf lt@MkCont {expLam = lam, expCont = cont } = lt { expLam = g lf lam, expCont = g lf cont }
     f lf (e1 :>>= p :-> e2) = e1 :>>= p :-> f lf e2
     f lf e@(App a as t) | a `Set.member` lf = App a as (getType lb)
@@ -70,11 +70,11 @@ mapValVal_ fn x = f x where
 mapExpLam fn e = f e where
     f (a :>>= b) = return (a :>>=) `ap` fn b
     f (Case e as) = return (Case e) `ap` mapM fn as
-    f lt@Let { expDefs = defs } = do
+{-    f lt@Let { expDefs = defs } = do
         defs' <- forM defs $ \d -> do
             b <- fn $ funcDefBody d
             return $ updateFuncDefProps d { funcDefBody = b }
-        return $ updateLetProps lt { expDefs = defs' }
+        return $ updateLetProps lt { expDefs = defs' }-}
 {-    f nr@NewRegion { expLam = lam } = do
         lam <- fn lam
         return $ nr { expLam = lam }-}
@@ -88,9 +88,9 @@ mapExpLam fn e = f e where
 
 mapExpExp fn e = f e where
     f (a :>>= b) = return (:>>=) `ap` fn a `ap` g b
-    f l@Let { expBody = b, expDefs = defs } = do
+{-    f l@Let { expBody = b, expDefs = defs } = do
         b <- fn b
-        mapExpLam g l { expBody = b }
+        mapExpLam g l { expBody = b }-}
     f e = mapExpLam g e
     g (l :-> e) = return (l :->) `ap` fn e
 
@@ -116,13 +116,13 @@ isManifestNode e = f mempty e where
     f lf (Return [(NodeC t _)]) = return [t]
     f lf Error {} = return []
     f lf (App a _ _) | a `Set.member` lf = return []
-    f lf Let { expBody = body, expIsNormal = False } = f lf body
-    f lf Let { expBody = body, expDefs = defs, expIsNormal = True } = ans where
+--    f lf Let { expBody = body, expIsNormal = False } = f lf body
+{-    f lf Let { expBody = body, expDefs = defs, expIsNormal = True } = ans where
         nlf = lf `Set.union` Set.fromList (map funcDefName defs)
         ans = do
             xs <- mapM (f nlf . lamExp . funcDefBody) defs
             b <- f nlf body
-            return (concat (b:xs))
+            return (concat (b:xs))-}
     f lf (Case _ ls) = do
         cs <- Prelude.mapM (f lf) [ e | _ :-> e <- ls ]
         return $ concat cs
@@ -149,7 +149,7 @@ isOmittable (Store x) | getType x /= TyNode = False
 isOmittable (Store {}) = True
 isOmittable Prim { expPrimitive = aprim } = aprimIsCheap aprim
 isOmittable (Case x ds) = all isOmittable [ e | _ :-> e <- ds ]
-isOmittable Let { expBody = x } = isOmittable x
+--isOmittable Let { expBody = x } = isOmittable x
 isOmittable (e1 :>>= _ :-> e2) = isOmittable e1 && isOmittable e2
 isOmittable _ = False
 
@@ -175,9 +175,9 @@ collectFuncs exp = runWriter (cfunc exp) where
         cfunc (Case _ as) = do
             rs <- mapM clfunc as
             return (mconcat rs)
-        cfunc Let { expFuncCalls = (tail,nonTail) } = do
+{-        cfunc Let { expFuncCalls = (tail,nonTail) } = do
             tell nonTail
-            return tail
+            return tail-}
         cfunc Fetch {} = return mempty
         cfunc Error {} = return mempty
         cfunc Prim {} = return mempty
@@ -192,7 +192,7 @@ collectFuncs exp = runWriter (cfunc exp) where
             return (a `mappend` b)-}
         cfunc x = error "Grin.Noodle.collectFuncs: unknown"
 
-grinLet defs body = updateLetProps Let {
+grinLet defs body = error "grinLet not defined"{-updateLetProps Let {
     expDefs = defs,
     expBody = body,
     expInfo = mempty,
@@ -211,7 +211,7 @@ updateLetProps lt@Let { expBody = body, expDefs = defs } =
     notNormal =  nonTail `Set.intersection` (Set.fromList $ map funcDefName defs)
     myDefs = Set.fromList $ map funcDefName defs
 updateLetProps e = e
-
+-}
 
 data ReturnInfo = ReturnNode (Maybe Atom,[Ty]) | ReturnConst Val | ReturnCalls Atom | ReturnOther | ReturnError
     deriving(Eq,Ord)
@@ -225,13 +225,13 @@ getReturnInfo  e = ans where
     f lf Error {} = tells ReturnError
     f lf (Case _ ls) = do Prelude.mapM_ (f lf) [ e | _ :-> e <- ls ]
     f lf (_ :>>= _ :-> e) = f lf e
-    f lf Let { expBody = body, expIsNormal = False } = f lf body
+--    f lf Let { expBody = body, expIsNormal = False } = f lf body
     f lf (App a _ _) | a `Set.member` lf = return ()
-    f lf Let { expBody = body, expDefs = defs, expIsNormal = True } = ans where
+{-    f lf Let { expBody = body, expDefs = defs, expIsNormal = True } = ans where
         nlf = lf `Set.union` Set.fromList (map funcDefName defs)
         ans = do
             mapM_ (f nlf . lamExp . funcDefBody) defs
-            f nlf body
+            f nlf body-}
     f _ (App a _ _) = tells $ ReturnCalls a
     f _ e = tells ReturnOther
 

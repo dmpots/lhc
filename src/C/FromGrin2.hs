@@ -262,7 +262,7 @@ localScope xs action = do
 iDeclare action = local (\e -> e { rDeclare = True }) action
 
 convertBody :: Exp -> C Statement
-convertBody Let { expDefs = defs, expBody = body } = do
+{-convertBody Let { expDefs = defs, expBody = body } = do
     u <- newUniq
     nn <- flip mapM defs $ \FuncDef { funcDefName = name, funcDefBody = as :-> _ } -> do
         vs' <- mapM convertVal as
@@ -278,7 +278,7 @@ convertBody Let { expDefs = defs, expBody = body } = do
     todo <- asks rTodo
     case todo of
         TodoReturn -> return (ss & mconcat rs);
-        _ -> return (ss & goto done & mconcat (intersperse (goto done) rs) & label done);
+        _ -> return (ss & goto done & mconcat (intersperse (goto done) rs) & label done);-}
 convertBody (e :>>= [] :-> e') = do
     ss <- localTodo TodoNothing (convertBody e)
     ss' <- convertBody e'
