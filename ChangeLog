@@ -14,6 +14,7 @@
   because derive allows us to use template haskell, thus avoiding
   a need for preprocessing.
 * Now uses ansi-terminal and ansi-wl-pprint from hackage.
-* Now requires Cabal >= 1.7 as it has LHC support, allowing us
-  to install lhc's packages easily as a post-installation step.
+* We can now install the base library automatically by passing
+  the -fwith-base flag to 'cabal install' - this requires cabal 1.7
+  to be installed, however.
 * Random code cleanups, etc.
