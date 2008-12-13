@@ -2499,5 +2499,6 @@ shiftRInteger i b = let
 
 -- -}
 
-main = Print.print [1..100 :: Integer]
-
+main = let large :: [Integer]
+           large = P.map (\n -> 2 P.^ n) [1..100 :: Integer]
+       in Print.print large
