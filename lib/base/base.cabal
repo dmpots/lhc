@@ -21,6 +21,7 @@ Library
                  Data.Maybe,
                  Data.Ratio,
                  Data.Unicode,
+                 Debug.Trace,
                  Foreign,
                  Foreign.C,
                  Foreign.C.Types,
