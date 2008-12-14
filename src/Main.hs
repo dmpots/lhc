@@ -792,10 +792,10 @@ dumpFinalGrin grin = do
 
 
 compileGrinToC grin | optMode options == Interpret    = fail "Interpretation currently not supported."
-compileGrinToC grin | optMode options == GenerateExe ||
-                      optMode options == GenerateC   || 
-                      optMode options == KeepTmpFiles = do
-    let (cg,rls) = FG2.compileGrin grin
+compileGrinToC grin | optMode options `elem` [GenerateExe
+                                             ,GenerateC
+                                             ,KeepTmpFiles] = do
+    let (cg,rls) = FG3.compileGrin grin
     let fn = optOutName options
     let cf = (fn ++ "_code.c")
     progress ("Writing " ++ show cf)
@@ -818,7 +818,7 @@ compileGrinToC grin | optMode options == GenerateExe ||
                            , globalvar "lhc_command" argstring 
                            , globalvar "lhc_version" sversion,"",cg ]
     -- only compile when we specify GenerateExe or KeepTmpFiles, otherwise we just emit C
-    when (((||) `on` (optMode options ==)) KeepTmpFiles GenerateExe) compileC
+    when (optMode options `elem` [KeepTmpFiles, GenerateExe]) compileC
 compileGrinToC grin | otherwise = return ()
 
 dumpCore pname prog = do
