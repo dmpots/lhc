@@ -8,7 +8,7 @@ import Data.List
 import Data.Char
 import Data.Maybe
 import Data.Monoid
-import Text.PrettyPrint.ANSI.Leijen(nest,(<$$>))
+import Text.PrettyPrint.ANSI.Leijen(indent,(<$$>))
 import Text.Printf
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -103,7 +103,7 @@ compileGrin grin = (hsffi_h ++ lhc_rts_header_h ++ lhc_rts_alloc_c ++ lhc_rts_c 
     (header,body) = generateC (Map.elems fm) (Map.elems sm)
     ((),finalHcHash,Written { wRequires = req, wFunctions = fm, wEnums = wenum, wStructures = sm, wTags = ts }) = runC grin go
     enum_tag_t | null enums = mempty
-               | otherwise  = text "enum {" <$$> nest 4 (P.vcat (punctuate P.comma $ enums)) <$$> text "};"
+               | otherwise  = text "enum {" <$$> indent 4 (P.vcat (punctuate P.comma $ enums)) <$$> text "};"
         where
             f t n = tshow t <> text " = " <> tshow (n :: Int)
             enums =  map (uncurry f) (Map.toList wenum) ++ (zipWith f (Set.toList (Set.map nodeTagName ts)) [0 ..])
