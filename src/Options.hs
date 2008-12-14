@@ -45,9 +45,11 @@ data Mode = BuildHl String -- ^ Build the specified hl-file given a description 
           | Version        -- ^ Print version and die.
           | ShowHelp       -- ^ Show help message and die.
           | Interpret      -- ^ Interpret.
-          | CompileHo      -- ^ Compile ho
-          | CompileHoGrin  -- ^ Compile ho and grin
-          | CompileExe     -- ^ Compile executable
+          | GenerateHo     -- ^ Generate ho
+          | GenerateHoGrin -- ^ Generate ho and grin
+          | GenerateC      -- ^ Generate C file
+          | GenerateExe    -- ^ Generate executable
+          | KeepTmpFiles   -- ^ Keep ho grin C and generate executable
           | DependencyTree -- ^ show simple dependency tree
           | ShowHo String  -- ^ Show ho-file.
           | ListLibraries  -- ^ List libraries
@@ -91,7 +93,7 @@ $(derive makeUpdate ''Opt)
 
 
 opt = Opt {
-    optMode        = CompileExe,
+    optMode        = GenerateExe,
     optColumns     = getColumns,
     optDebug       = False,
     optIncdirs     = initialIncludes,
@@ -143,8 +145,10 @@ theoptions =
     , Option []    ["progc"]     (ReqArg (\d -> optCC_s d) "gcc")      "c compiler to use"
     , Option []    ["arg"]       (ReqArg (\d -> optProgArgs_u (++ [d])) "arg") "arguments to pass interpreted program"
     , Option ['N'] ["noprelude"] (NoArg  (optPrelude_s False))         "no implicit prelude"
-    , Option ['C'] []            (NoArg  (optMode_s CompileHoGrin))    "Typecheck, compile ho and grin."
-    , Option ['c'] []            (NoArg  (optMode_s CompileHo))        "Typecheck and compile ho."
+    , Option ['C'] []            (NoArg  (optMode_s GenerateHo))       "Typecheck and compile ho."
+    , Option ['G'] []            (NoArg  (optMode_s GenerateHoGrin))   "Typecheck, compile ho and grin."
+    , Option ['c'] []            (NoArg  (optMode_s GenerateC))        "generate C but don't link"
+    , Option [] ["keep-tmp-files"] (NoArg (optMode_s KeepTmpFiles))    "keep all temporary files"
     , Option []    ["interpret"] (NoArg  (optMode_s Interpret))        "interpret."
     , Option ['k'] ["keepgoing"] (NoArg  (optKeepGoing_s True))        "keep going on errors."
     , Option []    ["width"]     (ReqArg (optColumns_s . read) "COLUMNS") "width of screen for debugging output."

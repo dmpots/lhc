@@ -2,6 +2,7 @@
 module Main(main) where
 
 import Control.Exception
+import qualified Prelude as P (catch)
 import Control.Monad.Identity
 import Control.Monad.Writer
 import Control.Monad.State
@@ -79,6 +80,7 @@ import qualified Interactive
 import qualified Stats
 import qualified System.IO as IO
 import System.FilePath (takeExtension)
+import System.Directory (removeFile)
 
 #if BASE4
 runMain action = Control.Exception.catches (action >> return ())
@@ -491,7 +493,7 @@ isInteractive = do
 transTypeAnalyze = transformParms { transformCategory = "typeAnalyze",  transformOperation = typeAnalyze True }
 
 compileModEnv cho = do
-    if optMode options == CompileHo then return () else do
+    if optMode options == GenerateHo then return () else do
 
     let dataTable = progDataTable prog
         prog = programUpdate program {
@@ -573,6 +575,7 @@ compileModEnv cho = do
         prog <- transformProgram transformParms { transformCategory = "LambdaLift", transformDumpProgress = dump FD.Progress, transformOperation = lambdaLift } prog
         wdump FD.CoreAfterlift $ printProgram prog -- printCheckName dataTable (programE prog)
         compileToGrin prog
+        cleanUp
         exitSuccess
 
 
@@ -655,14 +658,22 @@ compileModEnv cho = do
         Stats.clear Stats.theStats
 
     compileToGrin prog
-
+    cleanUp
+        where isOptMode = (==) (optMode options)
+              rm x    = P.catch (mapM_ removeFile x) (const $ return ())
+              cleanUp = unless (isOptMode KeepTmpFiles) $ do
+                          let n = optOutName options
+                          -- FIXME: do this better
+                          unless (isOptMode GenerateHo || 
+                                  isOptMode GenerateHoGrin) $ rm [n++".ho"]
+                          unless (isOptMode GenerateHoGrin) $ rm [n ++ "_final.grin"]
+                          unless (isOptMode GenerateC) $ rm [n ++ "_code.c"]
 
 -- | this gets rid of all type variables, replacing them with boxes that can hold any type
 -- the program is still type-safe, but all polymorphism has been removed in favor of
 -- implicit coercion to a universal type.
---
+-- 
 -- also, all rules are deleted.
-
 boxifyProgram :: Monad m => Program -> m Program
 boxifyProgram prog = ans where
     ans = do programMapDs f (progCombinators_u (map $ combRules_s []) prog)
@@ -767,8 +778,8 @@ compileToGrin prog = do
     x <- transformGrin simplifyParms x
     x <- return $ twiddleGrin x
     dumpFinalGrin x
+    -- don't generate C if we only ask for Ho and Grin files
     compileGrinToC x
-
 
 dumpFinalGrin grin = do
     wdump FD.GrinGraph $ do
@@ -779,9 +790,11 @@ dumpFinalGrin grin = do
 
 
 
-compileGrinToC grin | optMode options == Interpret = fail "Interpretation currently not supported."
-compileGrinToC grin | optMode options /= CompileExe = return ()
-compileGrinToC grin = do
+
+compileGrinToC grin | optMode options == Interpret    = fail "Interpretation currently not supported."
+compileGrinToC grin | optMode options == GenerateExe ||
+                      optMode options == GenerateC   || 
+                      optMode options == KeepTmpFiles = do
     let (cg,rls) = FG2.compileGrin grin
     let fn = optOutName options
     let cf = (fn ++ "_code.c")
@@ -797,12 +810,16 @@ compileGrinToC grin = do
                             (map ("-l" ++) rls) ++ debug ++ optCCargs options  ++ boehmOpts ++ profileOpts
         debug = if fopts FO.Debug then ["-g"] else ["-DNDEBUG", "-O3", "-fomit-frame-pointer"]
         globalvar n c = "char " ++ n ++ "[] = \"" ++ c ++ "\";"
-    writeFile cf $ unlines [globalvar "lhc_c_compile" comm, globalvar "lhc_command" argstring,globalvar "lhc_version" sversion,"",cg]
-    progress ("Running: " ++ comm)
-    r <- System.system comm
-    when (r /= System.ExitSuccess) $ fail "C code did not compile."
-    return ()
-
+        compileC = do 
+          progress ("Running: " ++ comm)
+          r <- System.system comm
+          when (r /= System.ExitSuccess) $ fail "C code did not compile."
+    writeFile cf $ unlines [ globalvar "lhc_c_compile" comm
+                           , globalvar "lhc_command" argstring 
+                           , globalvar "lhc_version" sversion,"",cg ]
+    -- only compile when we specify GenerateExe or KeepTmpFiles, otherwise we just emit C
+    when (((||) `on` (optMode options ==)) KeepTmpFiles GenerateExe) compileC
+compileGrinToC grin | otherwise = return ()
 
 dumpCore pname prog = do
     let fn = optOutName options ++ "_" ++ pname ++ ".lhc_core"
