@@ -795,7 +795,7 @@ compileGrinToC grin | optMode options == Interpret    = fail "Interpretation cur
 compileGrinToC grin | optMode options `elem` [GenerateExe
                                              ,GenerateC
                                              ,KeepTmpFiles] = do
-    let (cg,rls) = FG3.compileGrin grin
+    let (cg,rls) = FG2.compileGrin grin
     let fn = optOutName options
     let cf = (fn ++ "_code.c")
     progress ("Writing " ++ show cf)
