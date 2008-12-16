@@ -61,7 +61,6 @@ data Opt = Opt {
     optDump        ::  [String],  -- ^ Dump options (raw).
     optFOpts       ::  [String],  -- ^ Flag options (raw).
     optIncdirs     ::  [String],  -- ^ Include directories.
-    optProgArgs    ::  [String],  -- ^ Arguments to pass to the interpreted program.
     optCCargs      ::  [String],  -- ^ Optional arguments to the C compiler.
     optHls         ::  [String],  -- ^ Load the specified hl-files (haskell libraries).
     optHlPath      ::  [String],  -- ^ Path to look for libraries.
@@ -98,7 +97,6 @@ opt = Opt {
     optHlPath      = initialLibIncludes,
     optIncs        = [],
     optDefs        = [],
-    optProgArgs    = [],
     optDump        = [],
     optStale       = [],
     optFOpts       = ["default"],
@@ -139,7 +137,6 @@ theoptions =
     , Option ['D'] []            (ReqArg (\d -> optDefs_u (d:)) "NAME=VALUE") "add new definitions to set in preprocessor"
     , Option []    ["optc"]      (ReqArg (optCCargs_u . idu) "option") "extra options to pass to c compiler"
     , Option []    ["progc"]     (ReqArg (\d -> optCC_s d) "gcc")      "c compiler to use"
-    , Option []    ["arg"]       (ReqArg (\d -> optProgArgs_u (++ [d])) "arg") "arguments to pass interpreted program"
     , Option ['N'] ["noprelude"] (NoArg  (optPrelude_s False))         "no implicit prelude"
     , Option ['C'] []            (NoArg  (optMode_s GenerateHo))       "Typecheck and compile ho."
     , Option ['G'] []            (NoArg  (optMode_s GenerateHoGrin))   "Typecheck, compile ho and grin."
