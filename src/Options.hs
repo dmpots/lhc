@@ -59,7 +59,6 @@ data Opt = Opt {
     optColumns     :: !Int,       -- ^ Width of terminal.
     optDebug       :: !Bool,      -- ^ Debugging.
     optDump        ::  [String],  -- ^ Dump options (raw).
-    optStmts       ::  [String],  -- ^ statements to execute
     optFOpts       ::  [String],  -- ^ Flag options (raw).
     optIncdirs     ::  [String],  -- ^ Include directories.
     optProgArgs    ::  [String],  -- ^ Arguments to pass to the interpreted program.
@@ -102,7 +101,6 @@ opt = Opt {
     optProgArgs    = [],
     optDump        = [],
     optStale       = [],
-    optStmts       = [],
     optFOpts       = ["default"],
     optCCargs      = [],
     optHoDir       = Nothing,
@@ -152,7 +150,6 @@ theoptions =
     , Option []    ["main"]      (ReqArg (optMainFunc_s . Just . (,) False) "Main.main")  "main entry point."
     , Option ['m'] ["arch"]      (ReqArg (optArch_s . Just ) "arch")            "target architecture."
     , Option []    ["entry"]     (ReqArg (optMainFunc_s . Just . (,) True)  "<expr>")  "main entry point, showable expression."
-    , Option ['e'] []            (ReqArg (\d -> optStmts_u (d:)) "<statement>")  "run given statement as if on lhci prompt"
     , Option []    ["debug"]     (NoArg  (optDebug_s True))            "debugging"
     , Option []    ["show-ho"]   (ReqArg  (optMode_s . ShowHo) "file.ho") "Show ho file"
     , Option []    ["noauto"]    (NoArg  (optNoAuto_s True))           "Don't automatically load base and haskell98 packages"
