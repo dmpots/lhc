@@ -38,7 +38,7 @@ extra-source-files:  lib/base/base.cabal,
                      lib/base/src/Text/Show/*.hs,
                      lib/base/src/Unsafe/*.hs
 data-dir:            data
-data-files:          HsFFI.h names.txt operators.txt prelude.m4 primitives.txt props.txt wsize.h ViaGhc.hs
+data-files:          HsFFI.h names.txt operators.txt prelude.m4 primitives.txt props.txt wsize.h 
                      rts/lhc_rts.c rts/lhc_rts2.c rts/lhc_rts_alloc.c rts/lhc_rts_header.h 
                      
 flag base4

@@ -26,10 +26,6 @@ lhc_rts_alloc_c = readf "rts/lhc_rts_alloc.c"
 lhc_rts2_c :: String
 lhc_rts2_c = readf "rts/lhc_rts2.c"
 
-{-# NOINLINE viaghc_hs #-}
-viaghc_hs :: String
-viaghc_hs = readf "ViaGhc.hs"
-
 {-# NOINLINE prelude_m4 #-}
 prelude_m4 :: String
 prelude_m4 = readf "prelude.m4"

@@ -34,7 +34,6 @@ import Name.Prim
 import Name.VConsts
 import Numeric
 import Options
-import RawFiles(viaghc_hs)
 import Support.CanType
 import Support.FreeVars
 import Util.Gen
@@ -60,7 +59,7 @@ compileToHs prog = do
     args <- getArguments
     let argstring = simpleQuote (name:args)
         comm = shellQuote $ ["ghc", "-O", cf, "-o", fn ]
-    writeFile cf $ unlines ["-- " ++ argstring,"-- " ++ comm,"",viaghc_hs,render restate,data_decls,rv,"",foreign_decls]
+    writeFile cf $ unlines ["-- " ++ argstring,"-- " ++ comm,"",render restate,data_decls,rv,"",foreign_decls]
     progress ("Running: " ++ comm)
     r <- System.system comm
     when (r /= System.ExitSuccess) $ fail "Hs code did not compile."

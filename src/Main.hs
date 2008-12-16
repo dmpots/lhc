@@ -537,11 +537,11 @@ compileModEnv cho = do
     prog <- transformProgram transformParms { transformCategory = "PruneUnreachable", transformOperation = evaluate . programPruneUnreachable } prog
     prog <- barendregtProg prog
 
-    (viaGhc,fn,_,_) <- determineArch
+    (fn,_,_) <- determineArch
     wdump FD.Progress $ putStrLn $ "Arch: " ++ fn
 
     let theTarget = ELit litCons { litName = dc_Target, litArgs = [ELit (LitInt targetIndex tEnumzh)], litType = ELit litCons { litName = tc_Target, litArgs = [], litType = eStar } }
-        targetIndex = if viaGhc then 1 else 0
+        targetIndex = 0
     prog <- return $ runIdentity $ flip programMapDs prog $ \(t,e) -> return $ if tvrIdent t == toId v_target then (t { tvrInfo = setProperty prop_INLINE mempty },theTarget) else (t,e)
 
     --wdump FD.Core $ printProgram prog
@@ -625,12 +625,6 @@ compileModEnv cho = do
     prog <- simplifyProgram SS.emptySimplifyOpts { SS.so_finalPhase = True } "SuperSimplify after Boxy WorkWrap" verbose prog
     prog <- barendregtProg prog
     prog <- return $ runIdentity $ programMapBodies (return . cleanupE) prog
-
-    when viaGhc $ do
-        wdump FD.Core $ printProgram prog
-        fail "Compiling to GHC currently disabled"
-        --compileToHs prog
-        exitSuccess
 
     wdump FD.CoreBeforelift $ printProgram prog
     prog <- transformProgram transformParms { transformCategory = "LambdaLift", transformDumpProgress = dump FD.Progress, transformOperation = lambdaLift } prog

@@ -5,8 +5,8 @@ module C.Arch(
     archInfo,
     archOpTy,
     stringToOpTy,
-    genericArchInfo,
     determineArch,
+    genericArchInfo,
     primitiveInfo,
     genericPrimitiveInfo
     ) where
@@ -87,7 +87,7 @@ archInfo = ArchInfo { archPrimMap = genericPrimMap }
 
 primMap :: Map.Map ExtType PrimType
 primMap = Map.fromList [ (primTypeName a,a) | a <- as ] where
-    (_,_,as,_) = unsafePerformIO determineArch
+    (_,as,_) = unsafePerformIO determineArch
 
 genericPrimMap :: Map.Map ExtType PrimType
 genericPrimMap = Map.fromList [ (primTypeName a,a) | a <- arch_generic ] where
@@ -122,11 +122,7 @@ archOpTy ai s = case Op.readTy s of
 
 determineArch = do
     let specs = maybe [] (split (== '-')) (optArch options)
-        (backendGhc,specs') | ("ghc":rs) <- specs = (True,rs)
-                            | ("grin":rs) <- specs = (False,rs)
-                            | ("fgrin":rs) <- specs = (False,rs)
-                            | otherwise = (fopts FO.ViaGhc,specs)
-        (cpu,bits) = case specs' of
+        (cpu,bits) = case specs of
             ["32"] -> (cpu_alias arch,32)
             ["64"] -> (cpu_alias arch,64)
             [cpu,"32"] -> (cpu_alias cpu,32)
@@ -134,20 +130,13 @@ determineArch = do
             [cpu]      -> (cpu_alias cpu,WORD_SIZE_IN_BITS)
             []         -> (cpu_alias arch,WORD_SIZE_IN_BITS)
             _          -> arch_error
-    let (fn,mp,opt) = case (backendGhc,cpu,bits) of
-            (True,!_,32) -> ("ghc-" ++ show bits,arch_i686,[])
-            (True,!_,64) -> ("ghc-" ++ show bits,arch_x86_64,[])
-            (_,"generic",_) -> ("generic",arch_generic,[])
-            (_,"i686",32)   -> ("i686",arch_i686,[])
-            (_,"x86_64",32) -> ("x86_64-32",arch_i686, ["-m32"])
-            (_,"x86_64",(64::Int)) -> ("x86_64",arch_x86_64,[])
+    let (fn,mp,opt) = case (cpu,bits) of
+            ("generic",_) -> ("generic",arch_generic,[])
+            ("i686",32)   -> ("i686",arch_i686,[])
+            ("x86_64",32) -> ("x86_64-32",arch_i686, ["-m32"])
+            ("x86_64",(64::Int)) -> ("x86_64",arch_x86_64,[])
             _ -> arch_error
 
-    return (backendGhc,fn,mp,opt)
+    return (fn,mp,opt)
 
 arch_error =  error $ "\nunknown architecture, supported architectures are:\n" ++ show available_archs
-
-
-
-
-
