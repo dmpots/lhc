@@ -76,7 +76,6 @@ import qualified FlagOpts as FO
 import qualified Grin.Simplify
 import qualified Grin.SSimplify
 import qualified Info.Info as Info
-import qualified Interactive
 import qualified Stats
 import qualified System.IO as IO
 import System.FilePath (takeExtension)
@@ -127,13 +126,12 @@ main = do -- runMain $ catom $ bracketHtml $ do
 
 
 processFiles [] | Nothing <- optMainFunc options = do
-    int <- isInteractive
-    when (not int) $ putErrDie "lhc: no input files"
-    processFilesModules [Left (Module "Prelude")]
+                               putErrDie "lhc: no input files"
+                               processFilesModules [Left (Module "Prelude")]
 processFiles [] | Just (b,m) <- optMainFunc options = do
-    m <- return $ parseName Val m
-    m <- getModule m
-    processFilesModules [Left m]
+                                  m <- return $ parseName Val m
+                                  m <- getModule m
+                                  processFilesModules [Left m]
 processFiles cs = do processFilesModules (map fileOrModule cs)
 
 processFilesModules fs = do
@@ -483,13 +481,6 @@ shouldBeExported exports tvr
 
 --idHistogram e = execWriter $ annotate mempty (\id nfo -> tell (Histogram.singleton id) >> return nfo) (\_ -> return) (\_ -> return) e
 
-isInteractive :: IO Bool
-isInteractive = do
-    pn <- System.getProgName
-    return $ (optMode options == Interactive)
-          || "ichj" `isPrefixOf` reverse pn
-          || not (null $ optStmts options)
-
 transTypeAnalyze = transformParms { transformCategory = "typeAnalyze",  transformOperation = typeAnalyze True }
 
 compileModEnv cho = do
@@ -514,10 +505,6 @@ compileModEnv cho = do
     wdump FD.Rules $ putStrLn "  ---- user rules ---- " >> printRules RuleUser rules'
     wdump FD.Rules $ putStrLn "  ---- user catalysts ---- " >> printRules RuleCatalyst rules'
     wdump FD.RulesSpec $ putStrLn "  ---- specializations ---- " >> printRules RuleSpecialization rules'
-
-    -- enter interactive mode
-    int <- isInteractive
-    if int then Interactive.interact cho else do
 
     when collectPassStats $ do
         Stats.print "PassStats" Stats.theStats

@@ -61,7 +61,7 @@ Executable lhc
                       UndecidableInstances, TypeSynonymInstances, ScopedTypeVariables, ParallelListComp,
                       OverlappingInstances, RecursiveDo, GADTs, RankNTypes, PatternGuards, TemplateHaskell
  build-depends:       containers, mtl, pretty, array, bytestring, pureMD5,
-                      binary >= 0.4.4, directory, haskeline, random, regex-compat,
+                      binary >= 0.4.4, directory, random, regex-compat,
                       graphviz, fgl, unix, zlib, old-time, haskell98,
                       utf8-string, stringtable-atom, derive >= 0.1.4,
                       filepath, ansi-wl-pprint >= 0.5.0, ansi-terminal >= 0.5.0
@@ -82,7 +82,7 @@ Executable lhc
  else
   x-build-base:       False
  Other-modules:
-  CharIO, FindFixpoint, FlagOpts, Interactive, Options, PrimitiveOperators,
+  CharIO, FindFixpoint, FlagOpts, Options, PrimitiveOperators,
   DataConstructors, FlagDump, GenUtil, PackedString, RawFiles, Stats,
   C.FromGrin2 C.Arch C.FFI C.Generate C.Prims Cmm.Op
   Cmm.OpEval Cmm.Number

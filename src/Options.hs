@@ -41,7 +41,6 @@ import qualified FlagOpts
 import LHCVersion
 
 data Mode = BuildHl String -- ^ Build the specified hl-file given a description file.
-          | Interactive    -- ^ Run interactively.
           | Version        -- ^ Print version and die.
           | ShowHelp       -- ^ Show help message and die.
           | Interpret      -- ^ Interpret.
@@ -162,7 +161,6 @@ theoptions =
     , Option ['p'] []            (ReqArg (\d -> optHls_u (++ [d])) "file.hl") "Load given haskell library .hl file"
     , Option ['L'] []            (ReqArg (optHlPath_u . idu) "path")   "Look for haskell libraries in the given directory."
     , Option []    ["build-hl"]  (ReqArg (optMode_s . BuildHl) "file.cabal") "Build hakell library from given library description file"
-    , Option []    ["interactive"] (NoArg  (optMode_s Interactive))    "run interactivly"
     , Option []    ["ignore-ho"]   (NoArg  (optIgnoreHo_s True))       "Ignore existing haskell object files"
     , Option []    ["nowrite-ho"]  (NoArg  (optNoWriteHo_s True))      "Do not write new haskell object files"
     , Option []    ["no-ho"]       (NoArg  (optNoWriteHo_s True . optIgnoreHo_s True)) "same as --ignore-ho and --nowrite-ho"
