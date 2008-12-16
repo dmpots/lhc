@@ -43,7 +43,6 @@ import LHCVersion
 data Mode = BuildHl String -- ^ Build the specified hl-file given a description file.
           | Version        -- ^ Print version and die.
           | ShowHelp       -- ^ Show help message and die.
-          | Interpret      -- ^ Interpret.
           | GenerateHo     -- ^ Generate ho
           | GenerateHoGrin -- ^ Generate ho and grin
           | GenerateC      -- ^ Generate C file
@@ -148,7 +147,6 @@ theoptions =
     , Option ['G'] []            (NoArg  (optMode_s GenerateHoGrin))   "Typecheck, compile ho and grin."
     , Option ['c'] []            (NoArg  (optMode_s GenerateC))        "generate C but don't link"
     , Option [] ["keep-tmp-files"] (NoArg (optMode_s KeepTmpFiles))    "keep all temporary files"
-    , Option []    ["interpret"] (NoArg  (optMode_s Interpret))        "interpret."
     , Option ['k'] ["keepgoing"] (NoArg  (optKeepGoing_s True))        "keep going on errors."
     , Option []    ["width"]     (ReqArg (optColumns_s . read) "COLUMNS") "width of screen for debugging output."
     , Option []    ["main"]      (ReqArg (optMainFunc_s . Just . (,) False) "Main.main")  "main entry point."

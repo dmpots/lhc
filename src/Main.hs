@@ -772,7 +772,6 @@ dumpFinalGrin grin = do
 
 
 
-compileGrinToC grin | optMode options == Interpret    = fail "Interpretation currently not supported."
 compileGrinToC grin | optMode options `elem` [GenerateExe
                                              ,GenerateC
                                              ,KeepTmpFiles] = do
