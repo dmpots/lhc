@@ -50,10 +50,10 @@ dumpGrin pname grin = do
     hPutStrLn h $ unlines [ "-- " ++ argstring,"-- " ++ sversion,""]
     hPrintGrin h grin
     hClose h
-    wdump FD.Grin $ do
+    {-wdump FD.Grin $ do
         putErrLn $ "v-- " ++ pname ++ " Grin"
         printGrin grin
-        putErrLn $ "^-- " ++ pname ++ " Grin"
+        putErrLn $ "^-- " ++ pname ++ " Grin"-}
 
 
 transformGrin :: TransformParms Grin -> Grin -> IO Grin

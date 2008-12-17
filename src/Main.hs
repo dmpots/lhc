@@ -647,7 +647,6 @@ compileModEnv cho = do
                           -- FIXME: do this better
                           unless (isOptMode GenerateHo || 
                                   isOptMode GenerateHoGrin) $ rm [n++".ho"]
-                          unless (isOptMode GenerateHoGrin) $ rm [n ++ "_final.grin"]
                           unless (isOptMode GenerateC) $ rm [n ++ "_code.c"]
 
 -- | this gets rid of all type variables, replacing them with boxes that can hold any type
@@ -767,7 +766,7 @@ dumpFinalGrin grin = do
         let dot = graphGrin grin
             fn = optOutName options
         writeFile (fn ++ "_grin.dot") dot
-    dumpGrin "final" grin
+    wdump FD.Grin $ dumpGrin "final" grin
 
 
 
