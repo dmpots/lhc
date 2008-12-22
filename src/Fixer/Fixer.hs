@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, ExistentialQuantification, DeriveDataTypeable #-}
 -- find fixpoint of constraint problem
 
 module Fixer.Fixer(
