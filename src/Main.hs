@@ -943,7 +943,7 @@ lintCheckProgram onerr prog | flint = do
         printProgram prog
         putErrLn $ ">>> program has repeated toplevel definitions" ++ pprint repeats
         maybeDie
-    let f (tvr@TVr { tvrIdent = n },e) | not $ isValidAtom (idToInt n) = do
+    let f (tvr@TVr { tvrIdent = n },e) | not $ idIsNamed n = do
             onerr
             putErrLn $ ">>> non-unique name at top level: " ++ pprint tvr
             printProgram prog

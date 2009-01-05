@@ -154,7 +154,7 @@ renameE initSet initMap e = runReader (runIdNameT' $ addBoundNamesIdMap initMap 
         return (mempty,tv { tvrType = t'})
     ntvr ralways fg tv@(TVr { tvrIdent = n, tvrType = t}) = do
         --n' <- if n > 0 && (not ralways || isValidAtom n) then uniqueName  n else newName
-        n' <- if not (isEtherialId n) && (not ralways || isValidAtom (idToInt n)) then uniqueName  n else newName
+        n' <- if not (isEtherialId n) && (not ralways || idIsNamed n) then uniqueName  n else newName
         --n' <- if (not ralways || isValidAtom n) then uniqueName  n else newName
         t' <- fg t
         let tv' = tv { tvrIdent = n', tvrType = t' }

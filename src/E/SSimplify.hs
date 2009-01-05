@@ -569,7 +569,7 @@ simplifyDs prog sopts dsIn = ans where
         done StartContext res
     f cont e = trace ("Fall through: " ++ show (cont,e)) $ dosub e >>= done cont
 
-    showName t | isValidAtom (idToInt t) || dump FD.EVerbose = tvrShowName (tVr t Unknown)
+    showName t | idIsNamed t || dump FD.EVerbose = tvrShowName (tVr t Unknown)
                | otherwise = "(epheremal)"
 
     -- Rename a if necessary. We always have to substitute all occurrences because we update the type.

@@ -16,6 +16,7 @@ module Name.Id(
     mapMaybeIdMap,
     idSetFromList,
     idToInt,
+    idIsNamed,
     unnamed,
     idSetFromDistinctAscList,
     idMapFromList,
@@ -40,6 +41,7 @@ import Data.Monoid
 import Data.Typeable
 import System.Random
 import Data.Bits
+import Data.Maybe (isJust)
 import qualified Data.Map  as Map
 import qualified Data.Set as Set
 
@@ -83,6 +85,9 @@ idMapToList (IdMap is) = Map.toList is
 
 idToInt :: Id -> Int
 idToInt (Id i) = i
+
+idIsNamed :: Id -> Bool
+idIsNamed = isJust . fromId
 
 mapMaybeIdMap :: (a -> Maybe b) -> IdMap a -> IdMap b
 mapMaybeIdMap fn (IdMap m) = IdMap (Map.mapMaybe fn m)

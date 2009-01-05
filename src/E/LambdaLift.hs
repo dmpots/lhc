@@ -282,7 +282,7 @@ lambdaLift prog@Program { progDataTable = dataTable, progCombinators = cs } = do
                 t <- globalName t
                 tellCombinator (t,ls,e'')
             r
-        globalName tvr | not $ isValidAtom (idToInt $ tvrIdent tvr) = do
+        globalName tvr | not $ idIsNamed (tvrIdent tvr) = do
             TVr { tvrIdent = t } <- newName Unknown
             let ntvr = tvr { tvrIdent = t }
             tell ([],msingleton (tvrIdent tvr) (Just $ EVar ntvr))
