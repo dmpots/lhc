@@ -123,7 +123,7 @@ programMapDs_ f prog = mapM_ f (programDs prog)
 
 hPrintProgram fh prog@Program {progCombinators = cs, progDataTable = dataTable } = do
     sequence_ $ intersperse (hPutStrLn fh "") [ hPrintCheckName fh dataTable v e | Comb { combHead = v, combBody = e } <- cs]
-    when (progMain prog /= emptyId) $
+    when (not (isEmptyId (progMain prog))) $
         hPutStrLn fh $ "MainEntry: " ++ pprint (progMainEntry prog)
     when (progEntry prog /= singleton (progMain prog)) $
         hPutStrLn fh $ "EntryPoints: " ++ hsep (map pprint (progEntryPoints prog))

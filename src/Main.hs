@@ -188,7 +188,7 @@ processInitialHo accumho aho = do
             f rs = List.union  rs [ x | x <- nrules, ruleHead x == combHead comb]
 
     let finalVarMap = mappend (fromList [(tvrIdent tvr,Just $ EVar tvr) | tvr <- map combHead $ melems choCombs ]) (choVarMap accumho)
-        choCombs = mfilterWithKey (\k _ -> k /= emptyId) choCombinators'
+        choCombs = mfilterWithKey (\k _ -> not (isEmptyId k)) choCombinators'
         (mod:_) = Map.keys $ hoExports $ hoExp aho
     return $ mempty {
         choVarMap = finalVarMap,

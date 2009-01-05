@@ -212,7 +212,7 @@ inferType dataTable ds e = rfc e where
         return t'
     fc e@(ELit _) = let t = getType e in valid t >> return t
     -- Lemmih 08.11.26: Why are unnamed bindings errors in this case?
-    fc (EVar (TVr { tvrIdent = i })) | i == emptyId = fail "variable with nothing!"
+    fc (EVar (TVr { tvrIdent = i })) | isEmptyId i = fail "variable with nothing!"
     fc (EVar (TVr { tvrType =  t})) = valid t >> strong' t
     fc (EPi (TVr { tvrIdent = n, tvrType =  at}) b) = do
         ESort a <- rfc at

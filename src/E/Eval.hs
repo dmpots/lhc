@@ -11,7 +11,7 @@ import E.E
 import E.FreeVars
 import {-# SOURCE #-} E.Show
 import E.Subst
-import Name.Id (emptyId)
+import Name.Id (isEmptyId)
 
 
 eval :: E -> E
@@ -86,7 +86,7 @@ strong dsMap' term = eval' dsMap term [] where
     eval' ds (ELam v body) (t:rest) = eval' ds (subst v t body) rest
     eval' ds (EPi v body) (t:rest) = eval' ds (subst v t body) rest   -- fudge
     eval' ds (EAp t1 t2) stack = eval' ds t1 (t2:stack)
-    eval' _ds (EVar TVr { tvrIdent = i }) _stack | i == emptyId = fail "empty ident in term"
+    eval' _ds (EVar TVr { tvrIdent = i }) _stack | isEmptyId i = fail "empty ident in term"
     eval' ds t@(EVar v) stack
         | Just x <- Map.lookup v ds = eval' ds x stack
         | otherwise = do
