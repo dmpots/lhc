@@ -86,7 +86,7 @@ tipe' (TAp t1 t2) = liftM2 eAp (tipe' t1) (tipe' t2)
 tipe' (TArrow t1 t2) =  do
     t1' <- tipe' t1
     t2' <- tipe' t2
-    return $ EPi (tVr 0 (t1')) t2'
+    return $ EPi (tVr emptyId (t1')) t2'
 tipe' (TCon (Tycon n k)) | Just n' <- lookup n primitiveAliases = return $ ELit litCons { litName = n', litType = kind k }
 tipe' (TCon (Tycon n k)) =  return $ ELit litCons { litName = n, litType = kind k }
 tipe' (TVar tv@Tyvar { tyvarKind = k}) = do
@@ -96,7 +96,7 @@ tipe' (TForAll [] (_ :=> t)) = tipe' t
 tipe' (TExists [] (_ :=> t)) = tipe' t
 tipe' (TForAll xs (_ :=> t)) = do
     xs' <- flip mapM xs $ \tv -> do
-        v <- newName [70,72..] () tv
+        v <- newName (map unnamed [70,72..]) () tv
         return $ tVr v (kind $ tyvarKind tv)
     t' <- tipe' t
     return $ foldr EPi t' xs' -- [ tVr n (kind k) | n <- [2,4..] | k <- xs ]
@@ -113,7 +113,7 @@ tipe' ~(TExists xs (_ :=> t)) = do
 kind (KBase KUTuple) = eHash
 kind (KBase KHash) = eHash
 kind (KBase Star) = eStar
-kind (Kfun k1 k2) = EPi (tVr 0 (kind k1)) (kind k2)
+kind (Kfun k1 k2) = EPi (tVr emptyId (kind k1)) (kind k2)
 kind (KVar _) = error "Kind variable still existing."
 kind _ = error "DataConstructors.kind"
 
@@ -231,10 +231,10 @@ tunboxedtuple n = (typeCons,dataCons) where
         dc = unboxedNameTuple DataConstructor n
         tc = unboxedNameTuple TypeConstructor n
         tipe = foldr ELam ftipe typeVars
-        typeVars = take n [ tvr { tvrType = eStar, tvrIdent = v } | v <- [ 2,4 ..]]
-        vars =  [ tvr { tvrType = EVar t, tvrIdent = v } | v <- [ 2*n + 16, 2*n + 18 ..] | t <- typeVars ]
+        typeVars = take n [ tvr { tvrType = eStar, tvrIdent = unnamed v } | v <- [ 2,4 ..]]
+        vars =  [ tvr { tvrType = EVar t, tvrIdent = unnamed v } | v <- [ 2*n + 16, 2*n + 18 ..] | t <- typeVars ]
         ftipe = ELit (litCons { litName = tc, litArgs = map EVar typeVars, litType = eHash })
-        dtipe = foldr EPi (foldr EPi ftipe [ v { tvrIdent = 0 } | v <- vars]) typeVars
+        dtipe = foldr EPi (foldr EPi ftipe [ v { tvrIdent = emptyId } | v <- vars]) typeVars
 
 
 -- | conjured data types, these data types are created as needed and can be of any type, their
@@ -259,9 +259,9 @@ mktBox k = ELit (litCons { litName = nameConjured modBox k, litArgs = [], litTyp
 
 tarrow = emptyConstructor {
             conName = tc_Arrow,
-            conType = EPi (tVr 0 eStar) (EPi (tVr 0 eStar) eStar),
+            conType = EPi (tVr emptyId eStar) (EPi (tVr emptyId eStar) eStar),
             conOrigSlots = [SlotNormal eStar,SlotNormal eStar],
-            conExpr = ELam (tVr 2 eStar) (ELam (tVr 4 eStar) (EPi (tVr 0 (EVar $ tVr 2 eStar)) (EVar $ tVr 4 eStar))),
+            conExpr = ELam (tVr (unnamed 2) eStar) (ELam (tVr (unnamed 4) eStar) (EPi (tVr emptyId (EVar $ tVr (unnamed 2) eStar)) (EVar $ tVr (unnamed 4) eStar))),
             conInhabits = tStar,
             conChildren = DataAbstract
         }
@@ -281,7 +281,7 @@ primitiveTable = concatMap f allCTypes  where
             conName = dc,
             conType = tipe,
             conOrigSlots = [SlotNormal rt],
-            conExpr = ELam (tVr 2 rt) (ELit (litCons { litName = dc, litArgs = [EVar (tVr 2 rt)], litType = tipe })),
+            conExpr = ELam (tVr (unnamed 2) rt) (ELit (litCons { litName = dc, litArgs = [EVar (tVr (unnamed 2) rt)], litType = tipe })),
             conInhabits = tc
            }
         typeCons = emptyConstructor {
@@ -298,8 +298,8 @@ primitiveTable = concatMap f allCTypes  where
 
 
 typesCompatable :: forall m . Monad m => DataTable -> E -> E -> m ()
-typesCompatable dataTable a b = f (-2 :: Id) a b where
-        f :: Id -> E -> E -> m ()
+typesCompatable dataTable a b = f (-2) a b where
+        f :: Int -> E -> E -> m ()
         f _ (ESort a) (ESort b) = when (a /= b) $ fail $ "Sorts don't match: " ++ pprint (ESort a,ESort b)
         f _ (EVar a) (EVar b) = when (a /= b) $ fail $ "Vars don't match: " ++ pprint (a,b)
         -- we expand aliases first, because the newtype might have phantom types as arguments
@@ -316,19 +316,21 @@ typesCompatable dataTable a b = f (-2 :: Id) a b where
             f c b b'
         f c (ELam va ea) (ELam vb eb) = lam va ea vb eb c
         f c (EPi va ea) (EPi vb eb)   = lam va ea vb eb c
-        f c (EPi (TVr { tvrIdent = 0, tvrType =  a}) b) (ELit (LitCons { litName = n, litArgs = [a',b'], litType = t })) | conName tarrow == n, t == eStar = do
+        f c (EPi (TVr { tvrIdent = i, tvrType =  a}) b) (ELit (LitCons { litName = n, litArgs = [a',b'], litType = t }))
+               | isEmptyId i, conName tarrow == n, t == eStar = do
             f c a a'
             f c b b'
-        f c (ELit (LitCons { litName = n, litArgs = [a',b'], litType = t })) (EPi (TVr { tvrIdent = 0, tvrType =  a}) b)  | conName tarrow == n, t == eStar = do
+        f c (ELit (LitCons { litName = n, litArgs = [a',b'], litType = t })) (EPi (TVr { tvrIdent = i, tvrType =  a}) b)
+               | isEmptyId i, conName tarrow == n, t == eStar = do
             f c a a'
             f c b b'
         f _ a b | boxCompat a b || boxCompat b a = return ()
         f _ a b = fail $ "Types don't match:" ++ pprint (a,b)
 
-        lam :: TVr -> E -> TVr -> E -> Id -> m ()
+        lam :: TVr -> E -> TVr -> E -> Int -> m ()
         lam va ea vb eb c = do
             f c (tvrType va) (tvrType vb)
-            f (c - 2) (subst va (EVar va { tvrIdent = c }) ea) (subst vb (EVar vb { tvrIdent = c }) eb)
+            f (c - 2) (subst va (EVar va { tvrIdent = unnamed c }) ea) (subst vb (EVar vb { tvrIdent = unnamed c }) eb)
         boxCompat (ELit (LitCons { litName = n }))  t | Just e <- fromConjured modBox n =  e == getType t
         boxCompat _ _ = False
 
@@ -469,12 +471,12 @@ deriveClasses cmap (DataTable mp) = concatMap f (Map.elems mp) where
         [it@(ELit LitCons { litName = it_name })] = conSlots conr
         Just itr = getConstructor it_name (DataTable mp)
         DataEnum mv = conChildren itr
-        v1 = tvr { tvrIdent = 2,  tvrType = typ }
-        v2 = tvr { tvrIdent = 4,  tvrType = typ }
-        i1 = tvr { tvrIdent = 6,  tvrType = it }
-        i2 = tvr { tvrIdent = 8,  tvrType = it }
-        b3 = tvr { tvrIdent = 10, tvrType = tBoolzh }
-        val1 = tvr { tvrIdent = 14, tvrType = typ }
+        v1 = tvr { tvrIdent = unnamed 2,  tvrType = typ }
+        v2 = tvr { tvrIdent = unnamed 4,  tvrType = typ }
+        i1 = tvr { tvrIdent = unnamed 6,  tvrType = it }
+        i2 = tvr { tvrIdent = unnamed 8,  tvrType = it }
+        b3 = tvr { tvrIdent = unnamed 10, tvrType = tBoolzh }
+        val1 = tvr { tvrIdent = unnamed 14, tvrType = typ }
         unbox e = ELam v1 (ELam v2 (ec (EVar v1) i1 (ec (EVar v2) i2 e)))  where
             ec v i e = eCase v [Alt (litCons { litName = con, litArgs = [i], litType = typ }) e] Unknown
         h cl | cl == class_Eq = [mkCmpFunc (func_equals sFuncNames) Op.Eq]
@@ -529,7 +531,7 @@ updateLit dataTable lc@LitCons { litName = n } =  lc { litAliasFor = af } where
     af = do
         Constructor { conChildren = DataNormal [x], conOrigSlots = cs } <- getConstructor n dataTable
         Constructor { conAlias = ErasedAlias, conOrigSlots = [SlotNormal sl] } <- getConstructor x dataTable
-        return (foldr ELam sl [ tVr i s | s <- getSlots cs | i <- [2,4..]])
+        return (foldr ELam sl [ tVr (unnamed i) s | s <- getSlots cs | i <- [2,4..]])
 
 removeNewtypes :: DataTable -> E -> E
 removeNewtypes dataTable e = runIdentity (f e) where
@@ -568,7 +570,12 @@ toDataTable km cm ds currentDataTable = newDataTable  where
             consName =  mapName (id,(++ "#")) $ toName DataConstructor (nameName (conName theType))
             rtypeName =  mapName (id,(++ "#")) $ toName TypeConstructor (nameName (conName theType))
             rtype = ELit litCons { litName = rtypeName, litType = eHash, litAliasFor = Just tEnumzh }
-            dataCons = fc { conName = consName, conType = getType (conExpr dataCons), conOrigSlots = [SlotNormal rtype], conExpr = ELam (tVr 12 rtype) (ELit (litCons { litName = consName, litArgs = [EVar (tVr 12 rtype)], litType =  conExpr theType })) }
+            dataCons = fc { conName = consName
+                          , conType = getType (conExpr dataCons)
+                          , conOrigSlots = [SlotNormal rtype]
+                          , conExpr = ELam (tVr (unnamed 12) rtype) (ELit (litCons { litName = consName
+                                                                                   , litArgs = [EVar (tVr (unnamed 12) rtype)]
+                                                                                   , litType =  conExpr theType })) }
             rtypeCons = emptyConstructor {
                 conName = rtypeName,
                 conType = eHash,
@@ -601,7 +608,7 @@ toDataTable km cm ds currentDataTable = newDataTable  where
 
         theExpr =  foldr ELam (strictize tslots $ ELit litCons { litName = dataConsName, litArgs = map EVar dvars, litType = theTypeExpr }) hsvars
 
-        strictize tslots con = E.Subst.subst tvr { tvrIdent = -1 } Unknown $ f tslots con where
+        strictize tslots con = E.Subst.subst tvr { tvrIdent = unnamed (-1) } Unknown $ f tslots con where
             f (Left (v,False):rs) con = f rs con
             f (Left (v,True):rs) con = eStrictLet v (EVar v) (f rs con)
             f (Right (v,dc,rcs):rs) con = eCase (EVar v) [Alt pat (f rs con)] Unknown where
@@ -611,9 +618,9 @@ toDataTable km cm ds currentDataTable = newDataTable  where
         -- substitution is only about substituting type variables
         (ELit LitCons { litArgs = thisTypeArgs }, origArgs) = fromPi $ runVarName $ do
             let (vs,ty) = case Map.lookup dataConsName cm of Just (TForAll vs (_ :=> ty)) -> (vs,ty); ~(Just ty) -> ([],ty)
-            mapM_ (newName [2,4..] ()) vs
+            mapM_ (newName (map unnamed [2,4..]) ()) vs
             tipe' ty
-        subst = substMap $ fromList [ (tvrIdent tv ,EVar $ tv { tvrIdent = p }) | EVar tv <- thisTypeArgs | p <- [2,4..] ]
+        subst = substMap $ fromList [ (tvrIdent tv ,EVar $ tv { tvrIdent = unnamed p }) | EVar tv <- thisTypeArgs | p <- [2,4..] ]
 
         origSlots = map SlotExistential existentials ++ map f tslots where
             f (Left (e,_)) = SlotNormal (getType e)
@@ -634,7 +641,7 @@ toDataTable km cm ds currentDataTable = newDataTable  where
                 return $ Right (e { tvrIdent = i, tvrType = subst (tvrType e)},dc,[nv]):f is bs es
             f _ [] [] = []
             f _ _ _ = error "DataConstructors.tslots"
-            fvset = freeVars (thisTypeArgs,origArgs) `mappend` fromList [2,4 .. 2 * (length theTypeArgs + 2)]
+            fvset = freeVars (thisTypeArgs,origArgs) `mappend` fromList (map unnamed [2,4 .. 2 * (length theTypeArgs + 2)])
 
         -- existentials are free variables in the arguments, that arn't bound in the type
         existentials = melems $ freeVars (map getType origArgs) S.\\ (freeVars thisTypeArgs :: IdMap TVr)
@@ -648,7 +655,7 @@ toDataTable km cm ds currentDataTable = newDataTable  where
         theTypeName = toName Name.TypeConstructor (hsDeclName decl)
         theKind = kind $ fromJust (Map.lookup theTypeName km)
         (theTypeFKind,theTypeKArgs') = fromPi theKind
-        theTypeArgs = [ tvr { tvrIdent = x } | tvr  <- theTypeKArgs' | x <- [2,4..] ]
+        theTypeArgs = [ tvr { tvrIdent = unnamed x } | tvr  <- theTypeKArgs' | x <- [2,4..] ]
         theTypeExpr = ELit litCons { litName = theTypeName, litArgs = map EVar theTypeArgs, litType = theTypeFKind }
         theType = emptyConstructor {
             conName = theTypeName,
@@ -683,7 +690,7 @@ constructionExpression dataTable n typ@(ELit LitCons { litName = pn, litArgs = x
     (vid:_) = newIds (freeVars typ)
     Just mc = getConstructor n dataTable
     Just pc = getConstructor (conInhabits mc) dataTable
-    sub = substMap $ fromDistinctAscList [ (i,sl) | sl <- xs | i <- [2,4..] ]
+    sub = substMap $ fromDistinctAscList [ (unnamed i,sl) | sl <- xs | i <- [2,4..] ]
 constructionExpression wdt n e | Just fa <- followAlias wdt e  = constructionExpression wdt n fa
 constructionExpression _ n e = error $ "constructionExpression: error in " ++ show n ++ ": " ++ show e
 
@@ -706,7 +713,7 @@ deconstructionExpression dataTable name typ@(ELit LitCons { litName = pn, litArg
                 f (v:vs) (SlotUnpacked e n es:ss) rs ls = do
                     let g t = do
                             s <- newUniq
-                            return $ tVr (2*s) t
+                            return $ tVr (unnamed $ 2*s) t
                     as <- mapM g es
                     f vs ss (reverse as ++ rs) ((v,ELit litCons { litName = n, litArgs = map EVar as, litType = e }):ls)
                 f [] [] rs ls = return $ Alt (litCons { litName = name, litArgs = reverse rs, litType = typ }) (eLetRec ls e)
@@ -725,7 +732,7 @@ slotTypes wdt n (ELit LitCons { litName = pn, litArgs = xs, litType = _ })
     where
     Identity mc = getConstructor n wdt
     Identity pc = getConstructor (conInhabits mc) wdt
-    sub = substMap $ fromDistinctAscList [ (i,sl) | sl <- xs | i <- [2,4..] ]
+    sub = substMap $ fromDistinctAscList [ (unnamed i,sl) | sl <- xs | i <- [2,4..] ]
 slotTypes wdt n kind
     | sortKindLike kind, (e,ts) <- fromPi kind = drop (length ts) (conSlots mc)
     where Identity mc = getConstructor n wdt
@@ -742,7 +749,7 @@ slotTypesHs wdt n (ELit LitCons { litName = pn, litArgs = xs, litType = _ })
     where
     Identity mc = getConstructor n wdt
     Identity pc = getConstructor (conInhabits mc) wdt
-    sub = substMap $ fromDistinctAscList [ (i,sl) | sl <- xs | i <- [2,4..] ]
+    sub = substMap $ fromDistinctAscList [ (unnamed i,sl) | sl <- xs | i <- [2,4..] ]
 slotTypesHs wdt n kind
     | sortKindLike kind, (e,ts) <- fromPi kind = drop (length ts) (conSlots mc)
     where Identity mc = getConstructor n wdt
@@ -810,7 +817,7 @@ pprintTypeAsHs :: DocLike a => E -> a
 pprintTypeAsHs e = unparse $ runVarName (f e) where
     f e | e == eStar = return $ atom $ text "*"
         | e == eHash = return $ atom $ text "#"
-    f (EPi (TVr { tvrIdent = 0, tvrType = t1 }) t2) = do
+    f (EPi (TVr { tvrIdent = n, tvrType = t1 }) t2) | isEmptyId n = do
         t1 <- f t1
         t2 <- f t2
         return $ t1 `arr` t2

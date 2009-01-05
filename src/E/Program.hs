@@ -86,7 +86,7 @@ programUpdate prog = check $ ucache prog where
     check x
         | not flint = x
         | hasRepeatUnder combIdent ds = error $ "programSetDs: program has redundant definitions: \n" ++ names
-        | any (not . isValidAtom) (map combIdent ds) = error $ "programSetDs: trying to set non unique top level name: \n" ++ names
+        | any (not . isValidAtom . idToInt) (map combIdent ds) = error $ "programSetDs: trying to set non unique top level name: \n" ++ names
         | otherwise = x
     names = intercalate "\n"  (sort $ map (show . tvrShowName . combHead) ds)
 

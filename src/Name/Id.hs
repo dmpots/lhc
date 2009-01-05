@@ -16,16 +16,20 @@ module Name.Id(
     mapMaybeIdMap,
     idSetFromList,
     idToInt,
+    unnamed,
     idSetFromDistinctAscList,
     idMapFromList,
     idMapFromDistinctAscList,
     idSetToList,
     idMapToList,
+    isEmptyId,
     emptyId,
     newIds,
     newId,
     runIdNameT',
-    runIdNameT
+    runIdNameT,
+    toId,
+    fromId
     )where
 
 import Control.Monad.State
@@ -36,8 +40,8 @@ import Data.Monoid
 import Data.Typeable
 import System.Random
 import Data.Bits
-import qualified Data.IntMap  as IM
-import qualified Data.IntSet as IS
+import qualified Data.Map  as Map
+import qualified Data.Set as Set
 
 import StringTable.Atom
 import Util.HasSize
@@ -45,42 +49,56 @@ import Util.Inst()
 import Util.NameMonad
 import Util.SetLike as S
 import Name.Name
+import Doc.PPrint
+import Doc.DocLike
 
 -- TODO - make this a newtype
-type Id = Int
+data Id = Id Int
+          deriving (Read,Show,Eq,Ord)
 -- data Id = Etherial Int | NoBind | Named Name | Unnamed Int
+
+instance DocLike d => PPrint d Id where
+    pprint (Id i) = pprint i
 
 -- IdSet
 
+toId :: Name -> Id
+toId x = Id (fromAtom (toAtom x))
 
-newtype IdSet = IdSet IS.IntSet
+fromId :: Monad m => Id -> m Name
+fromId (Id i) = case intToAtom i of
+    Just a -> return $ Name a
+    Nothing -> fail $ "Name.fromId: not a name " ++ show i
+
+
+newtype IdSet = IdSet (Set.Set Id)
     deriving(Typeable,Monoid,HasSize,SetLike,BuildSet Id,ModifySet Id,IsEmpty,Eq,Ord)
 
 
 idSetToList :: IdSet -> [Id]
-idSetToList (IdSet is) = IS.toList is
+idSetToList (IdSet is) = Set.toList is
 
 idMapToList :: IdMap a -> [(Id,a)]
-idMapToList (IdMap is) = IM.toList is
+idMapToList (IdMap is) = Map.toList is
 
 idToInt :: Id -> Int
-idToInt = id
+idToInt (Id i) = i
 
 mapMaybeIdMap :: (a -> Maybe b) -> IdMap a -> IdMap b
-mapMaybeIdMap fn (IdMap m) = IdMap (IM.mapMaybe fn m)
+mapMaybeIdMap fn (IdMap m) = IdMap (Map.mapMaybe fn m)
 
 
 -- IdMap
 
-newtype IdMap a = IdMap (IM.IntMap a)
+newtype IdMap a = IdMap (Map.Map Id a)
     deriving(Typeable,Monoid,HasSize,SetLike,BuildSet (Id,a),MapLike Id a,Functor,Traversable,Foldable,IsEmpty,Eq,Ord)
 
 
 idSetToIdMap :: (Id -> a) -> IdSet -> IdMap a
-idSetToIdMap f (IdSet is) = IdMap $ IM.fromDistinctAscList [ (x,f x) |  x <- IS.toAscList is]
+idSetToIdMap f (IdSet is) = IdMap $ Map.fromDistinctAscList [ (x,f x) |  x <- Set.toAscList is]
 
 idMapToIdSet :: IdMap a -> IdSet
-idMapToIdSet (IdMap im) = IdSet $ (IM.keysSet im)
+idMapToIdSet (IdMap im) = IdSet $ (Map.keysSet im)
 
 
 -- | Name monad transformer.
@@ -112,6 +130,10 @@ runIdNameT' (IdNameT x) = do
 
 fromIdNameT (IdNameT x) = x
 
+instance GenName Id where
+    genNames i = map unnamed [st, st + 2 ..]  where
+        st = abs i + 2 + abs i `mod` 2
+
 instance Monad m => NameMonad Id (IdNameT m) where
     addNames ns = IdNameT $ do
         modify (\ (used,bound) -> (fromList ns `union` used, bound) )
@@ -132,7 +154,7 @@ instance Monad m => NameMonad Id (IdNameT m) where
         return nn
     newName  = IdNameT $ do
         (used,bound) <- get
-        let genNames i = [st, st + 2 ..]  where
+        let genNames i = map unnamed [st, st + 2 ..]  where
                 st = abs i + 2 + abs i `mod` 2
         fromIdNameT $ newNameFrom  (genNames (size used + size bound))
 
@@ -146,16 +168,16 @@ addBoundNamesIdMap nmap = IdNameT $ do
         nset = idMapToIdSet nmap
 
 idSetFromDistinctAscList :: [Id] -> IdSet
-idSetFromDistinctAscList ids = IdSet (IS.fromDistinctAscList ids)
+idSetFromDistinctAscList ids = IdSet (Set.fromDistinctAscList ids)
 
 idSetFromList :: [Id] -> IdSet
-idSetFromList ids = IdSet (IS.fromList ids)
+idSetFromList ids = IdSet (Set.fromList ids)
 
 idMapFromList :: [(Id,a)] -> IdMap a
-idMapFromList ids = IdMap (IM.fromList ids)
+idMapFromList ids = IdMap (Map.fromList ids)
 
 idMapFromDistinctAscList :: [(Id,a)] -> IdMap a
-idMapFromDistinctAscList ids = IdMap (IM.fromDistinctAscList ids)
+idMapFromDistinctAscList ids = IdMap (Map.fromDistinctAscList ids)
 
 
 instance Show IdSet where
@@ -173,21 +195,27 @@ instance Show v => Show (IdMap v) where
 -- positive and even - arbitrary numbers.
 
 etherialIds :: [Id]
-etherialIds = [-2, -4 ..  ]
+etherialIds = map unnamed [-2, -4 ..  ]
 
-isEtherialId id = id < 0
+isEtherialId (Id id) = id < 0
 
-isInvalidId id = id <= 0
+isInvalidId (Id id) = id <= 0
+
+isEmptyId :: Id -> Bool
+isEmptyId (Id 0) = True
+isEmptyId _ = False
 
 emptyId :: Id
-emptyId = 0
+emptyId = Id 0
 
+unnamed :: Int -> Id
+unnamed = Id
 
 -- | find some temporary ids that are not members of the set,
 -- useful for generating a small number of local unique names.
 
 newIds :: IdSet -> [Id]
-newIds ids = [ i | i <- [s, s + 2 ..] , i `notMember` ids ] where
+newIds ids = [ unnamed i | i <- [s, s + 2 ..] , unnamed i `notMember` ids ] where
     s = 2 + (2 * size ids)
 
 
@@ -195,7 +223,7 @@ newId :: Int           -- ^ a seed value, useful for speeding up finding a uniqu
       -> (Id -> Bool)  -- ^ whether an Id is acceptable
       -> Id            -- ^ your new Id
 newId seed check = head $ filter check ls where
-    ls = map mask $ randoms (mkStdGen seed)
+    ls = map unnamed $ map mask $ randoms (mkStdGen seed)
     mask x = x .&. 0x0FFFFFFE
 
 

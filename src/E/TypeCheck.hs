@@ -212,7 +212,7 @@ inferType dataTable ds e = rfc e where
         return t'
     fc e@(ELit _) = let t = getType e in valid t >> return t
     -- Lemmih 08.11.26: Why are unnamed bindings errors in this case?
-    fc (EVar (TVr { tvrIdent = 0 })) = fail "variable with nothing!"
+    fc (EVar (TVr { tvrIdent = i })) | i == emptyId = fail "variable with nothing!"
     fc (EVar (TVr { tvrType =  t})) = valid t >> strong' t
     fc (EPi (TVr { tvrIdent = n, tvrType =  at}) b) = do
         ESort a <- rfc at
@@ -231,7 +231,7 @@ inferType dataTable ds e = rfc e where
             a' <- rfc a
             if a' == tBox then return tBox else strong' (eAp a' b)
     fc (ELetRec vs e) = do
-        let ck (TVr { tvrIdent = 0 },_) = fail "binding of empty var"
+        let ck (TVr { tvrIdent = i },_) | isEmptyId i = fail "binding of empty var"
             ck (tv@(TVr { tvrType =  t}),e) = withContextDoc (hsep [text "Checking Let: ", parens (pprint tv),text  " = ", parens $ prettyE e ])  $ do
                 when (getType t == eHash && not (isEPi t)) $ fail $ "Let binding unboxed value: " ++ show (tv,e)
                 valid' nds t
@@ -282,7 +282,7 @@ inferType dataTable ds e = rfc e where
         mapM_ verifyPats' xs
         when (hasRepeatUnder litHead xs) $ fail "Duplicate case alternatives"
 
-    verifyPats' LitCons { litArgs = xs } = when (hasRepeatUnder id (filter (/= 0) $ map tvrIdent xs)) $ fail "Case pattern is non-linear"
+    verifyPats' LitCons { litArgs = xs } = when (hasRepeatUnder id (filter (not . isEmptyId) $ map tvrIdent xs)) $ fail "Case pattern is non-linear"
     verifyPats' _ = return ()
 
     eqAll ts = withContextDoc (text "eqAll" </> list (map prettyE ts)) $ foldl1M_ eq ts
@@ -365,7 +365,7 @@ typeInfer'' dataTable ds e = rfc e where
     fc s@ESort {} = return $ getType s
     fc (ELit LitCons { litType = t }) = strong' t
     fc e@ELit {} = strong' (getType e)
-    fc (EVar TVr { tvrIdent = 0 }) = fail "variable with nothing!"
+    fc (EVar TVr { tvrIdent = i }) | isEmptyId i = fail "variable with nothing!"
     fc (EVar TVr { tvrType =  t}) =  strong' t
     fc (EPi TVr { tvrIdent = n, tvrType = at} b) =  do
         ESort a <- rfc at
@@ -404,7 +404,7 @@ match :: Monad m =>
     -> E                  -- ^ pattern to match
     -> E                  -- ^ input expression
     -> m [(TVr,E)]
-match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () (-2::Int)) where
+match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () ((-2::Int))) where
     bvs :: IdSet
     bvs = fromList (map tvrIdent vs)
 
@@ -424,7 +424,7 @@ match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () (-2::Int)) 
         un t t' mm c
 
     un (EVar TVr { tvrIdent = i, tvrType =  t}) (EVar TVr {tvrIdent = j, tvrType =  u}) mm c | i == j = un t u mm c
-    un (EVar TVr { tvrIdent = i, tvrType =  t}) (EVar TVr {tvrIdent = j, tvrType =  u}) mm c | i < 0 || j < 0  = fail "Expressions don't match"
+    un (EVar TVr { tvrIdent = i, tvrType =  t}) (EVar TVr {tvrIdent = j, tvrType =  u}) mm c | isEtherialId i || isEtherialId j  = fail "Expressions don't match"
     un (EVar tvr@TVr { tvrIdent = i, tvrType = t}) b mm c
         | i `member` bvs = tell (Seq.single (tvr,b))
         | otherwise = fail $ "Expressions do not unify: " ++ show tvr ++ show b
@@ -433,7 +433,7 @@ match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () (-2::Int)) 
     un a b _ _ = fail $ "Expressions do not unify: " ++ show a ++ show b
     lam va ea vb eb mm c = do
         un (tvrType va) (tvrType vb) mm c
-        un (subst va (EVar va { tvrIdent = c }) ea) (subst vb (EVar vb { tvrIdent = c }) eb) mm (c - 2)
+        un (subst va (EVar va { tvrIdent = unnamed c }) ea) (subst vb (EVar vb { tvrIdent = unnamed c }) eb) mm (c - 2)
 
 $(derive makeUpdate ''TcEnv)
 instance ContextMonad String Tc where
@@ -449,7 +449,7 @@ tcE e = rfc e where
     fc s@ESort {} = return $ getType s
     fc (ELit LitCons { litType = t }) = strong' t
     fc e@ELit {} = strong' (getType e)
-    fc (EVar TVr { tvrIdent = 0 }) = fail "variable with nothing!"
+    fc (EVar TVr { tvrIdent = i }) | isEmptyId i = fail "variable with nothing!"
     fc (EVar TVr { tvrType =  t}) =  strong' t
     fc (EPi TVr { tvrIdent = n, tvrType = at} b) =  do
         ESort a <- rfc at

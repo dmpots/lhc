@@ -31,10 +31,16 @@ class GenName n where
     -- | Generate a list of candidate names given a seed
     genNames :: Int -> [n]
 
+{-
 instance GenName Int where
     genNames i = [st, st + 2 ..]  where
         st = abs i + 2 + abs i `mod` 2
-
+-}
+{-
+instance GenName Id where
+    genNames i = map unnamed [st, st + 2 ..]  where
+        st = abs i + 2 + abs i `mod` 2
+-}
 -- | Generate an infinite list of names not present in the given set.
 freeNames :: (Ord n,GenName n) => Set.Set n -> [n]
 freeNames s  = filter (not . (`Set.member` s)) (genNames (Set.size s))

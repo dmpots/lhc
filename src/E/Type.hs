@@ -159,7 +159,7 @@ instance (Show e,Show t) => Show (Lit e t) where
     showsPrec p LitCons { litName = n, litArgs = es, litType = t } = showParen (p > 10) $ hsep (shows n:map (showsPrec 11) es) <> showString "::" <> shows t
 
 instance Show a => Show (TVr' a) where
-    showsPrec n TVr { tvrIdent = 0, tvrType = e} = showParen (n > 10) $ showString "_::" . shows e
+    showsPrec n TVr { tvrIdent = emptyId, tvrType = e} = showParen (n > 10) $ showString "_::" . shows e
     showsPrec n TVr { tvrIdent = x, tvrType = e} = showParen (n > 10) $ case fromId x of
         Just n -> shows n . showString "::" . shows e
         Nothing  -> shows x . showString "::" . shows e
@@ -202,7 +202,7 @@ litHead LitCons { litName = s, litAliasFor = af } = litCons { litName = s, litTy
 litBinds (LitCons { litArgs = xs } ) = xs
 litBinds _ = []
 
-patToLitEE LitCons { litName = n, litArgs = [a,b], litType = t } | t == eStar, n == tc_Arrow = EPi (tVr 0 (EVar a)) (EVar b)
+patToLitEE LitCons { litName = n, litArgs = [a,b], litType = t } | t == eStar, n == tc_Arrow = EPi (tVr emptyId (EVar a)) (EVar b)
 patToLitEE LitCons { litName = n, litArgs = xs, litType = t, litAliasFor = af } = ELit $ LitCons { litName = n, litArgs = (map EVar xs), litType = t, litAliasFor = af }
 patToLitEE (LitInt x t) = ELit $ LitInt x t
 
@@ -245,7 +245,7 @@ eHash :: E
 eHash = ESort EHash
 
 tVr x y = tvr { tvrIdent = x, tvrType = y }
-tvr = TVr { tvrIdent = 0, tvrType = Unknown, tvrInfo = Info.empty }
+tvr = TVr { tvrIdent = emptyId, tvrType = Unknown, tvrInfo = Info.empty }
 
 combBody_u f r@Comb{combBody  = x} = r{combBody = f x}
 combHead_u f r@Comb{combHead  = x} = r{combHead = f x}

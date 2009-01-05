@@ -6,22 +6,22 @@ import E.Type
 import Monad
 import Name.Binary()
 import {-# SOURCE #-} Info.Binary(putInfo,getInfo)
-
+import Name.Id (emptyId, isEmptyId, fromId, toId, idToInt, unnamed)
 
 -- Binary instance
-data TvrBinary = TvrBinaryNone | TvrBinaryAtom Atom | TvrBinaryInt Word32
+data TvrBinary = TvrBinaryNone | TvrBinaryAtom Atom | TvrBinaryInt Int
 
 instance Binary TVr where
-    put (TVr { tvrIdent = 0, tvrType =  e, tvrInfo = nf} ) = do
+    put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf} ) | isEmptyId i = do
         put (TvrBinaryNone)
         put e
         putInfo nf
-    put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf}) | Just x <- intToAtom i = do
-        put (TvrBinaryAtom x)
+    put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf}) | Just x <- fromId i = do
+        put (TvrBinaryAtom (toAtom x))
         put e
         putInfo nf
     put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf}) = do
-        put (TvrBinaryInt $ fromIntegral i)
+        put (TvrBinaryInt $ idToInt i)
         put e
         putInfo nf
     get  = do
@@ -29,9 +29,9 @@ instance Binary TVr where
         e <- get
         nf <- getInfo
         case x of
-            TvrBinaryNone -> return $ TVr 0 e nf
-            TvrBinaryAtom a -> return $ TVr (fromAtom a) e nf
-            TvrBinaryInt i -> return $ TVr (fromIntegral i) e nf
+            TvrBinaryNone -> return $ TVr emptyId e nf
+            TvrBinaryAtom a -> return $ TVr (toId (fromAtom a)) e nf
+            TvrBinaryInt i -> return $ TVr (unnamed i) e nf
 
 instance Binary TvrBinary where
     put TvrBinaryNone = do putWord8  0
