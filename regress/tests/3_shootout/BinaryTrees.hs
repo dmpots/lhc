@@ -4,8 +4,13 @@
 -- Simon Marlow
 -- Shortened by Don Stewart
 -- De-optimized by Isaac Gouy
+{-
+
+2009.01.05: The program fails for unknown reasons. I suspect the C translation to be flawed.
 
 import System; import Text.Printf; import Control.Monad
+
+import Debug.Trace
 
 data Tree = Nil | Node !Int Tree Tree
 
@@ -22,14 +27,15 @@ depthLoop d m = when (d <= m) $ do
         depthLoop (d+2) m
     where n = 2^(m - d + min')
 
-sumLoop 0 d acc = acc
+sumLoop 0 d acc = acc :: Int
 sumLoop k d acc = c `seq` sumLoop (k-1) d (acc + c + c')
     where (c,c')  = (itemCheck (make k d), itemCheck (make (-1*k) d))
 
 -- make i (0::Int) = i `seq` Nil
 make :: Int -> Int -> Tree
 make i 0 = Node i Nil Nil
-make i d = Node i (make ((2*i)-1) (d-1)) (make (2*i) (d-1))
+make i d = {-trace ("make: " ++ show (i,d)) $ -} Node i (make ((2*i)-1) (d-1)) (make (2*i) (d-1))
 
 itemCheck Nil = 0
 itemCheck (Node x l r) = x + itemCheck l - itemCheck r
+-}
