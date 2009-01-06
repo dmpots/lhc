@@ -29,11 +29,11 @@ deadCode ::
     -> IO Grin -- ^ output
 deadCode stats roots grin = do
     fixer <- newFixer
-    usedFuncs <- newSupply fixer
-    usedArgs <- newSupply fixer
-    usedCafs <- newSupply fixer
-    pappFuncs <- newValue fixer bottom
-    suspFuncs <- newValue fixer bottom
+    usedFuncs <- newSupply fixer :: IO (Supply Atom Bool)
+    usedArgs <- newSupply fixer  :: IO (Supply (Tag, Int) Bool)
+    usedCafs <- newSupply fixer  :: IO (Supply Var Bool)
+    pappFuncs <- newValue fixer bottom :: IO (Value (Set.Set Tag))
+    suspFuncs <- newValue fixer bottom :: IO (Value (Set.Set Tag))
     -- set all roots as used
     flip mapM_ roots $ \r -> do
         addRule $ value True `implies` sValue usedFuncs r
@@ -139,7 +139,7 @@ go fixer pappFuncs suspFuncs usedFuncs usedArgs usedCafs postInline (fn,as :-> b
             h (p,e) = g e
             doNode (NodeC n as) | not postInline, Just (x,fn) <- tagUnfunction n  = let
                 consts = (mconcatMap doConst as)
-                usedfn = implies fn' (sValue usedFuncs fn)
+                usedfn = fn' `implies` sValue usedFuncs fn
                 suspfn | x > 0 = conditionalRule id fn' (pappFuncs `isSuperSetOf` value (Set.singleton fn))
                        | otherwise = conditionalRule id fn' (suspFuncs `isSuperSetOf` value (Set.singleton fn))
                 in mappend consts $ mconcat (usedfn:suspfn:[ mconcatMap (implies (sValue usedArgs fn) . varValue) (freeVars a) | (fn,a) <- combineArgs fn as])
