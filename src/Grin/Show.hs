@@ -86,9 +86,9 @@ prettyExp vl (e1 :>>= v :-> e2) = align (prettyExp (pVar v) e1 <$> prettyExp vl 
 prettyExp vl (Return []) = vl <> keyword "return" <+> text "()"
 prettyExp vl (Return [v]) = vl <> keyword "return" <+> prettyVal v
 prettyExp vl (Return vs) = vl <> keyword "return" <+> tupled (map prettyVal vs)
-prettyExp vl (Store v@Var {}) | getType v == tyDNode = vl <> keyword "demote" <+> prettyVal v
+--prettyExp vl (Store v@Var {}) | getType v == tyDNode = vl <> keyword "demote" <+> prettyVal v
 prettyExp vl (Store v) = vl <> keyword "store" <+> prettyVal v
-prettyExp vl (Fetch v@Var {}) | getType v == tyINode = vl <> keyword "promote" <+> prettyVal v
+--prettyExp vl (Fetch v@Var {}) | getType v == tyINode = vl <> keyword "promote" <+> prettyVal v
 prettyExp vl (Fetch v) = vl <> keyword "fetch" <+> prettyVal v
 prettyExp vl (Error "" _) = vl <> prim "exitFailure"
 prettyExp vl (Error s _) = vl <> keyword "error" <+> tshow s
