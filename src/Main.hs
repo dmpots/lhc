@@ -750,6 +750,7 @@ compileToGrin prog = do
     lintCheckGrin x
     x <- createEvalApply x
     lintCheckGrin x
+    wdump FD.GrinPosteval $ dumpGrin "posteval" x
     x <- evaluate $ Grin.SSimplify.simplify x
 
     lintCheckGrin x
