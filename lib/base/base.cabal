@@ -7,7 +7,12 @@ Library
   Extensions:      ForeignFunctionInterface
   hs-source-dirs:  src
   Exposed-Modules: Control.Exception,
+--               Control.Applicative,
+--               Control.Arrow,
+                 Control.Category,
                  Control.Monad,
+                 Control.Monad.Fix,
+                 Control.Monad.Instances,
                  Data.Array,
                  Data.Char,
                  Data.Complex,
@@ -21,6 +26,7 @@ Library
                  Data.Maybe,
                  Data.Ratio,
                  Data.Unicode,
+                 Data.Function,
                  Debug.Trace,
                  Foreign,
                  Foreign.C,
