@@ -78,6 +78,7 @@ runTestCase cfg tc
             (\_ -> removeDirectoryRecursive testDir) $ \_ -> checkFail $ withTimeout $
     do let args = [ "-o", progName
                   , "--ho-dir", testDir
+                  , "-flint"
                   , testCasePath tc ] ++
                   cfgLHCOptions cfg
        when (cfgVerbose cfg >= 4) $ putStrLn $ unwords (cfgLHCPath cfg:args)
