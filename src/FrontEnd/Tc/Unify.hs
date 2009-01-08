@@ -209,7 +209,7 @@ boxyMatch s1 s2 = do
         return False
 
 
-    bm (TAp a b) (TAp c d) = do
+    bm t1 t2 | Just (a, b) <- splitTAp_maybe t1, Just (c, d) <- splitTAp_maybe t2 = do
         printRule "APP"
         a `boxyMatch` c
         b `boxyMatch` d

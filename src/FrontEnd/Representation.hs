@@ -27,10 +27,13 @@ module FrontEnd.Representation(
     fromTAp,
     fromTArrow,
     tassocToAp,
+    splitTAp_maybe,
     MetaVar(..),
     tTTuple,
     tTTuple',
-    tList
+    tList,
+    tArrow,
+    tAp
     )where
 
 import Data.DeriveTH
@@ -94,6 +97,8 @@ instance Binary MetaVar where
 
 tList = TCon (Tycon tc_List (Kfun kindStar kindStar))
 
+tArrow = TCon (Tycon tc_Arrow (kindArg `Kfun` kindFunRet `Kfun` kindStar))
+
 instance Eq Type where
     (TVar a) == (TVar b) = a == b
     (TMetaVar a) == (TMetaVar b) = a == b
@@ -101,6 +106,9 @@ instance Eq Type where
     (TAp a' a) == (TAp b' b) = a' == b' && b == a
     (TArrow a' a) == (TArrow b' b) = a' == b' && b == a
     _ == _ = False
+
+tAp (TAp c@TCon{} a) b | c == tArrow = TArrow a b
+tAp a b = TAp a b
 
 tassocToAp TAssoc { typeCon = con, typeClassArgs = cas, typeExtraArgs = eas } = foldl tAp (TCon con) (cas ++ eas)
 
@@ -311,12 +319,17 @@ instance DocLike d => PPrint d MetaVar where
 
 fromTAp t = f t [] where
     f (TAp a b) rs = f a (b:rs)
+    f (TArrow a b) rs = f (tAp tArrow a) (b:rs)
     f t rs = (t,rs)
 
 fromTArrow t = f t [] where
     f (TArrow a b) rs = f b (a:rs)
     f t rs = (reverse rs,t)
 
+splitTAp_maybe :: Type -> Maybe (Type, Type)
+splitTAp_maybe (TAp a b) = Just (a, b)
+splitTAp_maybe (TArrow a b) = Just (tAp tArrow a, b)
+splitTAp_maybe t = Nothing
 
 instance CanType MetaVar Kind where
     getType mv = metaKind mv

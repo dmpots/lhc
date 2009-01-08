@@ -72,6 +72,8 @@ data Kind  = KBase KBase
            | KVar Kindvar               -- variables aren't really allowed in haskell in kinds
              deriving(Eq, Ord)   -- but we need them for kind inference
 
+infixr `Kfun`
+
 KBase kb    `isSubsumedBy` KBase kb'    = isSubsumedBy2 kb kb'
 Kfun  k1 k2 `isSubsumedBy` Kfun k1' k2' = isSubsumedBy k1 k1' && isSubsumedBy k2 k2'
 _           `isSubsumedBy` _            = False
