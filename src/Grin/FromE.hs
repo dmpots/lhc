@@ -689,7 +689,8 @@ compile' cenv (tvr,as,e) = ans where
     -- runtime behavior is considered, it means a compile time constant, the
     -- CAFs may be updated with evaluated values.
 
-    constant :: Monad m =>  E -> m Val
+--    constant :: Monad m =>  E -> m Val
+    constant :: E -> Maybe Val
     constant (EVar tvr) | Just c <- mlookup (tvrIdent tvr) (ccafMap cenv) = return c
                         | Just (v,as,_) <- mlookup (tvrIdent tvr) (scMap cenv)
                          , t <- partialTag v (length as), tagIsWHNF t = if isLifted (EVar tvr) then return $ Const $ NodeC t [] else return (NodeC t [])
@@ -733,7 +734,7 @@ compile' cenv (tvr,as,e) = ans where
 
 
 -- | converts an unboxed literal
-literal :: Monad m =>  E -> m [Val]
+literal :: E -> Maybe [Val]
 literal (ELit LitCons { litName = n, litArgs = xs })  |  Just xs <- mapM literal xs, Just _ <- fromUnboxedNameTuple n = return (keepIts $ concat xs)
 literal (ELit (LitInt i ty)) | Just ptype <- toCmmTy ty = return $ [Lit i (TyPrim ptype)]
 literal (ELit (LitInt i (ELit (LitCons { litArgs = [], litAliasFor = Just af }))))  = literal $ ELit (LitInt i af)
