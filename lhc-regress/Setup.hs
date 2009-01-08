@@ -50,15 +50,19 @@ cmd_threads = Option "N" ["threads"] (ReqArg threadsFlag "n")
 
 cmd_options :: OptDescr (Config -> Config)
 cmd_options = Option "" ["lhc-options"] (ReqArg optionsFlag "OPTS")
-              "give extra options to lhc"
+              "Give extra options to lhc"
   where
     optionsFlag s cfg = cfg{cfgLHCOptions = words s ++ cfgLHCOptions cfg}
 
 cmd_complete :: OptDescr (Config -> Config)
-cmd_complete = Option "c" ["complete"] (OptArg completeFlag "bool")
+cmd_complete = Option "c" ["complete"] (OptArg completeFlag "BOOL")
               "Run all tests even if some fail."
   where
     completeFlag mb_s cfg = cfg{cfgComplete = maybe True (parseBool . map toLower) mb_s}
+
+cmd_with_lhc :: OptDescr (Config -> Config)
+cmd_with_lhc = Option "" ["with-lhc"] (ReqArg (\path cfg -> cfg{cfgLHCPath = path}) "PATH")
+               "Give the path to lhc."
 
 {-
 cmd_dryrun :: OptDescr Flag
@@ -80,6 +84,7 @@ globalOptions =
     , cmd_threads
     , cmd_options
     , cmd_complete
+    , cmd_with_lhc
 --    , cmd_dryrun
     ]
 
