@@ -787,8 +787,9 @@ compileGrinToC grin | optMode options `elem` [GenerateExe
                   | otherwise = []
         comm = shellQuote $ [optCC options, "-std=gnu99", "-D_GNU_SOURCE", "-falign-functions=4", "-ffast-math"
                             , "-Wshadow", "-Wextra", "-Wall", "-Wno-unused-parameter", "-o", fn, cf ] ++
-                            (map ("-l" ++) rls) ++ debug ++ optCCargs options  ++ boehmOpts ++ profileOpts
-        debug = if fopts FO.Debug then ["-g"] else ["-DNDEBUG", "-O3", "-fomit-frame-pointer"]
+                            (map ("-l" ++) rls) ++ debug ++ unsafe ++ optCCargs options  ++ boehmOpts ++ profileOpts
+        debug = if fopts FO.Debug then ["-g"] else ["-fomit-frame-pointer","-O3"]
+        unsafe = if fopts FO.Unsafe then ["-DNDEBUG"] else []
         globalvar n c = "char " ++ n ++ "[] = \"" ++ c ++ "\";"
         compileC = do 
           progress ("Running: " ++ comm)

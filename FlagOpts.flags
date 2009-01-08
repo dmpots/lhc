@@ -12,6 +12,7 @@ unboxed-values allow unboxed value syntax
 ffi support foreign function declarations
 cpp pass haskell source through c preprocessor
 m4 pass haskell source through m4 preprocessor
+unsafe disable runtime assertions
 
 !Typechecking
 monomorphism-restriction enforce monomorphism restriction
