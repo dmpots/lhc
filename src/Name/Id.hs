@@ -56,8 +56,14 @@ import Doc.DocLike
 
 -- TODO - make this a newtype
 data Id = Id Int
-          deriving (Read,Show,Eq,Ord)
+          deriving (Eq,Ord)
 -- data Id = Etherial Int | NoBind | Named Name | Unnamed Int
+
+instance Show Id where
+    showsPrec n (Id i) = showsPrec n i
+
+instance Read Id where
+    readsPrec n s = [(Id i, rest) | (i, rest) <- readsPrec n s]
 
 instance DocLike d => PPrint d Id where
     pprint (Id i) = pprint i
