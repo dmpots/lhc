@@ -105,7 +105,7 @@ bracketHtml action = do
 
 catom action = action `finally` dumpToFile
 
-main = do -- runMain $ catom $ bracketHtml $ do
+main = runMain $ do
     o <- processOptions
     progressM $ do
         (argstring,_) <- getArgString
