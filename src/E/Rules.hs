@@ -228,11 +228,14 @@ makeRule name uniq ruleType fvs head args body
     | Left e <- typesCompatable lty rty =
          error $ render (text "E.Rules.makeRule: type error in rule" <+> text name
                          <$> text e
-                         <$> text "in" <+> align (pprint lty)
-                         <$> text "==>" <+> align (pprint rty))
+                         <$> text "in" <+> (align (pprint lhs)
+                                            <$> text " :: " <> align (pprint lty))
+                         <$> text "==>" <+> (align (pprint body)
+                                             <$> text " :: " <> align (pprint rty)))
     | otherwise  = rule
     where
-    lty = getType (foldl eAp (EVar head) args)
+    lhs = (foldl eAp (EVar head) args)
+    lty = getType lhs
     rty = getType body
     rule = emptyRule {
         ruleHead = head,
