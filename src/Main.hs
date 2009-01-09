@@ -246,8 +246,12 @@ processDecls cho ho' tiData = do
     let ds = [ (v,e) | (v,e) <- classInstances ] ++  [ (v,lc) | (n,v,lc) <- ds', v `notElem` fsts classInstances ]
  --   sequence_ [lintCheckE onerrNone fullDataTable v e | (_,v,e) <- ds ]
 
+
+{- SamB 2008.01.09: doing this in E.FromHS is error prone!
     -- Build rules from instances, specializations, and user specified rules and catalysts
     let instanceRules = createInstanceRules fullDataTable (hoClassHierarchy $ hoBuild ho')  (ds `mappend` hoEs (hoBuild ho))
+-}
+
     -- FIXME: 'converRules' and 'procAllSpecs' use IO for error handling. Use an error monad if they are user errors
     --        otherwise use exceptions and make the calls pure.
     userRules <- convertRules (progModule prog) tiData (hoClassHierarchy  $ hoBuild ho') allAssumps fullDataTable decls
@@ -265,7 +269,8 @@ processDecls cho ho' tiData = do
     wdump FD.CoreInitial $
         mapM_ (\(v,lc) -> printCheckName'' fullDataTable v lc) ds
 
-    let rules@(Rules rules') = instanceRules `mappend` userRules `mappend` specializeRules
+    let rules@(Rules rules') = -- instanceRules `mappend`
+                               userRules `mappend` specializeRules
 
     wdump FD.Rules $ putStrLn "  ---- user rules ---- " >> printRules RuleUser rules
     wdump FD.Rules $ putStrLn "  ---- user catalysts ---- " >> printRules RuleCatalyst rules
