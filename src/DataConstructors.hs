@@ -298,8 +298,8 @@ primitiveTable = concatMap f allCTypes  where
 
 
 typesCompatable :: forall m . Monad m => E -> E -> m ()
-typesCompatable a b = f (-2 :: Int) a b where
-        f :: Int -> E -> E -> m ()
+typesCompatable a b = f etherialIds a b where
+        f :: [Id] -> E -> E -> m ()
         f _ (ESort a) (ESort b) = when (a /= b) $ fail $ "Sorts don't match: " ++ pprint (ESort a,ESort b)
         f _ (EVar a) (EVar b) = when (a /= b) $ fail $ "Vars don't match: " ++ pprint (a,b)
         -- we expand aliases first, because the newtype might have phantom types as arguments
@@ -327,10 +327,10 @@ typesCompatable a b = f (-2 :: Int) a b where
         f _ a b | boxCompat a b || boxCompat b a = return ()
         f _ a b = fail $ "Types don't match:" ++ pprint (a,b)
 
-        lam :: TVr -> E -> TVr -> E -> Int -> m ()
-        lam va ea vb eb c = do
-            f c (tvrType va) (tvrType vb)
-            f (c - 2) (subst va (EVar va { tvrIdent = unnamed c }) ea) (subst vb (EVar vb { tvrIdent = unnamed c }) eb)
+        lam :: TVr -> E -> TVr -> E -> [Id] -> m ()
+        lam va ea vb eb (c:cs) = do
+            f (c:cs) (tvrType va) (tvrType vb)
+            f cs (subst va (EVar va { tvrIdent = c }) ea) (subst vb (EVar vb { tvrIdent = c }) eb)
         boxCompat (ELit (LitCons { litName = n }))  t | Just e <- fromConjured modBox n =  e == getType t
         boxCompat _ _ = False
 
