@@ -28,9 +28,10 @@ import Doc.PPrint
 import Doc.Pretty
 import E.Binary()
 import E.E
-import E.Show()
+import E.Show(render)
 import E.Subst
 import E.Values
+import DataConstructors(typesCompatable)
 import GenUtil
 import Info.Types
 import Support.MapBinaryInstance()
@@ -223,7 +224,16 @@ makeRule ::
     -> [E]      -- ^ the args
     -> E        -- ^ the body
     -> Rule
-makeRule name uniq ruleType fvs head args body = rule where
+makeRule name uniq ruleType fvs head args body
+    | Left e <- typesCompatable lty rty =
+         error $ render (text "E.Rules.makeRule: type error in rule" <+> text name
+                         <$> text e
+                         <$> text "in" <+> align (pprint lty)
+                         <$> text "==>" <+> align (pprint rty))
+    | otherwise  = rule
+    where
+    lty = getType (foldl eAp (EVar head) args)
+    rty = getType body
     rule = emptyRule {
         ruleHead = head,
         ruleBinds = fvs,

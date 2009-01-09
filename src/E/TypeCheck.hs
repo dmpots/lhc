@@ -301,7 +301,7 @@ inferType dataTable ds e = rfc e where
     eq' nds t1 t2 = do
         e1 <- strong nds (t1)
         e2 <- strong nds (t2)
-        case typesCompatable dataTable e1 e2 of
+        case typesCompatable e1 e2 of
             Right () -> return (e1)
             Left s -> failDoc $ hsep [text "eq:",text s, align $ vcat [ prettyE (e1),prettyE (e2) ]  ]
     fceq nds e1 t2 = do
