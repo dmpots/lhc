@@ -62,9 +62,6 @@ data Id = Id Int
 instance Show Id where
     showsPrec n (Id i) = showsPrec n i
 
-instance Read Id where
-    readsPrec n s = [(Id i, rest) | (i, rest) <- readsPrec n s]
-
 instance DocLike d => PPrint d Id where
     pprint (Id i) = pprint i
 
