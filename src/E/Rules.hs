@@ -104,11 +104,11 @@ printRule Rule {ruleName = n, ruleBinds = vs, ruleBody = e2, ruleHead = head, ru
     let p v = parens $ pprint v <> text "::" <> pprint (getType v)
     putDocMLn' CharIO.putStr $  (tshow n) <+> text "forall" <+> hsep (map p vs) <+> text "."
     let ty = pprint $ getType e1 -- case inferType dataTable [] e1 of
-    --    ty2 = pprint $ getType e2
+        ty2 = pprint $ getType e2
     putDocMLn' CharIO.putStr (indent 2 (pprint e1) <+> text "::" <+> ty )
     putDocMLn' CharIO.putStr $ text " ==>" <+> pprint e2
-    --putDocMLn CharIO.putStr (indent 2 (pprint e2))
-    --putDocMLn CharIO.putStr (indent 2 (text "::" <+> ty2))
+    putDocMLn CharIO.putStr (indent 2 (pprint e2))
+    putDocMLn CharIO.putStr (indent 2 (text "::" <+> ty2))
 
 combineRules as bs = map head $ sortGroupUnder ruleUniq (as ++ bs)
 
