@@ -634,7 +634,7 @@ tcPragmaDecl fd@(HsForeignExport _ e n qt) = do
 
 tcPragmaDecl _ = return []
 
-tcRule prule@HsRule { hsRuleUniq = uniq, hsRuleFreeVars = vs, hsRuleLeftExpr = e1, hsRuleRightExpr = e2, hsRuleSrcLoc = sloc } =
+tcRule prule@HsRule { hsRuleFreeVars = vs, hsRuleLeftExpr = e1, hsRuleRightExpr = e2, hsRuleSrcLoc = sloc } =
     withContext (locMsg sloc "in the RULES pragma" $ hsRuleString prule) ans where
         ans = do
             vs' <- mapM dv vs

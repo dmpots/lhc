@@ -153,7 +153,7 @@ tiModules' cho ms = do
 
 
     let smallClassHierarchy = makeClassHierarchy importClassHierarchy kindInfo ds
-    let cHierarchyWithInstances = scatterAliasInstances $ smallClassHierarchy `mappend` importClassHierarchy
+    let cHierarchyWithInstances = smallClassHierarchy `mappend` importClassHierarchy
 
     when (dump FD.ClassSummary) $ do
         putStrLn "  ---- class summary ---- "
@@ -193,7 +193,7 @@ tiModules' cho ms = do
     when (dump FD.Sigenv) $
          do {putStrLn "  ---- initial sigEnv information ---- ";
              putStrLn $ render $ pprintEnvMap sigEnv}
-    let bindings = (funPatBinds ++  liftedInstances)
+    let bindings = (funPatBinds ++ filter (not . isHsPragmaRules) liftedInstances)
         --classDefaults  = snub [ getDeclName z | z <- cDefBinds, isHsFunBind z || isHsPatBind z ]
         classNoDefaults = snub (concat [ getDeclNames z | z <- cDefBinds ]) -- List.\\ classDefaults
         noDefaultSigs = Map.fromList [ (n,maybe (error $ "sigEnv:"  ++ show n) id $ Map.lookup n sigEnv) | n <- classNoDefaults ]

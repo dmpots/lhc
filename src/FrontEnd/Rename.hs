@@ -295,9 +295,7 @@ instance Rename HsRule where
         fvs' <- sequence [ liftM2 (,) (rename x) (withSubTable subTable'' $ rename y)| (x,y) <- fvs]
         e1' <- rename e1
         e2' <- rename e2
-        m <- getCurrentModule
-        i <- newUniq
-        return prules {  hsRuleUniq = (m,i), hsRuleFreeVars = fvs', hsRuleLeftExpr = e1', hsRuleRightExpr = e2' }
+        return prules { hsRuleFreeVars = fvs', hsRuleLeftExpr = e1', hsRuleRightExpr = e2' }
 
 doesClassMakeSense :: HsQualType -> RM ()
 doesClassMakeSense (HsQualType _ type_) = case type_ of

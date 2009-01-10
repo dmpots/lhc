@@ -329,7 +329,7 @@ topdecl :: { HsDecl }
 rule :: { HsRule }
       : srcloc STRING mfreevars exp '=' exp
          { HsRule { hsRuleSrcLoc = $1, hsRuleString = $2, hsRuleFreeVars = $3, hsRuleLeftExpr = $4, hsRuleRightExpr = $6
-                  , hsRuleUniq = error "hsRuleUniq not set", hsRuleIsMeta = error "hsRuleIsMeta not set" } }
+                  , hsRuleIsMeta = error "hsRuleIsMeta not set" } }
 
 rules :: { [HsRule] }
       : rules optsemi rule  { $3 : $1 }

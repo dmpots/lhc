@@ -265,7 +265,6 @@ instance HasLocation HsModule where
     srcLoc x = hsModuleSrcLoc x
 
 data HsRule = HsRule {
-    hsRuleUniq :: (Module,Int),
     hsRuleSrcLoc :: SrcLoc,
     hsRuleIsMeta :: Bool,
     hsRuleString :: String,
