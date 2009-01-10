@@ -75,7 +75,7 @@ createIfv v e a b = res where
 
 ifzh e a b = eCase e [Alt lTruezh a, Alt lFalsezh b] Unknown
 
-newVars :: UniqueProducer m => [E] -> m [TVr]
+newVars :: Monad m => [E] -> Ce m [TVr]
 newVars xs = f xs [] where
     f [] xs = return $ reverse xs
     f (x:xs) ys = do
@@ -246,7 +246,7 @@ unbox dataTable e vn wtd = eCase e [Alt (litCons { litName = cna, litArgs = [tvr
     tvra = tVr vn sta
     Just (cna,sta,ta) = lookupCType' dataTable te
 
-createFunc :: UniqueProducer m => DataTable -> [E] -> ([(TVr,String)] -> (E -> E,E)) -> m E
+createFunc :: Monad m => DataTable -> [E] -> ([(TVr,String)] -> (E -> E,E)) -> Ce m E
 createFunc dataTable es ee = do
     xs <- flip mapM es $ \te -> do
         res@(_,sta,rt) <- lookupCType' dataTable te
@@ -369,7 +369,7 @@ convertDecls tiData props classHierarchy assumps dataTable hsDecls = liftM fst $
         | "Instance@" `isPrefixOf` show a = (a,setProperty prop_INSTANCE b, deNewtype dataTable c)
         | otherwise = (a,b, deNewtype dataTable c)
 
-    marshallToC :: UniqueProducer m => DataTable -> E -> E -> m E
+    marshallToC :: Monad m => DataTable -> E -> E -> Ce m E
     marshallToC dataTable e te | otherwise = do
         (cna,sta,ta) <- lookupCType' dataTable te
         [tvra] <- newVars [sta]
@@ -378,7 +378,7 @@ convertDecls tiData props classHierarchy assumps dataTable hsDecls = liftM fst $
                             (EVar tvra)]
                        Unknown
 
-    marshallFromC :: UniqueProducer m => DataTable -> E -> E -> m E
+    marshallFromC :: Monad m => DataTable -> E -> E -> Ce m E
     marshallFromC dataTable ce te | otherwise = do
         (cna,sta,ta) <- lookupCType' dataTable te
         return $ ELit (litCons { litName = cna, litArgs = [ce], litType = te })
