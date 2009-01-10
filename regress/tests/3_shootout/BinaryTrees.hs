@@ -4,9 +4,6 @@
 -- Simon Marlow
 -- Shortened by Don Stewart
 -- De-optimized by Isaac Gouy
-{-
-
-2009.01.05: The program fails for unknown reasons. I suspect the C translation to be flawed.
 
 import System; import Text.Printf; import Control.Monad
 
@@ -38,4 +35,3 @@ make i d = {-trace ("make: " ++ show (i,d)) $ -} Node i (make ((2*i)-1) (d-1)) (
 
 itemCheck Nil = 0
 itemCheck (Node x l r) = x + itemCheck l - itemCheck r
--}
