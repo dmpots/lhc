@@ -25,6 +25,7 @@ module Name.Id(
     idMapToList,
     isEmptyId,
     emptyId,
+    sillyId,
     newIds,
     newId,
     runIdNameT',
@@ -203,7 +204,7 @@ instance Show v => Show (IdMap v) where
 -- positive and even - arbitrary numbers.
 
 etherialIds :: [Id]
-etherialIds = map unnamed [-2, -4 ..  ]
+etherialIds = map Id [-2, -4 ..  ]
 
 isEtherialId (Id id) = id < 0
 
@@ -217,7 +218,11 @@ emptyId :: Id
 emptyId = Id 0
 
 unnamed :: Int -> Id
-unnamed = Id
+unnamed x | x <= 0    = error "Unnamed variables must be positive numbers."
+          | otherwise = Id x
+
+sillyId :: Id
+sillyId = Id (-1)
 
 -- | find some temporary ids that are not members of the set,
 -- useful for generating a small number of local unique names.

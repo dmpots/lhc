@@ -608,7 +608,7 @@ toDataTable km cm ds currentDataTable = newDataTable  where
 
         theExpr =  foldr ELam (strictize tslots $ ELit litCons { litName = dataConsName, litArgs = map EVar dvars, litType = theTypeExpr }) hsvars
 
-        strictize tslots con = E.Subst.subst tvr { tvrIdent = unnamed (-1) } Unknown $ f tslots con where
+        strictize tslots con = E.Subst.subst tvr { tvrIdent = sillyId } Unknown $ f tslots con where
             f (Left (v,False):rs) con = f rs con
             f (Left (v,True):rs) con = eStrictLet v (EVar v) (f rs con)
             f (Right (v,dc,rcs):rs) con = eCase (EVar v) [Alt pat (f rs con)] Unknown where

@@ -404,7 +404,7 @@ match :: Monad m =>
     -> E                  -- ^ pattern to match
     -> E                  -- ^ input expression
     -> m [(TVr,E)]
-match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () ((-2::Int))) where
+match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () (etherialIds)) where
     bvs :: IdSet
     bvs = fromList (map tvrIdent vs)
 
@@ -431,9 +431,9 @@ match lup vs = \e1 e2 -> liftM Seq.toList $ execWriterT (un e1 e2 () ((-2::Int))
     un a (EVar tvr) mm c | Just b <- lup (tvrIdent tvr), not $ isEVar b = un a b mm c
 
     un a b _ _ = fail $ "Expressions do not unify: " ++ show a ++ show b
-    lam va ea vb eb mm c = do
-        un (tvrType va) (tvrType vb) mm c
-        un (subst va (EVar va { tvrIdent = unnamed c }) ea) (subst vb (EVar vb { tvrIdent = unnamed c }) eb) mm (c - 2)
+    lam va ea vb eb mm (c:cs) = do
+        un (tvrType va) (tvrType vb) mm (c:cs)
+        un (subst va (EVar va { tvrIdent = c }) ea) (subst vb (EVar vb { tvrIdent = c }) eb) mm cs
 
 $(derive makeUpdate ''TcEnv)
 instance ContextMonad String Tc where
