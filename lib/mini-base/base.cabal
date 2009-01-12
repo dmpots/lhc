@@ -14,12 +14,12 @@ Library
 --                 Data.Array,
 --                 Data.Char,
 --                 Data.Complex,
---                 Data.List,
+                 Data.List
 --                 Data.Word,
 --                 Data.Monoid,
 --                 Data.Bits,
 --                 Data.Int,
---                 Data.IORef,
+                 Data.IORef
 --                 Data.Ix,
 --                 Data.Maybe,
 --                 Data.Ratio,
@@ -60,14 +60,14 @@ Library
 --                 System.CPUTime,
 --                 System.Directory,
 --                 System.Info,
---                 System.IO
+                 System.IO
 --                 System.IO.Error,
 --                 System.IO.Unsafe,
 --                 System.IO.Binary,
 --                 System.Locale,
 --                 System.Random,
 --                 System.Time,
---                 System
+                 System
 --                 Text.Show.Functions
 
   if !impl(lhc)
