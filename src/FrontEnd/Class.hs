@@ -370,11 +370,11 @@ methodToTopDecls _  kt preds crecord qt (methodName, methodDecls)
     instantiatedSig = newMethodSig' kt methodName (preds ++ cntxt) sigFromClass argType
     renamedMethodDecls = [renameOneDecl newMethodName methodDecls,
                           HsPragmaRules [HsRule {
-                                           hsRuleSrcLoc = hsDeclSrcLoc methodDecls,
+                                           hsRuleSrcLoc = srcLoc methodDecls,
                                            hsRuleIsMeta = True,
                                            hsRuleString = show newMethodName,
                                            hsRuleFreeVars = [],
-                                           hsRuleLeftExpr = HsVar (hsDeclName methodDecls),
+                                           hsRuleLeftExpr = HsVar (nameName methodName),
                                            hsRuleRightExpr = HsVar (nameName newMethodName)
                                          }]
                          ]

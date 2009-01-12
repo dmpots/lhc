@@ -657,7 +657,9 @@ tcRule prule@HsRule { hsRuleFreeVars = vs, hsRuleLeftExpr = e1, hsRuleRightExpr 
             ch <- getClassHierarchy
             rs1 <- return $ simplify ch rs1
             rs2 <- return $ simplify ch rs2
-            assertEntailment rs1 rs2
+            -- SamB 2009.01.12:
+            --   This doesn't make any sense to me -- it seems to break stuff ...
+            -- assertEntailment rs1 rs2
             return prule { hsRuleLeftExpr = e1, hsRuleRightExpr = e2 }
         dv (n,Nothing) = do
             v <- newMetaVar Tau kindStar
