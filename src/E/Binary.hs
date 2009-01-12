@@ -6,7 +6,7 @@ import E.Type
 import Monad
 import Name.Binary()
 import {-# SOURCE #-} Info.Binary(putInfo,getInfo)
-import Name.Id (emptyId, isEmptyId, fromId, toId, idToInt, unnamed)
+import Name.Id (emptyId, isEmptyId, fromId, toId, idToInt, anonymous)
 
 -- Binary instance
 data TvrBinary = TvrBinaryNone | TvrBinaryAtom Atom | TvrBinaryInt Int
@@ -31,7 +31,7 @@ instance Binary TVr where
         case x of
             TvrBinaryNone -> return $ TVr emptyId e nf
             TvrBinaryAtom a -> return $ TVr (toId (fromAtom a)) e nf
-            TvrBinaryInt i -> return $ TVr (unnamed i) e nf
+            TvrBinaryInt i -> return $ TVr (anonymous i) e nf
 
 instance Binary TvrBinary where
     put TvrBinaryNone = do putWord8  0

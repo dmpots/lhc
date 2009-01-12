@@ -945,7 +945,7 @@ newNameSM fn
          localEnv (insertInScope ident NotKnown) (fn ident)
 
 genNewId env = head $ filter (`mnotMember` envInScope env) $ idList
-    where idList = map unnamed [2,4..]
+    where idList = map anonymous [2,4..]
 
 data KnowSomething = KnowNothing | KnowNotOneOf [Name] | KnowIsCon Name | KnowIsNum Number | KnowSomething
     deriving(Eq)
@@ -1109,7 +1109,7 @@ instance NameMonad Id SM where
         sm <- get
         let (g1,g2) = split (smStdGen sm)
         put sm{smStdGen = g1}
-        newNameFrom (map unnamed $ filter (>0) $ filter even $ randoms g2)
+        newNameFrom (map anonymous $ filter (>0) $ filter even $ randoms g2)
 
 smUsedNames = SM $ gets idsUsed
 smBoundNames = SM $ gets idsBound

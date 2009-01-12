@@ -80,7 +80,7 @@ newVars xs = f xs [] where
     f [] xs = return $ reverse xs
     f (x:xs) ys = do
         s <- newUniq
-        f xs (tVr (unnamed (2*s)) x:ys)
+        f xs (tVr (anonymous (2*s)) x:ys)
 
 
 tipe t = f t where
@@ -180,7 +180,7 @@ nameToEntryPoint dataTable main cname ffi ds = ans where
                 Nothing | fopts FO.Raw -> EAp (EAp runRaw ty) maine
                 Nothing ->  EAp (EAp runExpr ty) maine
             ne = ELam worldVar (EAp e (EVar worldVar))
-            worldVar = tvr { tvrIdent = unnamed 2, tvrType = tWorld__ }
+            worldVar = tvr { tvrIdent = anonymous 2, tvrType = tWorld__ }
             theMainTvr =  tVr (toId cname) (infertype dataTable ne)
             tvm@(TVr { tvrType =  ty}) =  main
             maine = foldl EAp (EVar tvm) [ tAbsurd k |  TVr { tvrType = k } <- xs, sortKindLike k ]
@@ -198,12 +198,12 @@ createInstanceRules dataTable classHierarchy funcs = fromRules ans where
         _methodName@(~(Just (TVr {tvrType = ty},_))) = findName methodName
         defaultName =  (defaultInstanceName methodName)
         valToPat' (ELit LitCons { litAliasFor = af,  litName = x, litArgs = ts, litType = t }) = (ELit litCons { litAliasFor = af, litName = x, litArgs = ts', litType = t },ts') where
-            ts' = [ EVar (tVr (unnamed j) (getType z)) | z <- ts | j <- [2,4 ..], unnamed j `notElem` map tvrIdent args]
+            ts' = [ EVar (tVr (anonymous j) (getType z)) | z <- ts | j <- [2,4 ..], anonymous j `notElem` map tvrIdent args]
         --valToPat' (EPi (TVr { tvrType =  a}) b)  = ELit $ litCons { litName = tc_Arrow, litArgs = [ EVar (tVr j (getType z)) | z <- [a,b] | j <- [2,4 ..], j `notElem` map tvrIdent args], litType = eStar }
         valToPat' (EPi tv@TVr { tvrType =  a} b)  = (EPi tvr { tvrType =  a'} b',[a',b']) where
             a' = EVar (tVr ja (getType a))
             b' = EVar (tVr jb (getType b))
-            (ja:jb:_) = [ unnamed j |  j <- [2,4 ..], unnamed j `notElem` map tvrIdent args]
+            (ja:jb:_) = [ anonymous j |  j <- [2,4 ..], anonymous j `notElem` map tvrIdent args]
         valToPat' x = error $ "FromHs.valToPat': " ++ show x
         as = [ rule  t | Inst { instHead = _ :=> IsIn _ t }  <- snub (classInsts classRecord) ]
         (_ft,_:args') = fromPi ty

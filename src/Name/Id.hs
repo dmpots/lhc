@@ -17,7 +17,7 @@ module Name.Id(
     idSetFromList,
     idToInt,
     idIsNamed,
-    unnamed,
+    anonymous,
     idSetFromDistinctAscList,
     idMapFromList,
     idMapFromDistinctAscList,
@@ -57,18 +57,18 @@ import Doc.DocLike
 
 data Id = Empty                -- Empty binding. Like '\ _ -> ...'.
         | Etherial Int         -- Special ids used for typechecking. They should never be exposed to the user.
-        | Id Int               -- Anonymous id created by the compiler.
+        | Anonymous Int        -- Anonymous id created by the compiler.
         | Named Name           -- Named id created mostly by the user.
           deriving (Eq,Ord)
 
 instance Show Id where
-    showsPrec n (Id i) = showsPrec n i
+    showsPrec n (Anonymous i) = showsPrec n i
     showsPrec n (Named x) = showsPrec n x
     showsPrec n (Etherial i) = showsPrec n (-i)
     showsPrec n Empty = showsPrec n "_"
 
 instance DocLike d => PPrint d Id where
-    pprint (Id i) = pprint i
+    pprint (Anonymous i) = pprint i
     pprint (Named n) = pprint n
     pprint (Etherial i) = pprint (-i)
     pprint Empty = pprint "_"
@@ -95,7 +95,7 @@ idMapToList :: IdMap a -> [(Id,a)]
 idMapToList (IdMap is) = Map.toList is
 
 idToInt :: Id -> Int
-idToInt (Id i) = i
+idToInt (Anonymous i) = i
 idToInt (Named n) = fromAtom (toAtom n)
 idToInt (Etherial i) = -i
 idToInt Empty = 0
@@ -150,7 +150,7 @@ runIdNameT' (IdNameT x) = do
 fromIdNameT (IdNameT x) = x
 
 instance GenName Id where
-    genNames i = map unnamed [st, st + 2 ..]  where
+    genNames i = map anonymous [st, st + 2 ..]  where
         st = abs i + 2 + abs i `mod` 2
 
 instance Monad m => NameMonad Id (IdNameT m) where
@@ -173,7 +173,7 @@ instance Monad m => NameMonad Id (IdNameT m) where
         return nn
     newName  = IdNameT $ do
         (used,bound) <- get
-        let genNames i = map unnamed [st, st + 2 ..]  where
+        let genNames i = map anonymous [st, st + 2 ..]  where
                 st = abs i + 2 + abs i `mod` 2
         fromIdNameT $ newNameFrom  (genNames (size used + size bound))
 
@@ -230,9 +230,9 @@ isEmptyId _ = False
 emptyId :: Id
 emptyId = Empty
 
-unnamed :: Int -> Id
-unnamed x | x <= 0    = error "Unnamed variables must be positive numbers."
-          | otherwise = Id x
+anonymous :: Int -> Id
+anonymous x | x <= 0    = error "Anonymous variables must be positive numbers."
+            | otherwise = Anonymous x
 
 sillyId :: Id
 sillyId = Etherial 1
@@ -241,7 +241,7 @@ sillyId = Etherial 1
 -- useful for generating a small number of local unique names.
 
 newIds :: IdSet -> [Id]
-newIds ids = [ unnamed i | i <- [s ..] , unnamed i `notMember` ids ] where
+newIds ids = [ anonymous i | i <- [s ..] , anonymous i `notMember` ids ] where
     s = 1 + (size ids)
 
 
@@ -249,7 +249,7 @@ newId :: Int           -- ^ a seed value, useful for speeding up finding a uniqu
       -> (Id -> Bool)  -- ^ whether an Id is acceptable
       -> Id            -- ^ your new Id
 newId seed check = head $ filter check ls where
-    ls = map unnamed $ map mask $ randoms (mkStdGen seed)
+    ls = map anonymous $ map mask $ randoms (mkStdGen seed)
     mask x = x .&. 0x0FFFFFFE
 
 
