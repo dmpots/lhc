@@ -55,26 +55,33 @@ import Name.Name
 import Doc.PPrint
 import Doc.DocLike
 
--- TODO - make this a newtype
-data Id = Id Int
+data Id = Empty                -- Empty binding. Like '\ _ -> ...'.
+        | Etherial Int         -- Special ids used for typechecking. They should never be exposed to the user.
+        | Id Int               -- Anonymous id created by the compiler.
+        | Named Name           -- Named id created mostly by the user.
           deriving (Eq,Ord)
--- data Id = Etherial Int | NoBind | Named Name | Unnamed Int
 
 instance Show Id where
     showsPrec n (Id i) = showsPrec n i
+    showsPrec n (Named x) = showsPrec n x
+    showsPrec n (Etherial i) = showsPrec n (-i)
+    showsPrec n Empty = showsPrec n "_"
 
 instance DocLike d => PPrint d Id where
     pprint (Id i) = pprint i
+    pprint (Named n) = pprint n
+    pprint (Etherial i) = pprint (-i)
+    pprint Empty = pprint "_"
 
 -- IdSet
 
 toId :: Name -> Id
-toId x = Id (fromAtom (toAtom x))
+toId x = Named x
+--toId x = Id (fromAtom (toAtom x))
 
 fromId :: Monad m => Id -> m Name
-fromId (Id i) = case intToAtom i of
-    Just a -> return $ Name a
-    Nothing -> fail $ "Name.fromId: not a name " ++ show i
+fromId (Named n) = return n
+fromId i = fail $ "Name.fromId: not a name " ++ show i
 
 
 newtype IdSet = IdSet (Set.Set Id)
@@ -89,6 +96,9 @@ idMapToList (IdMap is) = Map.toList is
 
 idToInt :: Id -> Int
 idToInt (Id i) = i
+idToInt (Named n) = fromAtom (toAtom n)
+idToInt (Etherial i) = -i
+idToInt Empty = 0
 
 idIsNamed :: Id -> Bool
 idIsNamed = isJust . fromId
@@ -204,32 +214,35 @@ instance Show v => Show (IdMap v) where
 -- positive and even - arbitrary numbers.
 
 etherialIds :: [Id]
-etherialIds = map Id [-2, -4 ..  ]
+etherialIds = map Etherial [2, 3 ..  ]
 
-isEtherialId (Id id) = id < 0
+isEtherialId Etherial{} = True
+isEtherialId _ = False
 
-isInvalidId (Id id) = id <= 0
+isInvalidId Etherial{} = True
+isInvalidId Empty = True
+isInvalidId _ = False
 
 isEmptyId :: Id -> Bool
-isEmptyId (Id 0) = True
+isEmptyId Empty = True
 isEmptyId _ = False
 
 emptyId :: Id
-emptyId = Id 0
+emptyId = Empty
 
 unnamed :: Int -> Id
 unnamed x | x <= 0    = error "Unnamed variables must be positive numbers."
           | otherwise = Id x
 
 sillyId :: Id
-sillyId = Id (-1)
+sillyId = Etherial 1
 
 -- | find some temporary ids that are not members of the set,
 -- useful for generating a small number of local unique names.
 
 newIds :: IdSet -> [Id]
-newIds ids = [ unnamed i | i <- [s, s + 2 ..] , unnamed i `notMember` ids ] where
-    s = 2 + (2 * size ids)
+newIds ids = [ unnamed i | i <- [s ..] , unnamed i `notMember` ids ] where
+    s = 1 + (size ids)
 
 
 newId :: Int           -- ^ a seed value, useful for speeding up finding a unique id
