@@ -72,7 +72,7 @@ staticArgumentTransform prog = ans where
             ne' <- g ne'
             return [(t,ne')]
     f _ (Right ts) =  gds ts
-    gds ts = mapM g' ts >>= return where
+    gds ts = mapM g' ts where
         g' (t,e) = g e >>= return . (,) t
     g elet@ELetRec { eDefs = ds } =  do
         ds'' <- mapM (f False) (decomposeDs ds)

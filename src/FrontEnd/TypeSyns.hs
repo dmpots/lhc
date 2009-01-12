@@ -527,7 +527,7 @@ getHsNamesAndASrcLocsFromHsMatch (HsMatch srcLoc hsName _ _ _)
 getHsNamesAndASrcLocsFromHsStmt :: HsStmt -> [(HsName, SrcLoc)]
 getHsNamesAndASrcLocsFromHsStmt (HsGenerator srcLoc hsPat _hsExp) = zip (getNamesFromHsPat hsPat) (repeat srcLoc)
 getHsNamesAndASrcLocsFromHsStmt (HsQualifier _hsExp) = []
-getHsNamesAndASrcLocsFromHsStmt (HsLetStmt hsDecls) = concat $ map getHsNamesAndASrcLocsFromHsDecl hsDecls
+getHsNamesAndASrcLocsFromHsStmt (HsLetStmt hsDecls) = concatMap getHsNamesAndASrcLocsFromHsDecl hsDecls
 
 
 -- the getNew... functions are used only inside class declarations to avoid _re_ renaming things
@@ -539,8 +539,8 @@ getHsNamesFromHsQualType (HsQualType _hsContext hsType) = getHsNamesFromHsType h
 
 getHsNamesFromHsType :: HsType -> [HsName]
 getHsNamesFromHsType (HsTyFun hsType1 hsType2) = (getHsNamesFromHsType hsType1) ++ (getHsNamesFromHsType hsType2)
-getHsNamesFromHsType (HsTyTuple hsTypes) = concat $ map getHsNamesFromHsType hsTypes
-getHsNamesFromHsType (HsTyUnboxedTuple hsTypes) = concat $ map getHsNamesFromHsType hsTypes
+getHsNamesFromHsType (HsTyTuple hsTypes) = concatMap getHsNamesFromHsType hsTypes
+getHsNamesFromHsType (HsTyUnboxedTuple hsTypes) = concatMap getHsNamesFromHsType hsTypes
 getHsNamesFromHsType (HsTyApp hsType1 hsType2) = (getHsNamesFromHsType hsType1) ++ (getHsNamesFromHsType hsType2)
 getHsNamesFromHsType (HsTyVar hsName) = [hsName]
 getHsNamesFromHsType (HsTyForall vs qt) = getHsNamesFromHsQualType qt List.\\ map hsTyVarBindName vs

@@ -44,7 +44,7 @@ class (TextLike a) => DocLike a where
     vcat xs = foldr1 (\x y -> x <> char '\n' <> y) xs
     x <+> y = x <> char ' ' <> y
     x <$> y = x <> char '\n' <> y
-    encloseSep l r s ds = enclose l r (hcat $ punctuate s ds)
+    encloseSep l r s = enclose l r . hcat . punctuate s
     enclose l r x   = l <> x <> r
     list            = encloseSep lbracket rbracket comma
     tupled          = encloseSep lparen   rparen  comma
@@ -56,7 +56,7 @@ class (TextLike a) => DocLike a where
 ------------------------
 
 tshow :: (Show a,DocLike b) => a -> b
-tshow x = text (show x)
+tshow = text . show
 
 
 

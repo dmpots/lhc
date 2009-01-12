@@ -36,21 +36,21 @@ debugDeclBindGroups groups
 
 getDeclDeps :: HsDecl -> [HsName]
 
-getDeclDeps (HsPatBind _pat _ rhs wheres) = getRhsDeps rhs ++ foldr (++) [] (map getLocalDeclDeps wheres)
+getDeclDeps (HsPatBind _pat _ rhs wheres) = getRhsDeps rhs ++ concatMap getLocalDeclDeps wheres
 getDeclDeps (HsActionDecl _ _ e) = getExpDeps e
-getDeclDeps (HsFunBind matches) = foldr (++) [] (map getMatchDeps matches)
+getDeclDeps (HsFunBind matches) = concatMap getMatchDeps matches
 getDeclDeps _ = []
 
 
 getMatchDeps :: HsMatch -> [HsName]
-getMatchDeps (HsMatch _sloc _name _pats rhs wheres) = getRhsDeps rhs ++ foldr (++) [] (map getLocalDeclDeps wheres)
+getMatchDeps (HsMatch _sloc _name _pats rhs wheres) = getRhsDeps rhs ++ concatMap getLocalDeclDeps wheres
 
 -- get the dependencies from the local definitions in a function
 
 getLocalDeclDeps :: HsDecl -> [HsName]
-getLocalDeclDeps (HsFunBind matches) = foldr (++) [] (map getMatchDeps matches)
+getLocalDeclDeps (HsFunBind matches) = concatMap getMatchDeps matches
 
-getLocalDeclDeps (HsPatBind _sloc _hspat rhs wheres) = getRhsDeps rhs ++ foldr (++) [] (map getLocalDeclDeps wheres)
+getLocalDeclDeps (HsPatBind _sloc _hspat rhs wheres) = getRhsDeps rhs ++ concatMap getLocalDeclDeps wheres
 getLocalDeclDeps (HsActionDecl _sloc _ e) = getExpDeps e
 
 getLocalDeclDeps _ = []
@@ -59,7 +59,7 @@ getLocalDeclDeps _ = []
 
 getRhsDeps :: HsRhs -> [HsName]
 getRhsDeps (HsUnGuardedRhs e) = getExpDeps e
-getRhsDeps (HsGuardedRhss rhss) = foldr (++) [] (map getGuardedRhsDeps rhss)
+getRhsDeps (HsGuardedRhss rhss) = concatMap getGuardedRhsDeps rhss
 
 getGuardedRhsDeps :: HsGuardedRhs -> [HsName]
 getGuardedRhsDeps (HsGuardedRhs _sloc guardExp rhsExp)
@@ -73,27 +73,27 @@ getExpDeps e = execWriter (expDeps e)
 expDeps (HsVar name) = tell [name]
 expDeps (HsLet decls e) = do
     expDeps e
-    tell $ foldr (++) [] (map getLocalDeclDeps decls)
+    tell $ concatMap getLocalDeclDeps decls
 expDeps (HsCase e alts) = do
     expDeps e
-    tell $ foldr (++) [] (map getAltDeps alts)
+    tell $ concatMap getAltDeps alts
 expDeps (HsDo stmts) = do
-    tell $ foldr (++) [] (map getStmtDeps stmts)
+    tell $ concatMap getStmtDeps stmts
 expDeps (HsListComp e stmts) = do
     expDeps e
-    tell $ foldr (++) [] (map getStmtDeps stmts)
+    tell $ concatMap getStmtDeps stmts
 expDeps e = traverseHsExp_ expDeps e
 
 getAltDeps :: HsAlt -> [HsName]
 
 getAltDeps (HsAlt _sloc _pat guardedAlts wheres)
    = getGuardedAltsDeps guardedAlts ++
-     foldr (++) [] (map getLocalDeclDeps wheres)
+     concatMap getLocalDeclDeps wheres
 
 getGuardedAltsDeps :: HsRhs -> [HsName]
 getGuardedAltsDeps (HsUnGuardedRhs e) = getExpDeps e
 
-getGuardedAltsDeps (HsGuardedRhss gAlts) = foldr (++) [] (map getGAltsDeps gAlts)
+getGuardedAltsDeps (HsGuardedRhss gAlts) = concatMap getGAltsDeps gAlts
 
 getGAltsDeps :: HsGuardedRhs -> [HsName]
 getGAltsDeps (HsGuardedRhs _sloc e1 e2)
@@ -106,4 +106,4 @@ getStmtDeps (HsGenerator _srcLoc _pat e) = getExpDeps e
 getStmtDeps (HsQualifier e) = getExpDeps e
 
 getStmtDeps (HsLetStmt decls)
-   = foldr (++) [] (map getLocalDeclDeps decls)
+   = concatMap getLocalDeclDeps decls
