@@ -54,7 +54,10 @@ hasFailures :: Stats -> Bool
 hasFailures stats = unexpectedFailures stats /= 0
 
 ppStats :: Stats -> String
-ppStats stats = printf "Successful tests: %d\nExpected failures: %d\nUnexpected failures: %d\nOmitted tests: %d\n"
+ppStats stats = printf ("Successful tests:    %d\n"++
+                        "Expected failures:   %d\n"++
+                        "Unexpected failures: %d\n"++
+                        "Omitted tests:       %d\n")
                   (successfulTests stats)
                   (expectedFailures stats)
                   (unexpectedFailures stats)
