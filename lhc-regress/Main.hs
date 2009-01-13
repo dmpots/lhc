@@ -64,8 +64,9 @@ manager cfg noFailures ((tc,result):rest)
                                                 Success      -> printf "%20s: %s\n" (testCaseName tc) "OK"
                                                 KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "KnownFailure"
                                                 TimeOut      -> printf "%20s: %s\n" (testCaseName tc) "TimeOut"
-                                                CompileError str -> printf "%20s: %s\n" (testCaseName tc) str
-                                                ProgramError str -> printf "%20s: %s\n" (testCaseName tc) str
+                                                CompileError str | cfgVerbose cfg >= 4 -> printf "%20s: %s\n" (testCaseName tc) str
+                                                ProgramError str | cfgVerbose cfg >= 4 -> printf "%20s: %s\n" (testCaseName tc) str
+                                                _ -> printf "%20s: Failed\n" (testCaseName tc)
                      | cfgVerbose cfg >= 1 -> if isSuccess result then putStr "." else putStr "*"
                      | otherwise -> return ()
        hFlush stdout
