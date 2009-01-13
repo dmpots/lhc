@@ -29,6 +29,42 @@ isSuccess Success = True
 isSuccess KnownFailure = True
 isSuccess _ = False
 
+data Stats = Stats { successfulTests :: Int
+                   , expectedFailures :: Int
+                   , unexpectedFailures :: Int
+                   , testsNotExecuted :: Int
+                   }
+
+newStats :: Int -> Stats
+newStats nTests = Stats 0 0 0 nTests
+
+successfulTest :: Stats -> Stats
+successfulTest stats = stats{ successfulTests = successfulTests stats + 1
+                            , testsNotExecuted = testsNotExecuted stats - 1 }
+
+expectedFailure :: Stats -> Stats
+expectedFailure stats = stats{ expectedFailures = expectedFailures stats + 1
+                             , testsNotExecuted = testsNotExecuted stats - 1 }
+
+unexpectedFailure :: Stats -> Stats
+unexpectedFailure stats = stats{ unexpectedFailures = unexpectedFailures stats + 1
+                               , testsNotExecuted = testsNotExecuted stats - 1 }
+
+hasFailures :: Stats -> Bool
+hasFailures stats = unexpectedFailures stats /= 0
+
+ppStats :: Stats -> String
+ppStats stats = printf "Successful tests: %d\nExpected failures: %d\nUnexpected failures: %d\nOmitted tests: %d\n"
+                  (successfulTests stats)
+                  (expectedFailures stats)
+                  (unexpectedFailures stats)
+                  (testsNotExecuted stats)
+
+updateStats :: TestResult -> Stats -> Stats
+updateStats Success = successfulTest
+updateStats KnownFailure = expectedFailure
+updateStats _ = unexpectedFailure
+
 main :: IO ()
 main = do (cfg,paths) <- parseArguments =<< getArgs
           workChan <- newChan
@@ -43,23 +79,25 @@ main = do (cfg,paths) <- parseArguments =<< getArgs
                writeChan resultChan (test,result)
 
           results <- getChanContents resultChan
-          manager cfg True (take nTests results)
+          manager cfg (newStats nTests) (take nTests results)
             `finally` mapM_ killThread workers
 
 
 errMsg = "Some tests failed to perform as expected."
 
-manager cfg False _ | not (cfgComplete cfg)
-  = do when (cfgVerbose cfg >= 1) $ putStrLn errMsg
+manager cfg stats rest | hasFailures stats && (not (cfgComplete cfg) || null rest)
+  = do when (cfgVerbose cfg == 1) $ putStrLn ""
+       when (cfgVerbose cfg >= 1) $ do putStrLn errMsg
+                                       putStr (ppStats stats)
        exitFailure
 
-manager cfg True [] | cfgVerbose cfg >= 3 = putStrLn "No unexpected failures"
-manager cfg True [] | cfgVerbose cfg >= 1 = putStrLn ""
-manager cfg True [] = return ()
-manager cfg False [] = do when (cfgVerbose cfg >= 1) $ putStrLn errMsg >> exitFailure
-                          exitFailure
+manager cfg stats [] | cfgVerbose cfg >= 3 = do putStrLn "No unexpected failures"
+                                                putStr (ppStats stats)
+manager cfg stats [] | cfgVerbose cfg >= 1 = do putStrLn ""
+                                                putStr (ppStats stats)
+manager cfg stats [] = return ()
 
-manager cfg noFailures ((tc,result):rest)
+manager cfg stats ((tc,result):rest)
   = do case () of () | cfgVerbose cfg >= 3 -> case result of
                                                 Success      -> printf "%20s: %s\n" (testCaseName tc) "OK"
                                                 KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "KnownFailure"
@@ -70,7 +108,7 @@ manager cfg noFailures ((tc,result):rest)
                      | cfgVerbose cfg >= 1 -> if isSuccess result then putStr "." else putStr "*"
                      | otherwise -> return ()
        hFlush stdout
-       manager cfg (noFailures && isSuccess result) rest
+       manager cfg (updateStats result stats) rest
 
 -- FIXME: Get a proper temporary directory.
 runTestCase :: Config -> TestCase -> IO TestResult
