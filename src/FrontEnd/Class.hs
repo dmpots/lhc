@@ -371,7 +371,8 @@ methodToTopDecls _  kt preds crecord qt (methodName, methodDecls)
     renamedMethodDecls = [renameOneDecl newMethodName methodDecls,
                           HsPragmaRules [HsRule {
                                            hsRuleSrcLoc = srcLoc methodDecls,
-                                           hsRuleIsMeta = True,
+                                           hsRuleIsMeta = False,
+                                           hsRuleIsMethod = True,
                                            hsRuleString = show newMethodName,
                                            hsRuleFreeVars = [],
                                            hsRuleLeftExpr = HsVar (nameName methodName),

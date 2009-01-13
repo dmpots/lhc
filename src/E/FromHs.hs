@@ -268,7 +268,13 @@ convertRules :: Monad m => Module -> TiData -> ClassHierarchy -> Map.Map Name Ty
 convertRules mod tiData classHierarchy assumps dataTable hsDecls = ans where
     ans = do
         rawRules <- concatMapM g hsDecls
-        return $ fromRules [ makeRule n (mod,i) (if catalyst then RuleCatalyst else RuleUser) vs head args e2 | (catalyst,n,vs,e1,e2) <- rawRules, let (EVar head,args) = fromAp e1 | i <- [1..] ]
+        return $ fromRules [ makeRule n (mod,i) ruleType vs head args e2
+                             | (catalyst,method,n,vs,e1,e2) <- rawRules,
+                               let (EVar head,args) = fromAp e1,
+                               let ruleType | catalyst  = RuleCatalyst
+                                            | method    = RuleSpecialization
+                                            | otherwise = RuleUser
+                             | i <- [1..] ]
     g (HsPragmaRules rs) = mapM f rs
     g _ = return []
     f pr = do
@@ -291,7 +297,7 @@ convertRules mod tiData classHierarchy assumps dataTable hsDecls = ans where
             e2' = deNewtype dataTable $ smt $ sma e2
         --e2 <- atomizeAp False dataTable Stats.theStats mainModule e2'
         let e2 = atomizeAp mempty False dataTable e2'
-        return (hsRuleIsMeta pr,hsRuleString pr,( snds (cs' ++ ts) ),eval $ smt $ sma e1,e2)
+        return (hsRuleIsMeta pr,hsRuleIsMethod pr,hsRuleString pr,( snds (cs' ++ ts) ),eval $ smt $ sma e1,e2)
 
 convertE :: Monad m => TiData -> ClassHierarchy -> Map.Map Name Type -> DataTable -> SrcLoc -> HsExp -> m E
 convertE tiData classHierarchy assumps dataTable srcLoc exp = do
