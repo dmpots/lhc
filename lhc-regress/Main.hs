@@ -19,7 +19,7 @@ import Text.Printf
 import qualified Data.ByteString.Char8 as B
 
 data TestResult = CompileError String
-                | ProgramError String
+                | ProgramError String String
                 | KnownFailure
                 | TimeOut
                 | Success
@@ -99,12 +99,13 @@ manager cfg stats [] = return ()
 
 manager cfg stats ((tc,result):rest)
   = do case () of () | cfgVerbose cfg >= 3 -> case result of
-                                                Success      -> printf "%20s: %s\n" (testCaseName tc) "OK"
-                                                KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "KnownFailure"
-                                                TimeOut      -> printf "%20s: %s\n" (testCaseName tc) "TimeOut"
+                                                Success      -> printf "%20s: %s\n" (testCaseName tc) "OK."
+                                                KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "Known failure."
+                                                TimeOut      -> printf "%20s: %s\n" (testCaseName tc) "TimeOut."
                                                 CompileError str | cfgVerbose cfg >= 4 -> printf "%20s: %s\n" (testCaseName tc) str
-                                                ProgramError str | cfgVerbose cfg >= 4 -> printf "%20s: %s\n" (testCaseName tc) str
-                                                _ -> printf "%20s: Failed\n" (testCaseName tc)
+                                                ProgramError short str | cfgVerbose cfg >= 4 -> printf "%20s: %s\n" (testCaseName tc) str
+                                                CompileError str -> printf "%20s: %s\n" (testCaseName tc) "Compile failure."
+                                                ProgramError short str -> printf "%20s: %s\n" (testCaseName tc) short
                      | cfgVerbose cfg >= 1 -> if isSuccess result then putStr "." else putStr "*"
                      | otherwise -> return ()
        hFlush stdout
@@ -128,8 +129,8 @@ runTestCase cfg tc
            -> do when (cfgVerbose cfg >= 4) $ putStrLn $ unwords (progName:testCaseArgs tc)
                  (ret,out,err) <- execProcess progName (testCaseArgs tc) (testCaseStdin tc)
                  case (testCaseStdout tc, testCaseStderr tc) of
-                   (Just expectedOut,_) | expectedOut /= out -> return $ ProgramError $ unlines ["Unexpected stdout",B.unpack out]
-                   (_,Just expectedErr) | expectedErr /= err -> return $ ProgramError $ unlines ["Unexpected stderr",B.unpack err]
+                   (Just expectedOut,_) | expectedOut /= out -> return $ ProgramError "Unexpected stdout" $ B.unpack out
+                   (_,Just expectedErr) | expectedErr /= err -> return $ ProgramError "Unexpected stderr" $ B.unpack err
                    _ -> return Success
   where name = dropExtension (takeFileName (testCasePath tc))
         testDir = cfgTempDir cfg </> name
@@ -137,7 +138,7 @@ runTestCase cfg tc
         checkFail io = do ret <- io
                           if testCaseMustFail tc
                              then case ret of
-                                    Success -> return $ ProgramError "Known bug succeeded."
+                                    Success -> return $ ProgramError "Known bug succeeded." ""
                                     other   -> return KnownFailure
                              else return ret
         withTimeout io = do ret <- timeout (10^6 * cfgTestTimeout cfg) io
