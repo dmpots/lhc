@@ -106,7 +106,7 @@ manager cfg stats ((tc,result):rest)
                                                 KnownFailure -> printf "%20s: %s\n" (testCaseName tc) "Known failure."
                                                 TimeOut      -> printf "%20s: %s\n" (testCaseName tc) "TimeOut."
                                                 CompileError str | cfgVerbose cfg >= 4 -> printf "%20s: %s\n" (testCaseName tc) str
-                                                ProgramError short str | cfgVerbose cfg >= 4 -> printf "%20s: %s\n" (testCaseName tc) str
+                                                ProgramError short str | cfgVerbose cfg >= 4 -> printf "%20s: %s:\n%s" (testCaseName tc) short str
                                                 CompileError str -> printf "%20s: %s\n" (testCaseName tc) "Compile failure."
                                                 ProgramError short str -> printf "%20s: %s\n" (testCaseName tc) short
                      | cfgVerbose cfg >= 1 -> if isSuccess result then putStr "." else putStr "*"
