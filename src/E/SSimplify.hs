@@ -844,7 +844,9 @@ simplifyDs prog sopts dsIn = ans where
                 -- Nothing -> error $ "Var not in scope: " ++ show v
     hFunc e xs' = do app (e,xs')
     didInline ::OutE -> [OutE] -> SM OutE
-    didInline z zs = return (foldl EAp z zs)
+    -- SamB 2009.01.14:
+    --   FIXME does this always need to happen? Definately needs to happen sometimes. Without it,
+    --   we were getting E type errors in fastest_fib.
     didInline z zs = do
         used <- smUsedNames
         let (ne,nn) = runRename used (foldl EAp z zs)
