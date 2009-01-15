@@ -47,7 +47,10 @@ data NameType =
 
 
 newtype Name = Name Atom
-    deriving(Ord,Eq,Typeable,Binary,ToAtom,FromAtom)
+    deriving(Eq,Typeable,Binary,ToAtom,FromAtom)
+
+instance Ord Name where
+   Name a `compare` Name b = hash32 a `compare` hash32 b
 
 isTypeNamespace TypeConstructor = True
 isTypeNamespace ClassName = True
