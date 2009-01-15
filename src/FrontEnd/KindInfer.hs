@@ -41,7 +41,6 @@ import FrontEnd.Utils
 import GenUtil
 import Support.FreeVars
 import FrontEnd.HsSyn
-import Support.MapBinaryInstance
 import Name.Name
 import qualified Util.Seq as Seq
 import qualified FlagDump as FD
@@ -58,11 +57,11 @@ data KindEnv = KindEnv {
 $(derive makeMonoid ''KindEnv)
 
 instance Binary KindEnv where
-    put KindEnv { kindEnv = a, kindEnvAssocs = b, kindEnvClasses = c } = putMap a >> putMap b >> putMap c
+    put KindEnv { kindEnv = a, kindEnvAssocs = b, kindEnvClasses = c } = put a >> put b >> put c
     get = do
-        a <- getMap
-        b <- getMap
-        c <- getMap
+        a <- get
+        b <- get
+        c <- get
         return KindEnv { kindEnv = a, kindEnvAssocs = b, kindEnvClasses = c }
 
 instance HasSize KindEnv where

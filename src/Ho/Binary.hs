@@ -5,7 +5,6 @@ import Control.Monad
 import Data.Binary
 
 import Ho.Type
-import Support.MapBinaryInstance
 import Name.Binary()
 
 
@@ -24,7 +23,7 @@ instance Binary HoHeader where
 
 instance Binary HoBuild where
     put (HoBuild ae af ag ah ai ak al am) = do
-	    putMap ae
+	    put ae
 	    put af
 	    put ag
 	    put ah
@@ -33,7 +32,7 @@ instance Binary HoBuild where
 	    put al
 	    put am
     get = do
-    ae <- getMap
+    ae <- get
     af <- get
     ag <- get
     ah <- get
@@ -47,9 +46,9 @@ instance Binary HoBuild where
 instance Binary HoExp where
     put (HoExp ac ad) = do
 	    put ac
-	    putMap ad
+	    put ad
     get = do
     ac <- get
-    ad <- getMap
+    ad <- get
     return (HoExp ac ad)
 
