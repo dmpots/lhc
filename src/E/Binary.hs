@@ -4,9 +4,7 @@ import StringTable.Atom
 import Data.Binary
 import E.Type
 import Monad
-import Name.Binary()
 import {-# SOURCE #-} Info.Binary(putInfo,getInfo)
-import Name.Id (emptyId, isEmptyId, fromId, toId, idToInt, anonymous)
 
 -- Binary instance
 data TvrBinary = TvrBinaryNone | TvrBinaryAtom Atom | TvrBinaryInt Int

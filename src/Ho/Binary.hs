@@ -5,7 +5,7 @@ import Control.Monad
 import Data.Binary
 
 import Ho.Type
-import Name.Binary()
+--import Name.Binary()
 
 
 instance Binary HoHeader where

@@ -102,7 +102,7 @@ Executable lhc
   Grin.HashConst Grin.Interpret Grin.Lint Grin.NodeAnalyze Grin.Noodle Grin.Optimize
   Grin.SSimplify Grin.Show Grin.Simplify Grin.Unboxing Grin.Val Grin.Whiz Ho.Collected
   Ho.Binary Ho.Build Ho.Library Ho.Type Info.Binary Info.Info Info.Types Info.Properties
-  Name.Prim Name.Binary Name.Id Name.Name Name.Names Name.VConsts
+  Name.Prim Name.Id Name.Name Name.Names Name.VConsts
   Support.Tuple Support.CFF Support.FreeVars Support.CanType Support.ShowTable
   Support.Tickle Support.Transform Support.Unparse Util.Graph
   Util.Gen Util.ArbitraryInstances Util.BitSet Util.BooleanSolver Util.ContextMonad
