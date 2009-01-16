@@ -34,7 +34,7 @@ module Name.Id(
     fromId
     )where
 
-import Control.Monad.State
+import qualified Control.Monad.State as State
 import Control.Monad.Reader
 import Data.Traversable
 import Data.Foldable
@@ -55,11 +55,17 @@ import Name.Name
 import Doc.PPrint
 import Doc.DocLike
 
+import Data.DeriveTH
+import Data.Derive.All
+import Data.Binary
+
 data Id = Empty                -- Empty binding. Like '\ _ -> ...'.
         | Etherial Int         -- Special ids used for typechecking. They should never be exposed to the user.
         | Anonymous Int        -- Anonymous id created by the compiler.
         | Named Name           -- Named id created mostly by the user.
           deriving (Eq,Ord)
+
+$(derive makeBinary ''Id)
 
 instance Show Id where
     showsPrec n (Anonymous i) = showsPrec n i
@@ -85,7 +91,7 @@ fromId i = fail $ "Name.fromId: not a name " ++ show i
 
 
 newtype IdSet = IdSet (Set.Set Id)
-    deriving(Typeable,Monoid,HasSize,SetLike,BuildSet Id,ModifySet Id,IsEmpty,Eq,Ord)
+    deriving(Typeable,Monoid,HasSize,SetLike,BuildSet Id,ModifySet Id,IsEmpty,Eq,Ord,Binary)
 
 
 idSetToList :: IdSet -> [Id]
@@ -110,7 +116,7 @@ mapMaybeIdMap fn (IdMap m) = IdMap (Map.mapMaybe fn m)
 -- IdMap
 
 newtype IdMap a = IdMap (Map.Map Id a)
-    deriving(Typeable,Monoid,HasSize,SetLike,BuildSet (Id,a),MapLike Id a,Functor,Traversable,Foldable,IsEmpty,Eq,Ord)
+    deriving(Typeable,Monoid,HasSize,SetLike,BuildSet (Id,a),MapLike Id a,Functor,Traversable,Foldable,IsEmpty,Eq,Ord,Binary)
 
 
 idSetToIdMap :: (Id -> a) -> IdSet -> IdMap a
@@ -121,7 +127,7 @@ idMapToIdSet (IdMap im) = IdSet $ (Map.keysSet im)
 
 
 -- | Name monad transformer.
-newtype IdNameT m a = IdNameT (StateT (IdSet, IdSet) m a)
+newtype IdNameT m a = IdNameT (State.StateT (IdSet, IdSet) m a)
     deriving(Monad, MonadTrans, Functor, MonadFix, MonadPlus, MonadIO)
 
 instance (MonadReader r m) => MonadReader r (IdNameT m) where
@@ -131,20 +137,20 @@ instance (MonadReader r m) => MonadReader r (IdNameT m) where
 -- | Get bound and used names
 idNameBoundNames :: Monad m => IdNameT m IdSet
 idNameBoundNames = IdNameT $ do
-    (_used,bound) <- get
+    (_used,bound) <- State.get
     return bound
 idNameUsedNames :: Monad m => IdNameT m IdSet
 idNameUsedNames = IdNameT $  do
-    (used,_bound) <- get
+    (used,_bound) <- State.get
     return used
 
 -- | Run the name monad transformer.
 runIdNameT :: (Monad m) => IdNameT m a -> m a
-runIdNameT (IdNameT x) = liftM fst $ runStateT x (mempty,mempty)
+runIdNameT (IdNameT x) = liftM fst $ State.runStateT x (mempty,mempty)
 
 runIdNameT' :: (Monad m) => IdNameT m a -> m (a,IdSet)
 runIdNameT' (IdNameT x) = do
-    (r,(used,bound)) <- runStateT x (mempty,mempty)
+    (r,(used,bound)) <- State.runStateT x (mempty,mempty)
     return (r,bound)
 
 fromIdNameT (IdNameT x) = x
@@ -155,35 +161,35 @@ instance GenName Id where
 
 instance Monad m => NameMonad Id (IdNameT m) where
     addNames ns = IdNameT $ do
-        modify (\ (used,bound) -> (fromList ns `union` used, bound) )
+        State.modify (\ (used,bound) -> (fromList ns `union` used, bound) )
     addBoundNames ns = IdNameT $ do
         let nset = fromList ns
-        modify (\ (used,bound) -> (nset `union` used, nset `union` bound) )
+        State.modify (\ (used,bound) -> (nset `union` used, nset `union` bound) )
     uniqueName n = IdNameT $ do
-        (used,bound) <- get
-        if n `member` bound then fromIdNameT newName else put (insert n used,insert n bound) >> return n
+        (used,bound) <- State.get
+        if n `member` bound then fromIdNameT newName else State.put (insert n used,insert n bound) >> return n
     newNameFrom vs = IdNameT $ do
-        (used,bound) <- get
+        (used,bound) <- State.get
         let f (x:xs)
                 | x `member` used = f xs
                 | otherwise = x
             f [] = error "newNameFrom: finite list!"
             nn = f vs
-        put (insert nn used, insert nn bound)
+        State.put (insert nn used, insert nn bound)
         return nn
     newName  = IdNameT $ do
-        (used,bound) <- get
+        (used,bound) <- State.get
         let genNames i = map anonymous [st, st + 2 ..]  where
                 st = abs i + 2 + abs i `mod` 2
         fromIdNameT $ newNameFrom  (genNames (size used + size bound))
 
 addNamesIdSet nset = IdNameT $ do
-    modify (\ (used,bound) -> (nset `union` used, bound) )
+    State.modify (\ (used,bound) -> (nset `union` used, bound) )
 addBoundNamesIdSet nset = IdNameT $ do
-    modify (\ (used,bound) -> (nset `union` used, nset `union` bound) )
+    State.modify (\ (used,bound) -> (nset `union` used, nset `union` bound) )
 
 addBoundNamesIdMap nmap = IdNameT $ do
-    modify (\ (used,bound) -> (nset `union` used, nset `union` bound) ) where
+    State.modify (\ (used,bound) -> (nset `union` used, nset `union` bound) ) where
         nset = idMapToIdSet nmap
 
 idSetFromDistinctAscList :: [Id] -> IdSet

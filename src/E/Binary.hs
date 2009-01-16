@@ -12,26 +12,15 @@ import Name.Id (emptyId, isEmptyId, fromId, toId, idToInt, anonymous)
 data TvrBinary = TvrBinaryNone | TvrBinaryAtom Atom | TvrBinaryInt Int
 
 instance Binary TVr where
-    put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf} ) | isEmptyId i = do
-        put (TvrBinaryNone)
-        put e
-        putInfo nf
-    put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf}) | Just x <- fromId i = do
-        put (TvrBinaryAtom (toAtom x))
-        put e
-        putInfo nf
-    put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf}) = do
-        put (TvrBinaryInt $ idToInt i)
+    put (TVr { tvrIdent = i, tvrType =  e, tvrInfo = nf} ) = do
+        put i
         put e
         putInfo nf
     get  = do
-        (x ) <- get
+        i <- get
         e <- get
         nf <- getInfo
-        case x of
-            TvrBinaryNone -> return $ TVr emptyId e nf
-            TvrBinaryAtom a -> return $ TVr (toId (fromAtom a)) e nf
-            TvrBinaryInt i -> return $ TVr (anonymous i) e nf
+        return $ TVr i e nf
 
 instance Binary TvrBinary where
     put TvrBinaryNone = do putWord8  0
