@@ -98,7 +98,10 @@ data CEnv = CEnv {
     counter :: IORef Int
 }
 
-dumpTyEnv (TyEnv tt) = mapM_ putStrLn $ sort [ fromAtom n <+> hsep (map show as) <+> "::" <+> show t <> f z <> g th|  (n,TyTy { tySlots = as, tyReturn = t, tySiblings = z, tyThunk = th}) <- Map.toList tt] where
+dumpTyEnv (TyEnv tt) = mapM_ putStrLn $ sort [ fromAtom n <+> hsep (map show as) <+> "::" <+> show t <> f z <> g th
+                                             | (n,TyTy { tySlots = as, tyReturn = t, tySiblings = z
+                                                       , tyThunk = th}) <- Map.toList tt]
+    where
     f Nothing = mempty
     f (Just v) = text " " <> tshow v
     g TyNotThunk = mempty
