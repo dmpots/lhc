@@ -24,7 +24,7 @@ import Control.Monad.Identity
 import Control.Monad.Writer
 import Data.Monoid
 import Data.Generics
-import Data.List(nub)
+import Data.List(nub,(\\))
 import Text.PrettyPrint.ANSI.Leijen(Doc())
 import qualified Data.Map as Map
 import Debug.Trace
@@ -86,6 +86,7 @@ data ClassRecord = ClassRecord      { className :: Class,
                                       classSupers :: [Class],
                                       classInsts :: [Inst],
                                       classAssumps :: [(Name,Sigma)], -- ^ method signatures
+                                      classDefaults :: [(Name,Name)], -- ^ default methods and their body names
                                       classAssocs :: [(Tycon,[Tyvar],Maybe Sigma)]
                                     }
     deriving Show
@@ -99,9 +100,11 @@ newClassRecord c = ClassRecord {
     classArgs = [],
     classInsts = [],
     classAssumps = [],
+    classDefaults = [],
     classAssocs = []
     }
 
+-- SamB 2009-01-17: Why all the snubbing? Most of these fields should be blank on one side shouldn't they?
 combineClassRecords cra@(ClassRecord {}) crb@(ClassRecord {})
     | className cra == className crb = ClassRecord {
     className = className cra,
@@ -110,6 +113,7 @@ combineClassRecords cra@(ClassRecord {}) crb@(ClassRecord {})
     classInsts = snub $ classInsts cra ++ classInsts crb,
     classAssumps = snubFst $ classAssumps cra ++ classAssumps crb,
     classAssocs = snubUnder fst3 $ classAssocs cra ++ classAssocs crb,
+    classDefaults = snub $ classDefaults cra ++ classDefaults crb,
     classArgs = if null (classArgs cra) then classArgs crb else classArgs cra
     }
 
@@ -322,9 +326,17 @@ fromHsTypeApp t = f t [] where
     f t rs = (t,rs)
 
 instanceToTopDecls :: KindEnv -> ClassHierarchy -> HsDecl -> (([HsDecl],[Assump]))
-instanceToTopDecls kt ch@(ClassHierarchy classHierarchy) (HsInstDecl _ qualType methods)
+instanceToTopDecls kt ch@(ClassHierarchy classHierarchy) (HsInstDecl sl qualType methods)
     = first concat . unzip . map (methodToTopDecls ch kt [] crecord qualType) $ methodGroups where
-    methodGroups = groupEquations methods
+
+    missingMethodNames = map fst methodSigs \\ map getDeclName (filter (not . isHsTypeSig) methods)
+    methods' = [ HsPatBind sl (HsPVar (nameName methodName))
+                   (HsUnGuardedRhs (HsVar . nameName . defaultInstanceName $ methodName))
+                   []
+                 | methodName <- missingMethodNames
+               ]
+    methodGroups = groupEquations methods'
+    methodSigs = classAssumps crecord
     (_,(className,_)) = qtToClassHead kt qualType
     crecord = case Map.lookup className classHierarchy  of
         Nothing -> error $ "instanceToTopDecls: could not find class " ++ show className ++ "in class hierarchy"
@@ -465,6 +477,10 @@ makeClassHierarchy (ClassHierarchy ch) kt ds = (ClassHierarchy ans) where
                                 classSupers = [ toName ClassName x | HsAsst x _ <- cntxt],
                                 classInsts = [ emptyInstance { instHead = i } 
                                                | i@(_ :=> IsIn n _) <- primitiveInsts, nameName n == className],
+                                classDefaults = [ (methodName, defaultInstanceName methodName)
+                                                  | decl <- decls, isHsPatBind decl || isHsFunBind decl,
+                                                    let methodName = getDeclName decl
+                                                ],
                                 classAssumps = qualifiedMethodAssumps }]
         | otherwise = failSl sl "Invalid Class declaration."
         where

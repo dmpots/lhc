@@ -257,7 +257,11 @@ tiModules' cho ms = do
         allExports = Set.fromList (concatMap modInfoExport ms)
         externalKindEnv = restrictKindEnv (\ x  -> isGlobal x && (getModule x `elem` map (Just . modInfoName) ms)) kindInfo
     let hoBld = mempty {
-            hoAssumps = Map.filterWithKey (\k _ -> k `member` allExports) allAssumps,
+            hoAssumps = Map.filterWithKey 
+                           (\k _ -> (k `member` allExports)
+                                    || (k `elem` (map snd . concatMap classDefaults . classRecords $
+                                                      smallClassHierarchy)))
+                           allAssumps,
             hoFixities = restrictFixityMap (`member` allExports) thisFixityMap,
             -- TODO - this contains unexported names, we should filter these before writing to disk.
             hoKinds = externalKindEnv,

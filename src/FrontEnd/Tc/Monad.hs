@@ -254,8 +254,9 @@ lookupName n = do
             nvs <- mapM newVar  (replicate num kindArg)
             let nvs' = map TVar nvs
             return (TForAll nvs $ [] :=> foldr TArrow  (tTTuple' nvs') nvs')
-        Nothing -> fail $ "Could not find var in tcEnv:" ++ show (nameType n,n)
-
+        Nothing -> fail $ "Could not find var in tcEnv:" <+> show (nameType n,n)
+                          <$> "env:" <+> pprint env
+                          
 
 newMetaVar :: MetaVarType -> Kind -> Tc Type
 newMetaVar t k = do
