@@ -331,7 +331,10 @@ instanceToTopDecls kt ch@(ClassHierarchy classHierarchy) (HsInstDecl sl qualType
 
     missingMethodNames = map fst methodSigs \\ map getDeclName (filter (not . isHsTypeSig) methods)
     methods' = [ HsPatBind sl (HsPVar (nameName methodName))
-                   (HsUnGuardedRhs (HsVar . nameName . defaultInstanceName $ methodName))
+                   (HsUnGuardedRhs 
+                      (case lookup methodName (classDefaults crecord) of
+                         Just name -> HsVar (nameName name)
+                         Nothing   -> HsError sl HsErrorSource ("missing method: "++show methodName)))
                    []
                  | methodName <- missingMethodNames
                ]
