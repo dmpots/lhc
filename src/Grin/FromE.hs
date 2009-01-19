@@ -6,7 +6,6 @@ import Control.Monad.Trans
 import Data.Graph(stronglyConnComp, SCC(..))
 import Data.IORef
 import Data.Monoid
-import qualified Data.Traversable as T
 import List
 import Maybe
 import qualified Data.Set as Set
@@ -24,7 +23,6 @@ import Doc.Pretty
 import E.E
 import E.FreeVars
 import E.Program
-import E.Traverse
 import E.TypeCheck
 import E.Values
 import GenUtil
@@ -88,7 +86,7 @@ runC lenv (C x) = runReaderT x lenv
 data LEnv = LEnv {
     evaledMap :: IdMap Val,
     lfuncMap  :: IdMap (Atom,Int,[Ty])
-                 }
+}
 
 data CEnv = CEnv {
     scMap :: IdMap (Atom,[Ty],[Ty]),
@@ -98,7 +96,7 @@ data CEnv = CEnv {
     errorOnce :: OnceMap ([Ty],String) Atom,
     dataTable :: DataTable,
     counter :: IORef Int
-                 }
+}
 
 dumpTyEnv (TyEnv tt) = mapM_ putStrLn $ sort [ fromAtom n <+> hsep (map show as) <+> "::" <+> show t <> f z <> g th
                                              | (n,TyTy { tySlots = as, tyReturn = t, tySiblings = z
@@ -165,159 +163,6 @@ toTypes node = toty . followAliases mempty where
 
 toTyTy (as,r) = tyTy { tySlots = as, tyReturn = r }
 
-simplCompile :: Program -> Grin
-simplCompile prog@Program { progDataTable = dataTable}
-  = let (cc,regcc,rcafs) = constantCaf prog
-        cafNames = [ name | (name,var,val) <- cc ]
-        mainEntry = progMainEntry prog
-        funcMain = toAtom "b_main"
-        cafs = [ (x,y) | (_,x,y) <- rcafs ]
-        initCafs = sequenceG_ [ Update (Var v (TyPtr TyNode)) node | (v,node) <- cafs ]
-        a @>> b = a :>>= ([] :-> b)
-        sequenceG_ [] = Return []
-        sequenceG_ (x:xs) = foldl (@>>) x xs
-        grin = setGrinFunctions theFuncs emptyGrin {
-            grinEntryPoints = Map.insert funcMain (FfiExport "_amain" Safe CCall, ([],"void")) $
-                                Map.fromList [],
-            grinPhase = PhaseInit,
-            grinCafs = [ (x,NodeC tagHole []) | (x,_) <- cafs]
-            }
-        theFuncs = (funcMain ,[] :-> initCafs :>>= [] :->  discardResult (App (scTag mainEntry) [] [])) : ds
-        ds = [ let grinName = scTag name
-               in (grinName, map toVal args :-> compileExpr dataTable body)
-             | comb@(name,args,body) <- map combTriple (progCombinators prog), name `notElem` cafNames ]
-    in grin
-
-{-
-  Translate E to Grin.
-  We give all new values a unique ID.
--}
-compileExpr dataTable (ELetRec ds e) = worker (decomposeDs ds) (compileExpr dataTable e)
-  where worker [] x = x
-        worker (Left te@(_,ELam {}):ds) x = worker (Right [te]:ds) x
-        worker (Left (t,e):ds) x =
-            let e' = compileExpr dataTable e
-                v  = worker ds x
-            in e' :>>= [toVal t] :-> v
-        worker _ x = x
-compileExpr dataTable (EVar tvr) | Just nm <- fromId (tvrIdent tvr) = Return [NodeC (toAtom ('F':show nm)) []]
-compileExpr dataTable (EVar tvr) = Return [toVal tvr]
-compileExpr dataTable (ECase { eCaseScrutinee = scrut, eCaseBind = b, eCaseAlts = as, eCaseDefault = d })
-  = let e = compileExpr dataTable scrut
-        as' = flip map as $ \(Alt lit e) ->
-                case lit of
-                  LitCons{ litName=name, litArgs=args} -> let Just tag = getName' dataTable lit
-                                                          in [NodeC tag [toVal args]] :-> compileExpr dataTable e
-                  LitInt i t -> let Just t' = toCmmTy t
-                                in [Lit i (TyPrim t')] :-> compileExpr dataTable e
-        def = case d of
-                Nothing  -> []
-                Just val -> let bind = compileExpr dataTable val
-                                newVar = findNewVar (freeVars bind)
-                            in [[Var newVar TyNode] :-> compileExpr dataTable val]
-    in e :>>= [toVal b] :-> Case (toVal b) (as' ++ def)
-compileExpr dataTable (ELit (LitInt i t)) = let Just t' = toCmmTy t in Return [Lit i (TyPrim t')]
-compileExpr dataTable (ELit (lit@LitCons{ litArgs=args}))
-  = let Just tag = getName' dataTable lit
-        vars = [ Var (V n) TyNode | (_,n) <- zip args [0..]]
-    in foldr (\(a,n) r -> compileExpr dataTable a :>>= [n] :-> r) (Return [NodeC tag vars]) (zip args vars)
-compileExpr dataTable (EPrim ap@(APrim p _) xs ty)
-  = let xs' = keepIts $ args xs
-        ty' = toTypes TyNode ty
-        args es = map f es where
-          f x | Just [] <- literal x = Unit
-          f x | Just [z] <- literal x = z
-          f (EVar tvr) = toVal tvr
-          f x = error $ "invalid argument: " ++ show x
-    in case p of
-            Func True fn as "void" -> Prim ap xs' ty'
-            Func True fn as r      -> Prim ap xs' ty'
-            Func False _ as r | Just _ <- toCmmTy ty ->  do
-                Prim ap xs' ty'
-            IFunc True _ _ ->
-                Prim ap xs' ty'
-            IFunc False _ _ | Just _ <- toCmmTy ty ->
-                Prim ap xs' ty'
-            Peek pt' | [addr] <- xs -> do
-                Prim ap (args [addr]) ty'
-            Peek pt' -> do
-                let [_,addr] = xs
-                Prim ap (args [addr]) ty'
-            Poke pt' ->  do
-                let [_,addr,val] = xs
-                Prim ap (args [addr,val]) []
-            Op (Op.BinOp _ a1 a2) rt -> do
-                Prim ap (args xs) ty'
-            Op (Op.UnOp _ a1) rt -> do
-                Prim ap (args xs) ty'
-            Op (Op.ConvOp _ a1) rt -> do
-                Prim ap (args xs) ty'
-            other -> error $ "ce unknown primitive: " ++ show other
---eval a >>= \n -> apply n b
--- a >>= \a' -> eval a' >>= \f -> b >>= \b' -> apply f b'
-compileExpr dataTable (EAp a b)
-  = compileExpr dataTable a :>>= ([Var (V 0) TyNode] :-> (App funcEval [Var (V 0) TyNode] [TyNode] :>>=
-    ([Var (V 1) TyNode] :-> (compileExpr dataTable b :>>= ([Var (V 2) TyNode] :-> App funcApply [Var (V 1) TyNode, Var (V 2) TyNode] [TyNode])))))
-compileExpr dataTable e = (Error ("not implemented: " ++ show e) (toTypes TyNode e))
-
-findNewVar occupied = worker 0
-  where worker n = if V n `Set.member` occupied
-                   then worker (n+1)
-                   else V n
-{-
-newNewVars occupied = worker occupied 0
-  where worker occ n = if V n `Set.member` occ
-                       then worker occ (n+1)
-                       else V n:worker (Set.insert (V n) occ) (n+1)
--}
-
--- Give all anonymous variables a globally unique id.
-disambiguateProgram :: Program -> Program
-disambiguateProgram prog
-  = evalState (programMapBodies (fn Map.empty) prog) 1
-    where fn subst (ELam tvr e)
-              = do (old,new) <- rename tvr
-                   let newSubst = Map.insert old new subst
-                   liftM (ELam new) (fn newSubst e)
-          fn subst (EPi tvr e)
-              = do (old,new) <- rename tvr
-                   let newSubst = Map.insert old new subst
-                   liftM (EPi new) (fn newSubst e)
-          fn subst (ELetRec defs body)
-              = do nameSubst <- forM defs $ \(tvr,_) -> rename tvr
-                   let newSubst = Map.fromList nameSubst `Map.union` subst
-                   defs' <- forM defs $ \(tvr, e) -> fn newSubst e
-                   body' <- fn newSubst body
-                   return $ ELetRec (zip (map snd nameSubst) defs') body'
-          fn subst ec@(ECase e t bind alts def fv)
-              = do e' <- fn subst e
-                   (old,new) <- rename bind
-                   let subst' = Map.insert old new subst
-                   def' <- T.mapM (fn subst') def
-                   let alt (Alt lc@(LitCons{litArgs=args}) e)
-                           = do args' <- mapM rename args
-                                let newSubst = Map.fromList args' `Map.union` subst'
-                                e' <-fn newSubst e
-                                return $ Alt lc{litArgs = map snd args'} e'
-                       alt (Alt lit e) = do e' <- fn subst' e
-                                            return $ Alt lit e'
-                   alts' <-mapM alt alts
-                   return $ caseUpdate $ ECase e' t new alts' def' fv
-          fn subst (EVar tvr)
-              = case Map.lookup tvr subst of
-                  Nothing  -> return $ EVar tvr
-                  Just new -> return $ EVar new
-          fn subst (ELit (LitCons name args ty alias))
-              = do args' <- mapM (fn subst) args
-                   return $ ELit (LitCons name args' ty alias)
-          fn subst e = emapE (fn subst) e
-          genNewId :: State Int Id
-          genNewId = do s <- get
-                        put (s+1)
-                        return (anonymous s)
-          rename tvr | idIsNamed (tvrIdent tvr) = return (tvr,tvr)
-                     | otherwise = do new <- genNewId
-                                      return (tvr, tvr{tvrIdent = new})
 
 {-# NOINLINE compile #-}
 compile :: Program -> IO Grin

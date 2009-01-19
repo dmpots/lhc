@@ -702,8 +702,7 @@ compileToGrin prog = do
     progress "Converting to Grin..."
     prog <- return $ atomizeApps True prog
     wdump FD.CoreMangled $ printProgram prog
-    x <- Grin.FromE.compile (Grin.FromE.disambiguateProgram prog)
---    x <- return (Grin.FromE.simplCompile prog)
+    x <- Grin.FromE.compile prog
     when verbose $ Stats.print "Grin" Stats.theStats
     wdump FD.GrinInitial $ do dumpGrin "initial" x
     --x <- return $ normalizeGrin x
