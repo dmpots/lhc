@@ -501,6 +501,7 @@ compileModEnv cho = do
         rules' = Rules $ fromList [ (combIdent x,combRules x) | x <- melems (choCombinators cho), not $ null (combRules x) ]
 
     -- dump final version of various requested things
+    wdump FD.Progress $ putStrLn " --- final versions --- "
     wdump FD.Datatable $ putErrLn (render $ showDataTable dataTable)
     when (dump FD.ClassSummary) $ do
         putStrLn "  ---- class summary ---- "
@@ -546,7 +547,7 @@ compileModEnv cho = do
                         when (not (null ts')) $ putStrLn $ (pprint t) ++ " \\" ++ concat [ "(" ++ show  (Info.fetch (tvrInfo t) :: Typ) ++ ")" | t <- ts' ]
     lintCheckProgram onerrNone prog
     prog <- programPrune prog
-    --wdump FD.Core $ printProgram prog
+    wdump FD.Core $ (progress "Before expanding method placeholders:" >> printProgram prog)
 
     cmethods <- do
         let es' = concatMap expandPlaceholder (progCombinators prog)
