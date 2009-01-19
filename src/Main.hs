@@ -248,11 +248,12 @@ processDecls cho ho' tiData = do
 
 
 {- SamB 2008.01.09: doing this in E.FromHS is error prone!
-    -- Build rules from instances, specializations, and user specified rules and catalysts
+    -- Build rules from instances
     let instanceRules = createInstanceRules fullDataTable (hoClassHierarchy $ hoBuild ho')  (ds `mappend` hoEs (hoBuild ho))
 -}
 
-    -- FIXME: 'converRules' and 'procAllSpecs' use IO for error handling. Use an error monad if they are user errors
+    -- Build rules from specializations and user specified rules and catalysts
+    -- FIXME: 'convertRules' and 'procAllSpecs' use IO for error handling. Use an error monad if they are user errors
     --        otherwise use exceptions and make the calls pure.
     userRules <- convertRules (progModule prog) tiData (hoClassHierarchy  $ hoBuild ho') allAssumps fullDataTable decls
     (nds,specializeRules) <- procAllSpecs (tiCheckedRules tiData) ds
