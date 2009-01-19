@@ -187,6 +187,7 @@ printClassHierarchy (ClassHierarchy h) = mapM_ printClassDetails $  Map.toList h
     printClassDetails :: (Name, ClassRecord) -> IO ()
     printClassDetails (cname, cr) = do
         let args = classArgs cr; supers = classSupers cr; insts = classInsts cr;
+            defaults = classDefaults cr
             methodAssumps = classAssumps cr
             assocs = classAssocs cr
         putStrLn "..........."
@@ -195,6 +196,8 @@ printClassHierarchy (ClassHierarchy h) = mapM_ printClassDetails $  Map.toList h
         pnone supers $ do putStrLn $ " " ++ (intercalate " " (map show supers))
         putStr $ "instances:"
         pnone insts $  putStr $ "\n" ++ (showListAndSepInWidth showInst 80 ", " insts)
+        putStr $ "default method implementations:"
+        pnone defaults $ putStr $ "\n" ++ (unlines $ map pretty defaults)
         when (isClassRecord cr) $ do
             putStr $ "method signatures:"
             pnone methodAssumps $ putStr $ "\n" ++ (unlines $ map pretty methodAssumps)
