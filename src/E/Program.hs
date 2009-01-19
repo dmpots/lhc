@@ -125,16 +125,20 @@ programMapDs_ :: Monad m => ((TVr,E) -> m ()) -> Program -> m ()
 programMapDs_ f prog = mapM_ f (programDs prog)
 
 hPrintProgram fh prog@Program {progCombinators = cs, progDataTable = dataTable } = do
-    sequence_ $ intersperse (hPutStrLn fh "") [ do wdump FD.Rules $ hPutStrLn fh ("rules: "++show r)
-                                                   hPrintCheckName fh dataTable v e
-                                                | Comb { combHead = v, combBody = e, combRules = r } <- cs
-                                              ]
+    sequence_ $ intersperse (hPutStrLn fh "") $ map (hPrintComb fh dataTable) cs
     when (not (isEmptyId (progMain prog))) $
         hPutStrLn fh $ "MainEntry: " ++ pprint (progMainEntry prog)
     when (progEntry prog /= singleton (progMain prog)) $
         hPutStrLn fh $ "EntryPoints: " ++ hsep (map pprint (progEntryPoints prog))
 
 printProgram prog = hPrintProgram IO.stderr prog
+
+
+hPrintComb :: IO.Handle -> DataTable -> Comb -> IO ()
+hPrintComb fh dataTable (Comb { combHead = v, combBody = e, combRules = r }) = do
+  do wdump FD.Rules $ hPutStrLn fh ("rules: "++show r)
+     hPrintCheckName fh dataTable v e
+
 
 printCheckName'' = hPrintCheckName IO.stderr
 
