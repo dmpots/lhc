@@ -333,7 +333,8 @@ instanceToTopDecls kt ch@(ClassHierarchy classHierarchy) (HsInstDecl sl qualType
     = first concat . unzip . map (methodToTopDecls ch kt [] crecord qualType) $ methodGroups where
 
     missingMethodNames = map fst methodSigs \\ map getDeclName (filter (not . isHsTypeSig) methods)
-    methods' = [ HsPatBind sl (HsPVar (nameName methodName))
+    missingMethods
+             = [ HsPatBind sl (HsPVar (nameName methodName))
                    (HsUnGuardedRhs 
                       (case lookup methodName (classDefaults crecord) of
                          Just name -> HsVar (nameName name)
@@ -341,6 +342,7 @@ instanceToTopDecls kt ch@(ClassHierarchy classHierarchy) (HsInstDecl sl qualType
                    []
                  | methodName <- missingMethodNames
                ]
+    methods' = methods ++ missingMethods
     methodGroups = groupEquations methods'
     methodSigs = classAssumps crecord
     (_,(className,_)) = qtToClassHead kt qualType
