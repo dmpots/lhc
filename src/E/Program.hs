@@ -15,6 +15,7 @@ import CharIO
 import Doc.Pretty
 import E.E
 import E.Show
+import E.Rules ()
 import E.TypeCheck
 import FrontEnd.Class
 import Util.Gen hiding(putErrLn)
@@ -124,7 +125,10 @@ programMapDs_ :: Monad m => ((TVr,E) -> m ()) -> Program -> m ()
 programMapDs_ f prog = mapM_ f (programDs prog)
 
 hPrintProgram fh prog@Program {progCombinators = cs, progDataTable = dataTable } = do
-    sequence_ $ intersperse (hPutStrLn fh "") [ hPrintCheckName fh dataTable v e | Comb { combHead = v, combBody = e } <- cs]
+    sequence_ $ intersperse (hPutStrLn fh "") [ do wdump FD.Rules $ hPutStrLn fh ("rules: "++show r)
+                                                   hPrintCheckName fh dataTable v e
+                                                | Comb { combHead = v, combBody = e, combRules = r } <- cs
+                                              ]
     when (not (isEmptyId (progMain prog))) $
         hPutStrLn fh $ "MainEntry: " ++ pprint (progMainEntry prog)
     when (progEntry prog /= singleton (progMain prog)) $
