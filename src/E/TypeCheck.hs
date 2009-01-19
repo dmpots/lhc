@@ -188,7 +188,7 @@ inferType dataTable ds e = rfc e where
     inferType' ds e = inferType dataTable ds e
     prettyE = ePrettyEx
     rfc e =  withContextDoc (text "fullCheck:" </> prettyE e) (fc e >>=  strong')
-    rfc' nds e = withContextDoc (text "fullCheck:" </> prettyE e) (inferType' nds e >>=  strong')
+    rfc' nds e = withContextDoc (text "fullCheck(nested):" </> prettyE e) (inferType' nds e >>=  strong')
     strong' e = withContextDoc (text "Strong:" </> prettyE e) $ strong ds e
     fc s@(ESort _) = return $ getType s
     fc (ELit lc@LitCons {}) | let lc' = updateLit dataTable lc, litAliasFor lc /= litAliasFor lc' = fail $ "Alias not correct: " ++ show (lc, litAliasFor lc')
@@ -360,7 +360,7 @@ typeInfer'' :: ContextMonad String m => DataTable -> [(TVr,E)] -> E -> m E
 typeInfer'' dataTable ds e = rfc e where
     inferType' ds e = typeInfer'' dataTable ds e
     rfc e =  withContextDoc (text "fullCheck':" </> ePrettyEx e) (fc e >>=  strong')
-    rfc' nds e =  withContextDoc (text "fullCheck':" </> ePrettyEx e) (inferType' nds  e >>=  strong')
+    rfc' nds e =  withContextDoc (text "fullCheck'(nested):" </> ePrettyEx e) (inferType' nds  e >>=  strong')
     strong' e = withContextDoc (text "Strong':" </> ePrettyEx e) $ strong ds e
     fc s@ESort {} = return $ getType s
     fc (ELit LitCons { litType = t }) = strong' t
