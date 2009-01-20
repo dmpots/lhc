@@ -43,7 +43,6 @@ import Monad
 import Name.Name
 import Name.Names
 import Support.CanType
-import PrimitiveOperators(primitiveInsts)
 import Support.FreeVars
 import Util.Gen
 import Util.HasSize
@@ -483,8 +482,7 @@ makeClassHierarchy (ClassHierarchy ch) kt ds = (ClassHierarchy ans) where
                                 className = toName ClassName className,
                                 classSrcLoc = sl,
                                 classSupers = [ toName ClassName x | HsAsst x _ <- cntxt],
-                                classInsts = [ emptyInstance { instHead = i } 
-                                               | i@(_ :=> IsIn n _) <- primitiveInsts, nameName n == className],
+                                classInsts = [],
                                 classDefaults = [ (methodName, defaultInstanceName methodName)
                                                   | decl <- decls, isHsPatBind decl || isHsFunBind decl,
                                                     let methodName = getDeclName decl
