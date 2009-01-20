@@ -36,7 +36,7 @@ import qualified FlagDump as FD
 
 
 
-instance DocLike d => PPrint d Val   where
+instance PPrint Doc Val   where
     pprint v = prettyVal v
 
 
@@ -64,7 +64,7 @@ color n x = attrColor attr n x
 
 operator = bold . text
 keyword = bold . text
-tag x = text x
+tag = color "blue" . text
 func = color "lightgreen" . text
 prim = color "red" . text
 --func = text
@@ -122,7 +122,7 @@ prettyExp vl Call { expValue = Var v (TyCall fun _ _), expArgs = vs, expJump = j
 prettyExp vl Call { expValue = ValPrim ap [] (TyCall Primitive' _ _), expArgs = vs } = vl <> prim (tshow ap) <+> hsep (map prettyVal vs)
 
 {-# NOINLINE prettyVal #-}
-prettyVal :: DocLike d => Val -> d
+prettyVal :: Val -> Doc
 prettyVal s | Just [] <- valToList s = text "[]"
 prettyVal s | Just st <- fromVal s = text $ show (st::String)
 prettyVal s | Just vs <- valToList s = list $ map prettyVal vs
