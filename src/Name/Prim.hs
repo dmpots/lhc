@@ -9,7 +9,7 @@ dc_Int = toName DataConstructor ("Lhc.Prim","Int")
 {-# NOINLINE tc_Integer #-}
 tc_Integer = toName TypeConstructor ("Lhc.Basics","Integer")
 {-# NOINLINE dc_Integer #-}
-dc_Integer = toName DataConstructor "Integer#"
+dc_Integer = toName DataConstructor ("Lhc.Basics","Integer")
 {-# NOINLINE tc_Int8 #-}
 tc_Int8 = toName TypeConstructor ("Data.Int","Int8")
 {-# NOINLINE dc_Int8 #-}

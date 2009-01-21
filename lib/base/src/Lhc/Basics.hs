@@ -2,10 +2,12 @@
 module Lhc.Basics(module Lhc.Basics, module Lhc.Prim) where
 
 import Lhc.Prim
+import Lhc.Types
 import Lhc.Int
 
 data (->) :: ?? -> ? -> *
-data Integer
+
+data Integer = Integer BitsMax_
 
 type String = [Char]
 
