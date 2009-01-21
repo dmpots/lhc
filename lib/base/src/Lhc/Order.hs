@@ -93,15 +93,27 @@ instance Ord a => Ord [a] where
     x <= y = not (y < x)
 
 
+instance Eq Int where
+    Int x == Int y = boxBool (bits32Eq x y)
+    Int x /= Int y = boxBool (bits32NEq x y)
+
+instance Ord Int where
+    Int x < Int y = boxBool (bits32Lt x y)
+    Int x > Int y = boxBool (bits32Gt x y)
+    Int x <= Int y = boxBool (bits32Lte x y)
+    Int x >= Int y = boxBool (bits32Gte x y)
+
+
 instance Eq Char where
-    Char x == Char y = boxBool (equalsChar x y)
-    Char x /= Char y = boxBool (nequalsChar x y)
+    Char x == Char y = boxBool (bits32Eq x y)
+    Char x /= Char y = boxBool (bits32NEq x y)
 
 instance Ord Char where
     Char x < Char y = boxBool (bits32ULt x y)
     Char x > Char y = boxBool (bits32UGt x y)
     Char x <= Char y = boxBool (bits32ULte x y)
     Char x >= Char y = boxBool (bits32UGte x y)
+
 
 infixr 3  &&
 infixr 2  ||
@@ -121,11 +133,19 @@ not x = if x then False else True
 otherwise        :: Bool
 otherwise        =  True
 
-foreign import primitive "Eq" equalsChar :: Char__ -> Char__ -> Bool__
-foreign import primitive "NEq" nequalsChar :: Char__ -> Char__ -> Bool__
+
+foreign import primitive "Eq" bits32Eq :: Int__ -> Int__ -> Bool__
+foreign import primitive "NEq" bits32NEq :: Int__ -> Int__ -> Bool__
+
+foreign import primitive "Lt" bits32Lt :: Int__ -> Int__ -> Bool__
+foreign import primitive "Lte" bits32Lte :: Int__ -> Int__ -> Bool__
+foreign import primitive "Gt" bits32Gt :: Int__ -> Int__ -> Bool__
+foreign import primitive "Gte" bits32Gte :: Int__ -> Int__ -> Bool__
+
 foreign import primitive "ULt" bits32ULt :: Char__ -> Char__ -> Bool__
 foreign import primitive "ULte" bits32ULte :: Char__ -> Char__ -> Bool__
 foreign import primitive "UGt" bits32UGt :: Char__ -> Char__ -> Bool__
 foreign import primitive "UGte" bits32UGte :: Char__ -> Char__ -> Bool__
+
 foreign import primitive "box" boxBool :: Bool__ -> Bool
 

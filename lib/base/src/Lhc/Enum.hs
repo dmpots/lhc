@@ -59,6 +59,10 @@ instance Enum Int where
         f x | x >= z = x:f (x `plus` inc)
             | otherwise = []
 
+instance Bounded Int where
+    minBound = 0
+    maxBound = 0xFFFFFFFF
+    
 
 instance Enum Char where
     toEnum = chr

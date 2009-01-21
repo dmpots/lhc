@@ -5,7 +5,7 @@ import Name.Name
 {-# NOINLINE tc_Int #-}
 tc_Int = toName TypeConstructor ("Lhc.Prim","Int")
 {-# NOINLINE dc_Int #-}
-dc_Int = toName DataConstructor "Int#"
+dc_Int = toName DataConstructor ("Lhc.Prim","Int")
 {-# NOINLINE tc_Integer #-}
 tc_Integer = toName TypeConstructor ("Lhc.Basics","Integer")
 {-# NOINLINE dc_Integer #-}
