@@ -723,7 +723,7 @@ convertDecls tiData props classHierarchy assumps dataTable hsDecls = liftM fst $
                         Just p | getProperty prop_NOETA p -> span (sortKindLike . getType) as
                         _ -> (as,[])
                     ft = foldr EPi ft' rargs
-        return (cClass cr ++ primitiveInstances className)
+        return (cClass cr) -- ++ primitiveInstances className)
     cClassDecl _ = error "cClassDecl"
 
 convertVar n = do

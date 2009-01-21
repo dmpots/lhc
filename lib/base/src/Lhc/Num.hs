@@ -1,6 +1,7 @@
-{-# OPTIONS_LHC -N #-}
+{-# OPTIONS_LHC -N -fffi #-}
 module Lhc.Num where
 
+import Lhc.Types
 import Lhc.Basics
 import Lhc.Order
 import Lhc.Show
@@ -106,3 +107,69 @@ even, odd        :: (Integral a) => a -> Bool
 even n           =  n `rem` 2 == 0
 odd              =  not . even
 
+
+instance Num Int where
+    Int x + Int y = Int (bits32_Add x y)
+    Int x - Int y = Int (bits32_Sub x y)
+    Int x * Int y = Int (bits32_Mul x y)
+    
+    negate (Int x) = Int (bits32_Neg x)
+    
+    abs    x | x < 0     = -x
+             | otherwise =  x
+    
+    signum 0 = 0
+    signum x | x < 0     = -1
+             | otherwise =  1
+
+    fromInteger (Integer x) = Int (bitsmax_to_32 x)
+    fromInt = id
+
+instance Integral Int where
+    Int n `quot` Int d = Int (bits32_Div n d)
+    Int n `rem`  Int d = Int (bits32_Mod n d)
+
+    toInteger (Int x) = Integer (bits32_to_max x)
+    toInt = id
+
+foreign import primitive "Neg" bits32_Neg :: Bits32_ -> Bits32_
+foreign import primitive "Add" bits32_Add :: Bits32_ -> Bits32_ -> Bits32_
+foreign import primitive "Sub" bits32_Sub :: Bits32_ -> Bits32_ -> Bits32_
+foreign import primitive "Mul" bits32_Mul :: Bits32_ -> Bits32_ -> Bits32_
+foreign import primitive "Div" bits32_Div :: Bits32_ -> Bits32_ -> Bits32_
+foreign import primitive "Mod" bits32_Mod :: Bits32_ -> Bits32_ -> Bits32_
+
+foreign import primitive "I2I" bitsmax_to_32 :: BitsMax_ -> Bits32_
+foreign import primitive "I2I" bits32_to_max :: Bits32_ -> BitsMax_
+
+
+instance Num Integer where
+    Integer x + Integer y = Integer (bitsmax_Add x y)
+    Integer x - Integer y = Integer (bitsmax_Sub x y)
+    Integer x * Integer y = Integer (bitsmax_Mul x y)
+    
+    negate (Integer x) = Integer (bitsmax_Neg x)
+    
+    abs    x | x < 0     = -x
+             | otherwise =  x
+    
+    signum 0 = 0
+    signum x | x < 0     = -1
+             | otherwise =  1
+
+    fromInt (Int x) = Integer (bits32_to_max x)
+    fromInteger = id
+
+instance Integral Integer where
+    Integer n `quot` Integer d = Integer (bitsmax_Div n d)
+    Integer n `rem`  Integer d = Integer (bitsmax_Mod n d)
+
+    toInt (Integer x) = Int (bitsmax_to_32 x)
+    toInteger = id
+
+foreign import primitive "Neg" bitsmax_Neg :: BitsMax_ -> BitsMax_
+foreign import primitive "Add" bitsmax_Add :: BitsMax_ -> BitsMax_ -> BitsMax_
+foreign import primitive "Sub" bitsmax_Sub :: BitsMax_ -> BitsMax_ -> BitsMax_
+foreign import primitive "Mul" bitsmax_Mul :: BitsMax_ -> BitsMax_ -> BitsMax_
+foreign import primitive "Div" bitsmax_Div :: BitsMax_ -> BitsMax_ -> BitsMax_
+foreign import primitive "Mod" bitsmax_Mod :: BitsMax_ -> BitsMax_ -> BitsMax_

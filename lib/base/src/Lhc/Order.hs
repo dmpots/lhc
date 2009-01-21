@@ -11,6 +11,7 @@ module Lhc.Order(
     otherwise
     ) where
 
+import Lhc.Types
 import Lhc.Enum
 import Lhc.Basics
 
@@ -115,6 +116,17 @@ instance Ord Char where
     Char x >= Char y = boxBool (bits32UGte x y)
 
 
+instance Eq Integer where
+    Integer x == Integer y = boxBool (bitsmaxEq x y)
+    Integer x /= Integer y = boxBool (bitsmaxNEq x y)
+
+instance Ord Integer where
+    Integer x < Integer y = boxBool (bitsmaxLt x y)
+    Integer x > Integer y = boxBool (bitsmaxGt x y)
+    Integer x <= Integer y = boxBool (bitsmaxLte x y)
+    Integer x >= Integer y = boxBool (bitsmaxGte x y)
+
+
 infixr 3  &&
 infixr 2  ||
 
@@ -136,16 +148,21 @@ otherwise        =  True
 
 foreign import primitive "Eq" bits32Eq :: Int__ -> Int__ -> Bool__
 foreign import primitive "NEq" bits32NEq :: Int__ -> Int__ -> Bool__
-
 foreign import primitive "Lt" bits32Lt :: Int__ -> Int__ -> Bool__
 foreign import primitive "Lte" bits32Lte :: Int__ -> Int__ -> Bool__
 foreign import primitive "Gt" bits32Gt :: Int__ -> Int__ -> Bool__
 foreign import primitive "Gte" bits32Gte :: Int__ -> Int__ -> Bool__
-
 foreign import primitive "ULt" bits32ULt :: Char__ -> Char__ -> Bool__
 foreign import primitive "ULte" bits32ULte :: Char__ -> Char__ -> Bool__
 foreign import primitive "UGt" bits32UGt :: Char__ -> Char__ -> Bool__
 foreign import primitive "UGte" bits32UGte :: Char__ -> Char__ -> Bool__
+
+foreign import primitive "Eq" bitsmaxEq :: BitsMax_ -> BitsMax_ -> Bool__
+foreign import primitive "NEq" bitsmaxNEq :: BitsMax_ -> BitsMax_ -> Bool__
+foreign import primitive "Lt" bitsmaxLt :: BitsMax_ -> BitsMax_ -> Bool__
+foreign import primitive "Lte" bitsmaxLte :: BitsMax_ -> BitsMax_ -> Bool__
+foreign import primitive "Gt" bitsmaxGt :: BitsMax_ -> BitsMax_ -> Bool__
+foreign import primitive "Gte" bitsmaxGte :: BitsMax_ -> BitsMax_ -> Bool__
 
 foreign import primitive "box" boxBool :: Bool__ -> Bool
 

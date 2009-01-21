@@ -3,7 +3,7 @@
 # limits.h, float.h, inttypes.h
 
 # Lhc.Prim.Char, ubits32, char, UINT32_MAX, 0
-# Lhc.Prim.Int, sbits32, int, INT_MAX, INT_MIN
+Lhc.Prim.Int, sbits32, int, INT_MAX, INT_MIN
 Lhc.Basics.Integer, sbits<max>, int, INTMAX_MAX, INTMAX_MIN
 
 Data.Int.Int8, sbits8, int, INT8_MAX, INT8_MIN

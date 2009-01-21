@@ -236,7 +236,14 @@ v0 t = tVr emptyId t
 
 
 primitiveInsts = [
-   [] :=> IsIn n_Lhc_Enum_Bounded tc_Lhc_Basics_Integer
+   [] :=> IsIn n_Lhc_Enum_Bounded tc_Lhc_Prim_Int
+  ,[] :=> IsIn n_Foreign_Storable_Storable tc_Lhc_Prim_Int
+  ,[] :=> IsIn n_Lhc_Order_Eq tc_Lhc_Prim_Int
+  ,[] :=> IsIn n_Lhc_Order_Ord tc_Lhc_Prim_Int
+  ,[] :=> IsIn n_Lhc_Num_Num tc_Lhc_Prim_Int
+  ,[] :=> IsIn n_Data_Bits_Bits tc_Lhc_Prim_Int
+  ,[] :=> IsIn n_Lhc_Num_Integral tc_Lhc_Prim_Int
+  ,[] :=> IsIn n_Lhc_Enum_Bounded tc_Lhc_Basics_Integer
   ,[] :=> IsIn n_Foreign_Storable_Storable tc_Lhc_Basics_Integer
   ,[] :=> IsIn n_Lhc_Order_Eq tc_Lhc_Basics_Integer
   ,[] :=> IsIn n_Lhc_Order_Ord tc_Lhc_Basics_Integer
@@ -390,7 +397,37 @@ primitiveInsts = [
   ,[] :=> IsIn n_Lhc_Num_Num tc_Foreign_C_Types_CTime ]
 
 constantMethods = [
-   (n_Foreign_Storable_Storable, toInstName "Foreign.Storable.sizeOf.Lhc.Basics.Integer", ELam (v0 t_Lhc_Basics_Integer) $ prim_sizeof "bits<max>")
+   (n_Foreign_Storable_Storable, toInstName "Foreign.Storable.sizeOf.Lhc.Prim.Int", ELam (v0 t_Lhc_Prim_Int) $ prim_sizeof "bits32")
+  ,(n_Foreign_Storable_Storable, toInstName "Foreign.Storable.poke.Lhc.Prim.Int", buildPoke dc_Int t_Lhc_Prim_Int "bits32")
+  ,(n_Foreign_Storable_Storable, toInstName "Foreign.Storable.peek.Lhc.Prim.Int", buildPeek dc_Int t_Lhc_Prim_Int "bits32")
+  ,(n_Lhc_Enum_Bounded, toInstName "Lhc.Enum.maxBound.Lhc.Prim.Int", prim_maxbound dc_Int t_Lhc_Prim_Int "bits32")
+  ,(n_Lhc_Enum_Bounded, toInstName "Lhc.Enum.minBound.Lhc.Prim.Int", prim_minbound dc_Int t_Lhc_Prim_Int "bits32")
+  ,(n_Lhc_Num_Num, toInstName "Lhc.Num.fromInt.Lhc.Prim.Int", ELam v2_Int (EVar v2_Int))
+  ,(n_Lhc_Num_Num, toInstName "Lhc.Num.toInt.Lhc.Prim.Int", ELam v2_Int (EVar v2_Int))
+  ,(n_Lhc_Num_Num, toInstName "Lhc.Num.fromInteger.Lhc.Prim.Int", ELam v2_Integer (create_integralCast_fromInteger dc_Int r_bits32 (EVar v2_Integer) t_Lhc_Prim_Int))
+  ,(n_Lhc_Num_Num, toInstName "Lhc.Num.toInteger.Lhc.Prim.Int", ELam (v2 t_Lhc_Prim_Int) (create_integralCast_toInteger dc_Int r_bits32 (EVar (v2 t_Lhc_Prim_Int))))
+  ,(n_Lhc_Num_Num, toInstName "Lhc.Num.abs.Lhc.Prim.Int", ELam (v2 t_Lhc_Prim_Int) (build_abs "bits32" dc_Int (EVar (v2 t_Lhc_Prim_Int))  ))
+  ,(n_Lhc_Num_Num, toInstName "Lhc.Num.signum.Lhc.Prim.Int", ELam (v2 t_Lhc_Prim_Int) (build_signum "bits32" dc_Int (EVar (v2 t_Lhc_Prim_Int)) ))
+  ,(n_Lhc_Order_Eq,toInstName "Lhc.Order.==.Lhc.Prim.Int", op_aaB  Op.Eq "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Order_Ord,toInstName "Lhc.Order.>=.Lhc.Prim.Int", op_aaB  Op.Gte "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Order_Ord,toInstName "Lhc.Order.<=.Lhc.Prim.Int", op_aaB  Op.Lte "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Order_Ord,toInstName "Lhc.Order.>.Lhc.Prim.Int", op_aaB  Op.Gt "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Order_Ord,toInstName "Lhc.Order.<.Lhc.Prim.Int", op_aaB  Op.Lt "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Num,toInstName "Lhc.Num.+.Lhc.Prim.Int", op_aaa  Op.Add "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Num,toInstName "Lhc.Num.-.Lhc.Prim.Int", op_aaa  Op.Sub "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Num,toInstName "Lhc.Num.*.Lhc.Prim.Int", op_aaa  Op.Mul "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Num,toInstName "Lhc.Num.negate.Lhc.Prim.Int", op_aa  Op.Neg "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Data_Bits_Bits,toInstName "Data.Bits..&..Lhc.Prim.Int", op_aaa  Op.And "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Data_Bits_Bits,toInstName "Data.Bits..|..Lhc.Prim.Int", op_aaa  Op.Or "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Data_Bits_Bits,toInstName "Data.Bits.xor.Lhc.Prim.Int", op_aaa  Op.Xor "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Data_Bits_Bits,toInstName "Data.Bits.complement.Lhc.Prim.Int", op_aa  Op.Com "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Integral,toInstName "Lhc.Num.quot.Lhc.Prim.Int", op_aaa  Op.Div "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Integral,toInstName "Lhc.Num.rem.Lhc.Prim.Int", op_aaa  Op.Mod "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Integral,toInstName "Lhc.Num.div.Lhc.Prim.Int", op_aaa  Op.Div "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Lhc_Num_Integral,toInstName "Lhc.Num.mod.Lhc.Prim.Int", op_aaa  Op.Mod "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Data_Bits_Bits,toInstName "Data.Bits.shiftL.Lhc.Prim.Int", op_aIa  Op.Shl "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Data_Bits_Bits,toInstName "Data.Bits.shiftR.Lhc.Prim.Int", op_aIa  Op.Shra "bits32" dc_Int t_Lhc_Prim_Int)
+  ,(n_Foreign_Storable_Storable, toInstName "Foreign.Storable.sizeOf.Lhc.Basics.Integer", ELam (v0 t_Lhc_Basics_Integer) $ prim_sizeof "bits<max>")
   ,(n_Foreign_Storable_Storable, toInstName "Foreign.Storable.poke.Lhc.Basics.Integer", buildPoke dc_Integer t_Lhc_Basics_Integer "bits<max>")
   ,(n_Foreign_Storable_Storable, toInstName "Foreign.Storable.peek.Lhc.Basics.Integer", buildPeek dc_Integer t_Lhc_Basics_Integer "bits<max>")
   ,(n_Lhc_Enum_Bounded, toInstName "Lhc.Enum.maxBound.Lhc.Basics.Integer", prim_maxbound dc_Integer t_Lhc_Basics_Integer "bits<max>")
@@ -1043,7 +1080,8 @@ theMethods = [
     ]
 
 allCTypes = [
-   (dc_Integer, tc_Integer, r_bits_max_, "bits<max>", "int")
+   (dc_Int, tc_Int, r_bits32, "bits32", "int")
+  ,(dc_Integer, tc_Integer, r_bits_max_, "bits<max>", "int")
   ,(dc_Int8, tc_Int8, r_bits8, "bits8", "int")
   ,(dc_Int16, tc_Int16, r_bits16, "bits16", "int")
   ,(dc_Int32, tc_Int32, r_bits32, "bits32", "int")
@@ -1076,6 +1114,7 @@ t_Foreign_C_Types_CTime = ELit litCons { litName = tc_CTime, litType = eStar}
 t_Foreign_C_Types_CShort = ELit litCons { litName = tc_CShort, litType = eStar}
 t_Data_Int_Int8 = ELit litCons { litName = tc_Int8, litType = eStar}
 t_Foreign_C_Types_CChar = ELit litCons { litName = tc_CChar, litType = eStar}
+t_Lhc_Prim_Int = ELit litCons { litName = tc_Int, litType = eStar}
 t_Data_Word_Word = ELit litCons { litName = tc_Word, litType = eStar}
 t_Data_Int_Int16 = ELit litCons { litName = tc_Int16, litType = eStar}
 t_Data_Word_Word8 = ELit litCons { litName = tc_Word8, litType = eStar}
@@ -1099,6 +1138,7 @@ tc_Foreign_C_Types_CTime = TCon (Tycon tc_CTime kindStar)
 tc_Foreign_C_Types_CShort = TCon (Tycon tc_CShort kindStar)
 tc_Data_Int_Int8 = TCon (Tycon tc_Int8 kindStar)
 tc_Foreign_C_Types_CChar = TCon (Tycon tc_CChar kindStar)
+tc_Lhc_Prim_Int = TCon (Tycon tc_Int kindStar)
 tc_Data_Word_Word = TCon (Tycon tc_Word kindStar)
 tc_Data_Int_Int16 = TCon (Tycon tc_Int16 kindStar)
 tc_Data_Word_Word8 = TCon (Tycon tc_Word8 kindStar)
