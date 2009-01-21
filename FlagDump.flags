@@ -14,6 +14,7 @@ derived show generated derived instances
 imports show in scope names for each module
 exports show which names are exported from each module
 scc-modules show strongly connected modules in dependency order
+dep-graph Dump module dependancy graph to deps.dot
 defs Show all defined names in a module
 
 
