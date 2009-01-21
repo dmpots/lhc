@@ -60,8 +60,8 @@ instance Enum Int where
             | otherwise = []
 
 instance Bounded Int where
-    minBound = 0
-    maxBound = 0xFFFFFFFF
+    minBound = Int 0#
+    maxBound = Int 0xFFFFFFFF#
     
 
 instance Enum Char where
