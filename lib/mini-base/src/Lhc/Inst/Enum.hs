@@ -42,15 +42,13 @@ ENUMINST(Word8)
 ENUMINST(Word16)
 ENUMINST(Word32)
 ENUMINST(Word64)
-ENUMINST(WordPtr)
 ENUMINST(WordMax)
 
 ENUMINST(Int8)
 ENUMINST(Int16)
 ENUMINST(Int32)
 ENUMINST(Int64)
-ENUMINST(IntPtr)
-ENUMINST(IntMax)
+{-ENUMINST(IntPtr)-}
 ENUMINST(Integer)
 
 
@@ -67,4 +65,49 @@ instance Enum () where
     enumFromTo () () 	= [()]
     enumFromThenTo () () () = let many = ():many in many
 
+
+instance Bounded Int where
+    minBound = Int 0x80000000#
+    maxBound = Int 0x7FFFFFFF#
+instance Bounded Int8 where
+    minBound = Int8 0x80#
+    maxBound = Int8 0x7F#
+instance Bounded Int16 where
+    minBound = Int16 0x8000#
+    maxBound = Int16 0x7FFF#
+instance Bounded Int32 where
+    minBound = Int32 0x80000000#
+    maxBound = Int32 0x7FFFFFFF#
+instance Bounded Int64 where
+    minBound = Int64 0x8000000000000000#
+    maxBound = Int64 0x7FFFFFFFFFFFFFFF#
+
+instance Bounded Word where
+    minBound = Word 0#
+    maxBound = Word 0xFFFFFFFF#
+instance Bounded Word8 where
+    minBound = Word8 0#
+    maxBound = Word8 0xFF#
+instance Bounded Word16 where
+    minBound = Word16 0#
+    maxBound = Word16 0xFFFF#
+instance Bounded Word32 where
+    minBound = Word32 0#
+    maxBound = Word32 0xFFFFFFFF#
+instance Bounded Word64 where
+    minBound = Word64 0#
+    maxBound = Word64 0xFFFFFFFFFFFFFFFF#
+
+instance Bounded WordMax where
+    minBound = bitsMaxMinBound
+    maxBound = bitsMaxMaxBound
+
+-- Lemmih 2009.01.22: These primitives don't exist yet.
+foreign import primitive "MinBound"      bitsMaxMinBound :: WordMax
+foreign import primitive "MaxBound"      bitsMaxMaxBound :: WordMax
+
+-- Lemmih 2009.01.22: This instance shouldn't exist. Delete it.
+instance Bounded Integer where
+    minBound = Integer 0#
+    maxBound = Integer 0xFFFFFFFF#
 

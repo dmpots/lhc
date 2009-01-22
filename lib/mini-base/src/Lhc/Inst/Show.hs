@@ -26,8 +26,8 @@ instance Show Word32 where
 instance Show Word64 where
     showsPrec _ x = showWordMax (fromIntegral x :: WordMax)
 
-instance Show WordPtr where
-    showsPrec _ x = showWordMax (fromIntegral x :: WordMax)
+--instance Show WordPtr where
+--    showsPrec _ x = showWordMax (fromIntegral x :: WordMax)
 
 instance Show WordMax where
     showsPrec _ x = showWordMax x

@@ -1,12 +1,5 @@
 {-# OPTIONS -N #-}
 module Data.Word(Word,Word8,Word16,Word32,Word64,WordMax,WordPtr) where
 
+import Lhc.Prim
 
-
-data Word
-data Word8
-data Word16
-data Word32
-data Word64
-data WordMax
-data WordPtr

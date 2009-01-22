@@ -70,7 +70,7 @@ isEOF = hIsEOF stdin
 hIsEOF :: Handle -> IO Bool
 hIsEOF h = withHandle h $ \ptr -> do
     r <- c_feof ptr
-    return (r /= 0)
+    error "hIsEOF not defined" -- return (r /= 0)
 
 hPutChar h ch = withHandle h $ \ptr -> do
     c_fputwc (fromInt (ord ch)) ptr
@@ -149,8 +149,10 @@ foreign import ccall "wchar.h lhc_utf8_getc" c_fgetwc :: Ptr Handle -> IO Int
 foreign import ccall "wchar.h lhc_utf8_putc" c_fputwc :: Int -> Ptr Handle -> IO Int
 
 foreign import ccall "stdio.h feof" c_feof :: Ptr Handle -> IO CInt
-foreign import ccall "stdio.h ftell" c_ftell :: Ptr Handle -> IO IntMax                  -- XXX
-foreign import ccall "stdio.h fseek" c_fseek :: Ptr Handle -> IntMax -> CInt -> IO CInt  -- XXX
+foreign import ccall "stdio.h ftell" c_ftell :: Ptr Handle -> IO Int                  -- XXX
+--foreign import ccall "stdio.h ftell" c_ftell :: Ptr Handle -> IO IntMax                  -- XXX
+foreign import ccall "stdio.h fseek" c_fseek :: Ptr Handle -> Int -> CInt -> IO CInt  -- XXX
+--foreign import ccall "stdio.h fseek" c_fseek :: Ptr Handle -> IntMax -> CInt -> IO CInt  -- XXX
 
 foreign import primitive "const.SEEK_SET" c_SEEK_SET :: CInt
 foreign import primitive "const.SEEK_CUR" c_SEEK_CUR :: CInt
