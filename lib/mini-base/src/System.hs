@@ -37,11 +37,11 @@ getProgName = case Lhc.Options.target of
 
 getArgs = case Lhc.Options.target of
 --    Lhc.Options.GhcHs -> ghc_getArgs
-    _ -> do error "getArgs not defined"{-
+    _ -> do 
         argc <- peek lhc_argc
         argv <- peek lhc_argv
         let f n = peekElemOff argv n >>= peekCString
-        mapM f [0 .. fromIntegral argc - 1]-}
+        mapM f [0 .. fromIntegral argc - 1]
 
 
 getEnv s = withCString s c_getenv >>= \p ->

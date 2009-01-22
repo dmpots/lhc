@@ -16,7 +16,7 @@ data CSChar
 data CUChar
 data CShort
 data CUShort
-data CInt
+data CInt = CInt Int32
 data CUInt
 data CLong
 data CULong
@@ -80,3 +80,4 @@ instance Ord $1 where
 INSTS(CSize)
 INSTS(CWchar)
 INSTS(CChar)
+INSTS(CInt)
