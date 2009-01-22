@@ -59,8 +59,8 @@ import Support.CFF
 import Util.FilterInput
 import Util.Gen hiding(putErrLn,putErr,putErrDie)
 import Util.SetLike
-import Util.Graphviz (graphviz')
 import LHCVersion
+import Data.GraphViz as GV
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified FlagDump as FD
@@ -277,6 +277,8 @@ toCompUnitGraph done roots = do
     let fs m = maybe (error $ "can't find deps for: " ++ show m) snd (Map.lookup m (knownSourceMap done))
         gr :: G.Graph ((Module, SourceHash), [Module]) Module
         gr = G.newGraph  [ ((m,sourceHash sc),fs (sourceHash sc)) | (m,Found sc) <- Map.toList (modEncountered done)] (fst . fst) snd
+        gr' = G.sccGroups gr
+        
 
     when (dump FD.DepGraph) $ do
         let nodes = zip [0..] [(m,sourceHash sc) | (m,Found sc) <- (Map.toList (modEncountered done))]
@@ -284,15 +286,24 @@ toCompUnitGraph done roots = do
             gri :: GI.Gr (Module, SourceHash) ()
             gri = GI.mkGraph nodes [ (n,n2,())
                                      | (n,(_,sh)) <- nodes,
-                                       n2 <- concatMap (maybeToList . (`Map.lookup` nodeMap)) (fs sh )
+                                       n2 <- concatMap (maybeToList . (`Map.lookup` nodeMap)) (fs sh)
                                    ]
-            fnode (m,_) = [("label", show m)]
-            fedge ()    = []
+            
+            sccMap = Map.fromList [(n, ns) | ns <- (map.map) (fst.fst) gr', n <- ns]
 
-        writeFile "deps.dot" (graphviz' gri [] fnode fedge)
+            cluster ln@(_,(m,_)) = case (fromJust $ Map.lookup m sccMap) of
+                                     [_] -> N ln
+                                     ms  -> C ms (N ln)
 
-    let gr' = G.sccGroups gr
-        lmods = Map.mapMaybe ( \ x -> case x of ModLibrary _ h -> Just h ; _ -> Nothing) (modEncountered done)
+            fcluster  _  = [Style Dashed]
+
+            fnode (_,(m,_)) = [Label (show m)]
+            fedge _         = []
+
+        writeFile "deps.dot" (show $ clusterGraphToDot gri [GV.Unknown "aspect" "2,10"]
+                                                       cluster fcluster fnode fedge)
+
+    let lmods = Map.mapMaybe ( \ x -> case x of ModLibrary _ h -> Just h ; _ -> Nothing) (modEncountered done)
         phomap = Map.fromListWith (++) (concat [  [ (m,[hh]) | (m,_) <- hohDepends hoh ] | (hh,(_,hoh,_)) <- Map.toList (hosEncountered done)])
         sources = Map.fromList [ (m,sourceHash sc) | (m,Found sc) <- Map.toList (modEncountered done)]
     when (dump FD.SccModules) $ do
