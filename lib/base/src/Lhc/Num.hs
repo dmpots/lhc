@@ -1,4 +1,4 @@
-{-# OPTIONS_LHC -N -fffi #-}
+{-# OPTIONS_LHC -N -fffi -fm4 #-}
 module Lhc.Num where
 
 import Lhc.Types
@@ -8,6 +8,8 @@ import Lhc.Show
 import Lhc.IO(error)
 import Lhc.Enum
 import Lhc.Float
+
+import Data.Word
 
 infixl 7 :%
 infixl 7  *  , /, `quot`, `rem`, `div`, `mod`
@@ -108,47 +110,14 @@ even n           =  n `rem` 2 == 0
 odd              =  not . even
 
 
-instance Num Int where
-    Int x + Int y = Int (bits32_Add x y)
-    Int x - Int y = Int (bits32_Sub x y)
-    Int x * Int y = Int (bits32_Mul x y)
+
+m4_define(NUMINST,{{
+instance Num $1 where
+    $1 x + $1 y = $1 (add_$1 x y)
+    $1 x - $1 y = $1 (sub_$1 x y)
+    $1 x * $1 y = $1 (mul_$1 x y)
     
-    negate (Int x) = Int (bits32_Neg x)
-    
-    abs    x | x < 0     = -x
-             | otherwise =  x
-    
-    signum 0 = 0
-    signum x | x < 0     = -1
-             | otherwise =  1
-
-    fromInteger (Integer x) = Int (bitsmax_to_32 x)
-    fromInt = id
-
-instance Integral Int where
-    Int n `quot` Int d = Int (bits32_Div n d)
-    Int n `rem`  Int d = Int (bits32_Mod n d)
-
-    toInteger (Int x) = Integer (bits32_to_max x)
-    toInt = id
-
-foreign import primitive "Neg" bits32_Neg :: Bits32_ -> Bits32_
-foreign import primitive "Add" bits32_Add :: Bits32_ -> Bits32_ -> Bits32_
-foreign import primitive "Sub" bits32_Sub :: Bits32_ -> Bits32_ -> Bits32_
-foreign import primitive "Mul" bits32_Mul :: Bits32_ -> Bits32_ -> Bits32_
-foreign import primitive "Div" bits32_Div :: Bits32_ -> Bits32_ -> Bits32_
-foreign import primitive "Mod" bits32_Mod :: Bits32_ -> Bits32_ -> Bits32_
-
-foreign import primitive "I2I" bitsmax_to_32 :: BitsMax_ -> Bits32_
-foreign import primitive "I2I" bits32_to_max :: Bits32_ -> BitsMax_
-
-
-instance Num Integer where
-    Integer x + Integer y = Integer (bitsmax_Add x y)
-    Integer x - Integer y = Integer (bitsmax_Sub x y)
-    Integer x * Integer y = Integer (bitsmax_Mul x y)
-    
-    negate (Integer x) = Integer (bitsmax_Neg x)
+    negate ($1 x) = $1 (neg_$1 x)
     
     abs    x | x < 0     = -x
              | otherwise =  x
@@ -157,19 +126,44 @@ instance Num Integer where
     signum x | x < 0     = -1
              | otherwise =  1
 
-    fromInt (Int x) = Integer (bits32_to_max x)
-    fromInteger = id
+    fromInteger (Integer x) = $1 (bitsmax_to_$1 x)
+    fromInt (Int x) = $1 (bits32_to_$1 x)
 
-instance Integral Integer where
-    Integer n `quot` Integer d = Integer (bitsmax_Div n d)
-    Integer n `rem`  Integer d = Integer (bitsmax_Mod n d)
+instance Integral $1 where
+    $1 n `quot` $1 d = $1 (div_$1 n d)
+    $1 n `rem`  $1 d = $1 (mod_$1 n d)
 
-    toInt (Integer x) = Int (bitsmax_to_32 x)
-    toInteger = id
+    toInteger ($1 x) = Integer (max_from_$1 x)
+    toInt ($1 x) = Int (bits32_from_$1 x)
 
-foreign import primitive "Neg" bitsmax_Neg :: BitsMax_ -> BitsMax_
-foreign import primitive "Add" bitsmax_Add :: BitsMax_ -> BitsMax_ -> BitsMax_
-foreign import primitive "Sub" bitsmax_Sub :: BitsMax_ -> BitsMax_ -> BitsMax_
-foreign import primitive "Mul" bitsmax_Mul :: BitsMax_ -> BitsMax_ -> BitsMax_
-foreign import primitive "Div" bitsmax_Div :: BitsMax_ -> BitsMax_ -> BitsMax_
-foreign import primitive "Mod" bitsmax_Mod :: BitsMax_ -> BitsMax_ -> BitsMax_
+foreign import primitive "Neg" neg_$1 :: $2 -> $2
+foreign import primitive "Add" add_$1 :: $2 -> $2 -> $2
+foreign import primitive "Sub" sub_$1 :: $2 -> $2 -> $2
+foreign import primitive "Mul" mul_$1 :: $2 -> $2 -> $2
+foreign import primitive "Div" div_$1 :: $2 -> $2 -> $2
+foreign import primitive "Mod" mod_$1 :: $2 -> $2 -> $2
+
+foreign import primitive "I2I" bitsmax_to_$1 :: BitsMax_ -> $2
+foreign import primitive "I2I" bits32_to_$1 :: Bits32_ -> $2
+foreign import primitive "I2I" max_from_$1 :: $2 -> BitsMax_
+foreign import primitive "I2I" bits32_from_$1 :: $2 -> Bits32_
+}})
+
+
+
+NUMINST(Int,Bits32_)
+NUMINST(Int8,Bits8_)
+NUMINST(Int16,Bits16_)
+NUMINST(Int32,Bits32_)
+NUMINST(Int64,Bits64_)
+NUMINST(IntPtr,BitsPtr_)
+NUMINST(Integer,BitsMax_)
+
+NUMINST(Word,Bits32_)
+NUMINST(Word8,Bits8_)
+NUMINST(WordMax,BitsMax_)
+NUMINST(Word16,Bits16_)
+NUMINST(Word32,Bits32_)
+NUMINST(Word64,Bits64_)
+NUMINST(WordPtr,BitsPtr_)
+
