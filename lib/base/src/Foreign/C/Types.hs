@@ -6,7 +6,7 @@ import Data.Word
 import Lhc.Num
 import Lhc.Enum
 
-data CChar = CChar Int8 deriving (Bounded,Enum)
+data CChar = CChar Int8 deriving (Bounded)
 data CSChar
 data CUChar
 data CShort
@@ -16,8 +16,8 @@ data CUInt
 data CLong
 data CULong
 data CPtrdiff
-data CSize = CSize Word64 deriving (Bounded,Enum)
-data CWchar = CWchar Int32 deriving (Bounded,Enum)
+data CSize = CSize Word64 deriving (Bounded)
+data CWchar = CWchar Int32 deriving (Bounded)
 data CSigAtomic
 data CLLong
 data CULLong
