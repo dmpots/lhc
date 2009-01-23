@@ -7,7 +7,6 @@
 
 import System; import Text.Printf; import Control.Monad
 
-import Debug.Trace
 
 data Tree = Nil | Node !Int Tree Tree
 
