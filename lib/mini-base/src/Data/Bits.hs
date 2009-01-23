@@ -150,12 +150,12 @@ instance Bits $1 where
     shiftL ($1 x) (Int bits) = $1 (shiftL$1 x bits)
     shiftR ($1 x) (Int bits) = $1 (shiftR$1 x bits)
 
-foreign import primitive "and" and$1 :: $2 -> $2 -> $2
-foreign import primitive "or" or$1 :: $2 -> $2 -> $2
-foreign import primitive "xor" xor$1 :: $2 -> $2 -> $2
+foreign import primitive "And" and$1 :: $2 -> $2 -> $2
+foreign import primitive "Or" or$1 :: $2 -> $2 -> $2
+foreign import primitive "Xor" xor$1 :: $2 -> $2 -> $2
 foreign import primitive "complement" complement$1 :: $2 -> $2
-foreign import primitive "shiftL" shiftL$1 :: $2 -> Bits32_ -> $2
-foreign import primitive "shiftR" shiftR$1 :: $2 -> Bits32_ -> $2
+foreign import primitive "Shl" shiftL$1 :: $2 -> Bits32_ -> $2
+foreign import primitive "Shra" shiftR$1 :: $2 -> Bits32_ -> $2
 
 }})
 
