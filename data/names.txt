@@ -29,6 +29,7 @@ Bits128    Lhc.Types.Bits128_
 BitsPtr    Lhc.Types.BitsPtr_
 BitsMax    Lhc.Types.BitsMax_
 BitsSize   Lhc.Types.BitsSize_t_
+BitsInt    Lhc.Types.BitsInt
 
 Float32    Lhc.Types.Float32_
 Float64    Lhc.Types.Float64_
