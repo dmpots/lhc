@@ -279,7 +279,7 @@ toCompUnitGraph done roots = do
         gr = G.newGraph  [ ((m,sourceHash sc),fs (sourceHash sc)) | (m,Found sc) <- Map.toList (modEncountered done)] (fst . fst) snd
         gr' = G.sccGroups gr
         
-
+    -- Note: tred(1) is VERY handy with these graphs!
     when (dump FD.DepGraph) $ do
         let nodes = zip [0..] [(m,sourceHash sc) | (m,Found sc) <- (Map.toList (modEncountered done))]
             nodeMap = Map.fromList [ (sh, n) | (n,(sh,_)) <- nodes ]
