@@ -20,7 +20,7 @@ Library
                  Data.Bits
 --                 Data.Int,
                  Data.IORef
---                 Data.Ix,
+                 Data.Ix
 --                 Data.Maybe,
 --                 Data.Ratio,
 --                 Data.Unicode,
