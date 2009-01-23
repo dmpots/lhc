@@ -10,6 +10,7 @@ data Bits64_  :: #
 data Bits128_ :: #
 data BitsPtr_ :: #
 data BitsMax_ :: #
+data BitsInt_ :: #
 data BitsSize_t_ :: #
 
 data Float32_ :: #

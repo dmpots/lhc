@@ -94,36 +94,19 @@ instance Ord a => Ord [a] where
     x >= y = not (x < y)
     x <= y = not (y < x)
 
-m4_define(ORDINST,{{
-instance Eq $1 where
-    $1 x == $1 y = boxBool (eq_$1 x y)
-    $1 x /= $1 y = boxBool (neq_$1 x y)
-instance Ord $1 where
-    $1 x < $1 y = boxBool (lt_$1 x y)
-    $1 x > $1 y = boxBool (gt_$1 x y)
-    $1 x <= $1 y = boxBool (lte_$1 x y)
-    $1 x >= $1 y = boxBool (gte_$1 x y)
+m4_include(Lhc/Order.m4)
 
-foreign import primitive "Eq" eq_$1   :: $2 -> $2 -> Bool__
-foreign import primitive "NEq" neq_$1 :: $2 -> $2 -> Bool__
-foreign import primitive "$3Lt" lt_$1   :: $2 -> $2 -> Bool__
-foreign import primitive "$3Lte" lte_$1 :: $2 -> $2 -> Bool__
-foreign import primitive "$3Gt" gt_$1   :: $2 -> $2 -> Bool__
-foreign import primitive "$3Gte" gte_$1 :: $2 -> $2 -> Bool__
+INST_EQORDER(Word8,Bits8_,U)
+INST_EQORDER(Word16,Bits16_,U)
+INST_EQORDER(Word32,Bits32_,U)
+INST_EQORDER(Word64,Bits64_,U)
+INST_EQORDER(WordPtr,BitsPtr_,U)
 
-}})
-
-ORDINST(Word8,Bits8_,U)
-ORDINST(Word16,Bits16_,U)
-ORDINST(Word32,Bits32_,U)
-ORDINST(Word64,Bits64_,U)
-ORDINST(WordPtr,BitsPtr_,U)
-
-ORDINST(Int8,Bits8_)
-ORDINST(Int16,Bits16_)
-ORDINST(Int32,Bits32_)
-ORDINST(Int64,Bits64_)
-ORDINST(IntPtr,BitsPtr_)
+INST_EQORDER(Int8,Bits8_)
+INST_EQORDER(Int16,Bits16_)
+INST_EQORDER(Int32,Bits32_)
+INST_EQORDER(Int64,Bits64_)
+INST_EQORDER(IntPtr,BitsPtr_)
 
 instance Eq Int where
     Int x == Int y = boxBool (bits32Eq x y)
