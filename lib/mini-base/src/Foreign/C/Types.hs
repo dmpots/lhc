@@ -7,6 +7,9 @@ module Foreign.C.Types
   , CSize
   ) where
 
+-- FIXME: this module really shouldn't import all this stuff. These types should probably
+-- be defined in another module so that instances can be defined elsewhere.
+
 import Lhc.Types
 import Lhc.Num
 import Lhc.Order

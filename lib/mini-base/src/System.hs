@@ -48,7 +48,7 @@ getEnv s = withCString s c_getenv >>= \p ->
     if p == nullPtr then fail ("getEnv: " ++ show s)  else peekCString p
 
 
-system s = error "system not defined" {-withCString s c_system >>= \r -> case r of
+system s = error "FIXME: system not defined" {-withCString s c_system >>= \r -> case r of
     0 -> return ExitSuccess
     _ -> return $ ExitFailure (fromIntegral r)-}
 

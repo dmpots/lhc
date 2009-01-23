@@ -109,7 +109,7 @@ newtype Errno = Errno CInt
 
 instance Eq Errno where
   errno1@(Errno no1) == errno2@(Errno no2)
-    | isValidErrno errno1 && isValidErrno errno2 = error "Eq on CInt not defined" -- no1 == no2
+    | isValidErrno errno1 && isValidErrno errno2 = error "FIXME: Eq on CInt not defined" -- no1 == no2
     | otherwise					 = False
 
 -- common "errno" symbols
@@ -133,7 +133,7 @@ eOK, e2BIG, eACCES, eADDRINUSE, eADDRNOTAVAIL, eADV, eAFNOSUPPORT, eAGAIN,
 -- the cCONST_XXX identifiers are cpp symbols whose value is computed by
 -- configure
 --
-eOK             = error "eOK not defined" -- Errno 0
+eOK             = error "FIXME: eOK not defined" -- Errno 0
 {-
 #ifdef __NHC__
 #include "Errno.hs"
@@ -246,7 +246,7 @@ isValidErrno               :: Errno -> Bool
 --
 -- the configure script sets all invalid "errno"s to -1
 --
-isValidErrno (Errno errno)  = error "isValidErrno not defined" -- errno /= -1
+isValidErrno (Errno errno)  = error "FIXME: isValidErrno not defined" -- errno /= -1
 
 
 -- access to the current thread's "errno" value
@@ -259,7 +259,7 @@ getErrno :: IO Errno
 -- We must call a C function to get the value of errno in general.  On
 -- threaded systems, errno is hidden behind a C macro so that each OS
 -- thread gets its own copy.
-getErrno = error "getErrno not defined" -- do e <- peek _errno; return (Errno e)
+getErrno = error "FIXME: getErrno not defined" -- do e <- peek _errno; return (Errno e)
 foreign import ccall "errno.h &errno" _errno :: Ptr CInt
 
 -- | Reset the current thread\'s @errno@ value to 'eOK'.
@@ -267,7 +267,7 @@ foreign import ccall "errno.h &errno" _errno :: Ptr CInt
 resetErrno :: IO ()
 
 -- Again, setting errno has to be done via a C function.
-resetErrno = error "resetErrno not defined" -- poke _errno 0
+resetErrno = error "FIXME: resetErrno not defined" -- poke _errno 0
 
 -- throw current "errno" value
 -- ---------------------------

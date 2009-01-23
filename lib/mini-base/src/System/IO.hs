@@ -70,7 +70,7 @@ isEOF = hIsEOF stdin
 hIsEOF :: Handle -> IO Bool
 hIsEOF h = withHandle h $ \ptr -> do
     r <- c_feof ptr
-    error "hIsEOF not defined" -- return (r /= 0)
+    error "FIXME: hIsEOF not defined" -- return (r /= 0)
 
 hPutChar h ch = withHandle h $ \ptr -> do
     c_fputwc (fromInt (ord ch)) ptr
