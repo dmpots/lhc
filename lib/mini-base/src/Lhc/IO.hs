@@ -33,7 +33,6 @@ module Lhc.IO(
 import Lhc.Prim
 import Lhc.Basics
 import Lhc.Order
-import Foreign.C.Types
 import qualified Lhc.Options
 
 

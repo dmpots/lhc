@@ -4,7 +4,6 @@ module Data.Bits where
 
 import Lhc.Num
 import Lhc.Order
-import Lhc.Int
 
 
 infixl 8 `shift`, `rotate`, `shiftL`, `shiftR`, `rotateL`, `rotateR`
