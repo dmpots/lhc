@@ -48,11 +48,11 @@ m4_include(Foreign/Storable.m4)
 
 INST_EQORDER(CInt,BitsInt_)
 NUMINST(CInt, BitsInt_)
-INST_STORABLE(CInt,BitsInt_,bits_int)
+INST_STORABLE(CInt,BitsInt_,bits<int>)
 
 INST_EQORDER(CSize,BitsSize_t_)
 NUMINST(CSize, BitsSize_t_)
-INST_STORABLE(CSize,BitsSize_t_,bits_size_t)
+INST_STORABLE(CSize,BitsSize_t_,bits<size_t>)
 
 INST_EQORDER(CWchar,Bits32_)
 NUMINST(CWchar, Bits32_)
