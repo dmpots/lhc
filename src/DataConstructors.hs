@@ -854,6 +854,7 @@ primitiveAliases = [
     (tc_Bits128, rt_bits128),
     (tc_BitsPtr, rt_bits_ptr_),
     (tc_BitsMax, rt_bits_max_),
+    (tc_BitsSize, rt_bits_size_t_),
 
     (tc_Float32, rt_float32),
     (tc_Float64, rt_float64),
