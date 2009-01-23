@@ -80,4 +80,5 @@ instance Ord (Ptr a) where
 castPtr :: Ptr a -> Ptr b
 castPtr (Ptr addr) = Ptr addr
 
+foreign import primitive "box" boxBool :: Bool__ -> Bool
 
