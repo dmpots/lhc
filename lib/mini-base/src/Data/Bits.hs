@@ -1,10 +1,12 @@
-{-# OPTIONS_LHC -N #-}
+{-# OPTIONS_LHC -N -fffi -fm4 #-}
 module Data.Bits where
 
 
 import Lhc.Num
 import Lhc.Order
-
+import Lhc.Types
+import Data.Int
+import Lhc.Prim
 
 infixl 8 `shift`, `rotate`, `shiftL`, `shiftR`, `rotateL`, `rotateR`
 infixl 7 .&.
@@ -139,3 +141,22 @@ class Num a => Bits a where
     x `rotateR` i = x `rotate` (-i)
 
 
+m4_define(INST_BITS,{{
+instance Bits $1 where
+    $1 x .&. $1 y = $1 (and$1 x y)
+    $1 x .|. $1 y = $1 (or$1 x y)
+    $1 x `xor` $1 y = $1 (xor$1 x y)
+    complement ($1 x) = $1 (complement$1 x)
+    shiftL ($1 x) (Int bits) = $1 (shiftL$1 x bits)
+    shiftR ($1 x) (Int bits) = $1 (shiftR$1 x bits)
+
+foreign import primitive "and" and$1 :: $2 -> $2 -> $2
+foreign import primitive "or" or$1 :: $2 -> $2 -> $2
+foreign import primitive "xor" xor$1 :: $2 -> $2 -> $2
+foreign import primitive "complement" complement$1 :: $2 -> $2
+foreign import primitive "shiftL" shiftL$1 :: $2 -> Bits32_ -> $2
+foreign import primitive "shiftR" shiftR$1 :: $2 -> Bits32_ -> $2
+
+}})
+
+INST_BITS(Int,Bits32_)
