@@ -140,24 +140,24 @@ instance RealFloat Float where
     exponent x		= case decodeFloatf x of (_,n) -> n
     significand x	= case decodeFloatf x of (m,_) -> m
 
-    isNaN x = undefined -- c_isnanf x /= 0
-    isInfinite x = undefined -- c_isinfinitef x /= 0
+    isNaN x = c_isnanf x /= 0
+    isInfinite x = c_isinfinitef x /= 0
     isDenormalized _ = False
-    isNegativeZero x = undefined -- x == 0 && c_signbitf x /= 0
+    isNegativeZero x = x == 0 && c_signbitf x /= 0
     isIEEE _ = True
 
-    scaleFloat k x = undefined -- c_ldexpf x (fromInt k)
-    decodeFloatf x = undefined{-unsafePerformIO $ alloca $ \ptr -> do
-        x' <- undefined -- c_frexpf x ptr
+    scaleFloat k x = c_ldexpf x (fromInt k)
+    decodeFloatf x = unsafePerformIO $ alloca $ \ptr -> do
+        x' <- c_frexpf x ptr
         exp <- peek ptr
-        return (x', fromIntegral exp)-}
+        return (x', fromIntegral exp)
 
-    encodeFloat i e = undefined -- c_ldexpf (fromInteger i) (fromInt e)
-    decodeFloat x = undefined{-unsafePerformIO $ alloca $ \ptr -> do
-        x' <- undefined -- c_frexp (floatToDouble x) ptr
+    encodeFloat i e = c_ldexpf (fromInteger i) (fromInt e)
+    decodeFloat x = unsafePerformIO $ alloca $ \ptr -> do
+        x' <- c_frexp (floatToDouble x) ptr
         exp <- peek ptr
         let x'' =  c_ldexp x' (fromInt $ floatDigits x)
-        return (double2integer x'', fromIntegral exp  - floatDigits x)-}
+        return (double2integer x'', fromIntegral exp  - floatDigits x)
 
     atan2 = atan2Float
 
@@ -172,23 +172,23 @@ instance RealFloat Double where
     exponent x		= case decodeFloatf x of (_,n) -> n
     significand x	= case decodeFloatf x of (m,_) -> m
 
-    isNaN x = undefined -- c_isnan x /= 0
-    isInfinite x = undefined -- c_isinfinite x /= 0
+    isNaN x = c_isnan x /= 0
+    isInfinite x = c_isinfinite x /= 0
     isDenormalized _ = False
-    isNegativeZero x = undefined -- x == 0 && c_signbit x /= 0
+    isNegativeZero x = x == 0 && c_signbit x /= 0
     isIEEE _ = True
-    scaleFloat k x = undefined -- c_ldexp x (fromInt k)
-    decodeFloatf x = undefined {-unsafePerformIO $ alloca $ \ptr -> do
-        x' <- undefined -- c_frexp x ptr
+    scaleFloat k x = c_ldexp x (fromInt k)
+    decodeFloatf x = unsafePerformIO $ alloca $ \ptr -> do
+        x' <- c_frexp x ptr
         exp <- peek ptr
-        return (x', fromIntegral exp)-}
+        return (x', fromIntegral exp)
 
-    encodeFloat i e = undefined --  c_ldexp (integer2double i) (fromInt e)
-    decodeFloat x = undefined {-unsafePerformIO $ alloca $ \ptr -> do
-        x' <- undefined -- c_frexp x ptr
+    encodeFloat i e = c_ldexp (integer2double i) (fromInt e)
+    decodeFloat x = unsafePerformIO $ alloca $ \ptr -> do
+        x' <- c_frexp x ptr
         exp <- peek ptr
         let x'' = c_ldexp x' (fromInt $ floatDigits x)
-        return (double2integer x'', fromIntegral exp  - floatDigits x)-}
+        return (double2integer x'', fromIntegral exp  - floatDigits x)
 
 
     atan2 = atan2Double
