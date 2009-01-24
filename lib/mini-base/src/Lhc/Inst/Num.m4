@@ -27,8 +27,8 @@ foreign import primitive "Neg" neg_$1 :: $2 -> $2
 foreign import primitive "Add" add_$1 :: $2 -> $2 -> $2
 foreign import primitive "Sub" sub_$1 :: $2 -> $2 -> $2
 foreign import primitive "Mul" mul_$1 :: $2 -> $2 -> $2
-foreign import primitive "Div" div_$1 :: $2 -> $2 -> $2
-foreign import primitive "Mod" mod_$1 :: $2 -> $2 -> $2
+foreign import primitive "$3Div" div_$1 :: $2 -> $2 -> $2
+foreign import primitive "$3Mod" mod_$1 :: $2 -> $2 -> $2
 
 foreign import primitive "I2I" bitsmax_to_$1 :: BitsMax_ -> $2
 foreign import primitive "I2I" bits32_to_$1 :: Bits32_ -> $2
