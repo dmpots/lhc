@@ -7,6 +7,7 @@ import Data.Word
 import Lhc.Basics
 import Lhc.Num
 import Lhc.Order
+import Lhc.Enum
 import Lhc.Show
 
 -- we convert them to Word or WordMax so the showIntAtBase specialization can occur.
