@@ -34,12 +34,12 @@ instance Show WordMax where
 
 instance Show Int where
     showsPrec p x
-        | x < 0 = showParen (p > 6) (showChar '-' . showWord (fromIntegral $ negate x :: Word))
+        | x < 0 = showParen (p > 6) (showChar '-' . showWord (fromIntegral x :: Word))
         | otherwise = showWord (fromIntegral x :: Word)
 
 instance Show Integer where
     showsPrec p x
-        | x < 0 = showParen (p > 6) (showChar '-' . showWordMax (fromIntegral $ negate x :: WordMax))
+        | x < 0 = showParen (p > 6) (showChar '-' . showWordMax (fromIntegral x :: WordMax))
         | otherwise = showWordMax (fromIntegral x :: WordMax)
 
 instance Show Int8 where
