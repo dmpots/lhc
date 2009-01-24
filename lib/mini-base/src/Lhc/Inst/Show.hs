@@ -32,15 +32,19 @@ instance Show Word64 where
 instance Show WordMax where
     showsPrec _ x = showWordMax x
 
+
+-- SamB 2009.01.24: FIXME these could be more efficient if we re-did the branch structure like in GHC.Int, I think
 instance Show Int where
     showsPrec p x
-        | x < 0 = showParen (p > 6) (showChar '-' . showWord (fromIntegral x :: Word))
+        | x == minBound = showParen (p > 6) (showChar '-' . showWord (fromIntegral x :: Word))
+        | x < 0         = showParen (p > 6) (showChar '-' . showWord (fromIntegral $ negate x :: Word))
         | otherwise = showWord (fromIntegral x :: Word)
 
 instance Show Integer where
     showsPrec p x
-        | x < 0 = showParen (p > 6) (showChar '-' . showWordMax (fromIntegral x :: WordMax))
-        | otherwise = showWordMax (fromIntegral x :: WordMax)
+        | x == minBound = showParen (p > 6) (showChar '-' . showWordMax (fromIntegral x :: WordMax))
+        | x < 0         = showParen (p > 6) (showChar '-' . showWordMax (fromIntegral $ negate x :: WordMax))
+        | otherwise     = showWordMax (fromIntegral x :: WordMax)
 
 instance Show Int8 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
