@@ -34,6 +34,8 @@ import Doc.PPrint
 import GenUtil
 import FrontEnd.HsSyn
 
+import Data.Word
+
 data NameType =
     TypeConstructor
     | DataConstructor
@@ -46,11 +48,24 @@ data NameType =
     deriving(Ord,Eq,Enum,Read,Show)
 
 
-newtype Name = Name Atom
-    deriving(Eq,Typeable,Binary,ToAtom,FromAtom)
+data Name = Name Atom Word32
+    deriving(Typeable) --,Eq,Binary,ToAtom,FromAtom)
+
+instance Binary Name where
+    put (Name atom _) = put atom
+    get = fmap fromAtom get
+
+instance FromAtom Name where
+    fromAtom atom = Name atom (hash32 atom)
+instance ToAtom Name where
+    toAtom (Name atom _) = atom
+
+instance Eq Name where
+    Name _ a == Name _ b = a == b
+    Name _ a /= Name _ b = a /= b
 
 instance Ord Name where
-   Name a `compare` Name b = hash32 a `compare` hash32 b
+   Name _ a `compare` Name _ b = a `compare` b
 
 isTypeNamespace TypeConstructor = True
 isTypeNamespace ClassName = True
@@ -76,10 +91,10 @@ fromValishHsName name
 
 createName _ "" i = error $ "createName: empty module "  ++ i
 createName _ m "" = error $ "createName: empty ident "   ++ m
-createName t m i = Name $  toAtom $ (chr $  ord '1' + fromEnum t):m ++ ";" ++ i
+createName t m i = fromAtom $  toAtom $ (chr $  ord '1' + fromEnum t):m ++ ";" ++ i
 createUName :: NameType -> String -> Name
 createUName _ "" = error $ "createUName: empty ident"
-createUName t i =  Name $ toAtom $ (chr $ fromEnum t + ord '1'):";" ++ i
+createUName t i =  fromAtom $ toAtom $ (chr $ fromEnum t + ord '1'):";" ++ i
 
 class ToName a where
     toName :: NameType -> a -> Name
@@ -146,16 +161,16 @@ parseName t name = toName t (intercalate "." ms, intercalate "." (ns ++ [last sn
 
 
 nameType :: Name -> NameType
-nameType (Name a) = toEnum $ fromIntegral ( a `unsafeByteIndex` 0)  - ord '1'
+nameType (Name a _) = toEnum $ fromIntegral ( a `unsafeByteIndex` 0)  - ord '1'
 
 nameName :: Name -> HsName
-nameName (Name a) = f $ tail (fromAtom a) where
+nameName (Name a _) = f $ tail (fromAtom a) where
     f (';':xs) = UnQual $ HsIdent xs
     f xs | (a,_:b) <- span (/= ';') xs  = Qual (Module a) (HsIdent b)
     f _ = error $ "invalid Name: " ++ (show $ (fromAtom a :: String))
 
 nameParts :: Name -> (NameType,Maybe String,String)
-nameParts n@(Name a) = f $ tail (fromAtom a) where
+nameParts n@(Name a _) = f $ tail (fromAtom a) where
     f (';':xs) = (nameType n,Nothing,xs)
     f xs = (nameType n,Just a,b) where
         (a,_:b) = span (/= ';') xs
