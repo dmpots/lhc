@@ -298,15 +298,16 @@ phaseEvalInlined e = e >= PostInlineEval
 
 
 data Grin = Grin {
-    grinEntryPoints :: Map.Map Atom (FfiExport, ([ExtType], ExtType)),
-    grinPhase :: !Phase,
-    grinTypeEnv :: TyEnv,
-    grinFunctions :: [FuncDef],
+    grinEntryPoints   :: Map.Map Atom (FfiExport, ([ExtType], ExtType)),
+    grinPhase         :: !Phase,
+    grinTypeEnv       :: TyEnv,
+    grinFunctions     :: [FuncDef],
     grinSuspFunctions :: Set.Set Atom,
     grinPartFunctions :: Set.Set Atom,
-    grinStats :: !Stats.Stat,
-    grinCafs :: [(Var,Val)]
-}
+    grinStats         :: !Stats.Stat,
+    grinCafs          :: [(Var,Val)],
+    grinUnique        :: Int
+                 }
 
 
 emptyGrin = Grin {
@@ -317,8 +318,9 @@ emptyGrin = Grin {
     grinSuspFunctions = mempty,
     grinPartFunctions = mempty,
     grinStats = mempty,
-    grinCafs = mempty
-}
+    grinCafs = mempty,
+    grinUnique = 1
+                 }
 
 grinEntryPointNames = Map.keys . grinEntryPoints
 

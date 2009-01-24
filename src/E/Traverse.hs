@@ -57,7 +57,12 @@ emapEGH f g h e = z e where
     z (ESort aa) = do return $ ESort aa
     z (ELit lc@LitCons { litArgs = es, litType = t }) = do t' <- g t; es' <- mapM f es; return $ ELit lc { litArgs = es', litType = t' }
     z (ELit aa) = do aa <- T.mapM g aa; return $ ELit aa
-    z ELetRec { eDefs = aa, eBody = ab } = do aa <- mapM (\x -> do x <- (do (aa,ab) <- return x; aa <- mapmTvr g aa;ab <- f ab;return (aa,ab)); return x) aa;ab <- f ab; return $ ELetRec aa ab
+    z ELetRec { eDefs = aa, eBody = ab } = do aa <- mapM (\(aa,ab) ->do aa <- mapmTvr g aa
+                                                                        ab <- f ab
+                                                                        return (aa,ab))
+                                                         aa
+                                              ab <- f ab
+                                              return $ ELetRec aa ab
     z ec@ECase {} = do
         e' <- f $ eCaseScrutinee ec
         b' <- T.mapM g (eCaseBind ec)
