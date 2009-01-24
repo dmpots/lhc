@@ -7,6 +7,7 @@ import Data.Int
 import Lhc.Enum
 import Lhc.Num
 import Lhc.Order
+import Lhc.Types
 import Lhc.IO(error)
 import Lhc.Basics
 
@@ -65,46 +66,27 @@ instance Enum () where
     enumFromTo () () 	= [()]
     enumFromThenTo () () () = let many = ():many in many
 
+m4_define(INST_BOUNDED,{{
+instance Bounded $1 where
+    minBound = $1 (minBound$1 0#)
+    maxBound = $1 (maxBound$1 0#)
 
-instance Bounded Int where
-    minBound = Int 0x80000000#
-    maxBound = Int 0x7FFFFFFF#
-instance Bounded Int8 where
-    minBound = Int8 0x80#
-    maxBound = Int8 0x7F#
-instance Bounded Int16 where
-    minBound = Int16 0x8000#
-    maxBound = Int16 0x7FFF#
-instance Bounded Int32 where
-    minBound = Int32 0x80000000#
-    maxBound = Int32 0x7FFFFFFF#
-instance Bounded Int64 where
-    minBound = Int64 0x8000000000000000#
-    maxBound = Int64 0x7FFFFFFFFFFFFFFF#
+foreign import primitive "minBound.$3" minBound$1 :: $2 -> $2
+foreign import primitive "maxBound.$3" maxBound$1 :: $2 -> $2
+}})
 
-instance Bounded Word where
-    minBound = Word 0#
-    maxBound = Word 0xFFFFFFFF#
-instance Bounded Word8 where
-    minBound = Word8 0#
-    maxBound = Word8 0xFF#
-instance Bounded Word16 where
-    minBound = Word16 0#
-    maxBound = Word16 0xFFFF#
-instance Bounded Word32 where
-    minBound = Word32 0#
-    maxBound = Word32 0xFFFFFFFF#
-instance Bounded Word64 where
-    minBound = Word64 0#
-    maxBound = Word64 0xFFFFFFFFFFFFFFFF#
+INST_BOUNDED(Int,Bits32_,bits32)
+INST_BOUNDED(Int8,Bits8_,bits8)
+INST_BOUNDED(Int16,Bits16_,bits16)
+INST_BOUNDED(Int32,Bits32_,bits32)
+INST_BOUNDED(Int64,Bits64_,bits64)
 
-instance Bounded WordMax where
-    minBound = bitsMaxMinBound
-    maxBound = bitsMaxMaxBound
-
--- Lemmih 2009.01.22: These primitives don't exist yet.
-foreign import primitive "MinBound"      bitsMaxMinBound :: WordMax
-foreign import primitive "MaxBound"      bitsMaxMaxBound :: WordMax
+INST_BOUNDED(Word,Bits32_,bits32)
+INST_BOUNDED(Word8,Bits8_,bits8)
+INST_BOUNDED(Word16,Bits16_,bits16)
+INST_BOUNDED(Word32,Bits32_,bits32)
+INST_BOUNDED(Word64,Bits64_,bits64)
+INST_BOUNDED(WordMax,BitsMax_,bits<max>)
 
 -- Lemmih 2009.01.22: This instance shouldn't exist. Delete it.
 instance Bounded Integer where
