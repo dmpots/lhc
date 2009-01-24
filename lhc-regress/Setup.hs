@@ -33,7 +33,7 @@ emptyConfig = do tmp <- getTemporaryDirectory
                                , cfgTempDir = tmp
                                , cfgLHCPath = fromMaybe "lhc" lhc
                                , cfgLHCOptions = ["+RTS","-M1G","-RTS"]
-                               , cfgTestTimeout = 120
+                               , cfgTestTimeout = 5 * 60
                                , cfgComplete = False}
 
 cmd_verbose :: OptDescr (Config -> Config)
