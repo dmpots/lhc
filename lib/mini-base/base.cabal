@@ -7,46 +7,46 @@ Library
   Extensions:      ForeignFunctionInterface
   hs-source-dirs:  src
   Exposed-Modules:
---               Control.Exception,
---               Control.Applicative,
---               Control.Arrow,
+                 Control.Exception
+--                 Control.Applicative
+--                 Control.Arrow
                  Control.Monad
---                 Data.Array,
+                 Data.Array
                  Data.Char,
---                 Data.Complex,
+                 Data.Complex
                  Data.List
                  Data.Word,
---                 Data.Monoid,
+                 Data.Monoid
                  Data.Bits
---                 Data.Int,
+                 Data.Int
                  Data.IORef
                  Data.Ix
---                 Data.Maybe,
+                 Data.Maybe
                  Data.Ratio,
---                 Data.Unicode,
---                 Data.Function,
---                 Debug.Trace,
---                 Foreign,
---                 Foreign.C,
+                 Data.Unicode
+                 Data.Function
+                 Debug.Trace
+                 Foreign
+                 Foreign.C
                  Foreign.C.Types,
                  Foreign.C.String,
                  Foreign.C.Error,
---                 Foreign.ForeignPtr,
---                 Foreign.Marshal
+                 Foreign.ForeignPtr
+                 Foreign.Marshal
                  Foreign.Marshal.Alloc,
                  Foreign.Marshal.Array,
                  Foreign.Marshal.Error,
---                 Foreign.Marshal.Pool,
+                 Foreign.Marshal.Pool
                  Foreign.Marshal.Utils,
                  Foreign.Ptr,
---                 Foreign.StablePtr,
+                 Foreign.StablePtr
                  Foreign.Storable,
                  Lhc.Addr,
                  Lhc.Basics,
                  Lhc.Float
---                 Lhc.Array,
---                 Data.Array.IO,
---                 Data.Array.Unboxed,
+                 Lhc.Array
+                 Data.Array.IO
+                 Data.Array.Unboxed
                  Lhc.Handle,
                  Lhc.IO,
                  Lhc.Tuples,
@@ -56,19 +56,19 @@ Library
                  Prelude.IOError,
                  Prelude.Text,
                  Prelude
---                 System.Console.GetOpt,
---                 System.CPUTime,
---                 System.Directory,
---                 System.Info,
+                 System.Console.GetOpt
+                 System.CPUTime
+                 System.Directory
+                 System.Info
                  System.IO
---                 System.IO.Error,
+                 System.IO.Error
                  System.IO.Unsafe,
---                 System.IO.Binary,
---                 System.Locale,
+                 System.IO.Binary
+                 System.Locale
 --                 System.Random,
 --                 System.Time,
                  System
---                 Text.Show.Functions
+                 Text.Show.Functions
                  Text.Printf
 
   if !impl(lhc)
