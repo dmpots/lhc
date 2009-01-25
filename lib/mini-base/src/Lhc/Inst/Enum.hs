@@ -89,7 +89,4 @@ INST_BOUNDED(Word64,Bits64_,bits64)
 INST_BOUNDED(WordMax,BitsMax_,bits<max>)
 
 -- Lemmih 2009.01.22: This instance shouldn't exist. Delete it.
-instance Bounded Integer where
-    minBound = Integer 0#
-    maxBound = Integer 0xFFFFFFFF#
-
+INST_BOUNDED(Integer,BitsMax_,bits<max>)
