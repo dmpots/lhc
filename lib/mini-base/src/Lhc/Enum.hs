@@ -50,14 +50,51 @@ instance Enum Int where
     enumFromTo x y = f x where
         f x | x > y = []
             | otherwise = x:f (increment x)
-    enumFromThenTo x y z | y >= x = f x where
-        inc = y `minus` x
-        f x | x <= z = x:f (x `plus` inc)
-            | otherwise = []
-    enumFromThenTo x y z  = f x where
-        inc = y `minus` x
-        f x | x >= z = x:f (x `plus` inc)
-            | otherwise = []
+
+    enumFromThenTo = efdtInt
+
+
+----------------------------------------------------------------------
+-- Shamelessly stolen from GHC.Enum
+
+efdtInt :: Int -> Int -> Int -> [Int]
+-- [x1,x2..y]
+efdtInt x1 x2 y
+ | x2 >= x1  = efdtIntUp x1 x2 y
+ | otherwise = efdtIntDn x1 x2 y
+
+-- Requires x2 >= x1
+efdtIntUp :: Int -> Int -> Int -> [Int]
+efdtIntUp x1 x2 y    -- Be careful about overflow!
+ | y < x2    = if y < x1 then [] else [x1]
+ | otherwise = -- Common case: x1 <= x2 <= y
+               let delta = x2 `minus` x1 -- >= 0
+                   y' = y `minus` delta  -- x1 <= y' <= y; hence y' is representable
+
+                   -- Invariant: x <= y
+                   -- Note that: z <= y' => z + delta won't overflow
+                   -- so we are guaranteed not to overflow if/when we recurse
+                   go_up x | x > y'   = [x]
+                           | otherwise = x : go_up (x `plus` delta)
+               in x1 : go_up x2
+
+-- Requires x2 <= x1
+efdtIntDn :: Int -> Int -> Int -> [Int]
+efdtIntDn x1 x2 y    -- Be careful about underflow!
+ | y > x2    = if y > x1 then [] else [x1]
+ | otherwise = -- Common case: x1 >= x2 >= y
+               let delta = x2 `minus` x1 -- <= 0
+                   y' = y `minus` delta  -- y <= y' <= x1; hence y' is representable
+
+                   -- Invariant: x >= y
+                   -- Note that: z >= y' => z + delta won't underflow
+                   -- so we are guaranteed not to underflow if/when w-e recurse
+                   go_dn x | x < y'   = [x]
+                           | otherwise = x : go_dn (x `plus` delta)
+               in x1 : go_dn x2
+
+-- End shameless theft
+----------------------------------------------------------------------
 
 
 instance Enum Char where
