@@ -1,6 +1,7 @@
-module Grin.FromE(compile) where
+module Grin.FromE(compile,disambiguateProgram) where
 
 import Char
+import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Trans
 import Data.Graph(stronglyConnComp, SCC(..))
@@ -50,6 +51,8 @@ import qualified FlagDump as FD
 import qualified Info.Info as Info
 import qualified Stats
 
+import E.Traverse
+import qualified Data.Traversable as T
 
 
 {- | Tags
@@ -164,7 +167,62 @@ toTypes node = toty . followAliases mempty where
 toTyTy (as,r) = tyTy { tySlots = as, tyReturn = r }
 
 
+-- Remove all disambiguity due to name shadowing.
+disambiguateProgram :: Program -> Program
+disambiguateProgram prog
+  = evalState (programMapBodies (fn Map.empty) prog) 1
+    where fn subst (ELam tvr e)
+             = do (old,new) <- rename tvr
+                  let newSubst = Map.insert old new subst
+                  liftM (ELam new) (fn newSubst e)
+          fn subst (EPi tvr e)
+              = do (old,new) <- rename tvr
+                   let newSubst = Map.insert old new subst
+                   liftM (EPi new) (fn newSubst e)
+          fn subst (ELetRec defs body)
+              = do nameSubst <- forM defs $ \(tvr,_) -> rename tvr
+                   let newSubst = Map.fromList nameSubst `Map.union` subst
+                   defs' <- forM defs $ \(tvr, e) -> fn newSubst e
+                   body' <- fn newSubst body
+                   return $ ELetRec (zip (map snd nameSubst) defs') body'
+          fn subst ec@(ECase e t bind alts def fv)
+              = do e' <- fn subst e
+                   (old,new) <- rename bind
+                   let subst' = Map.insert old new subst
+                   def' <- T.mapM (fn subst') def
+                   let alt (Alt lc@(LitCons{litArgs=args}) e)
+                          = do args' <- mapM rename args
+                               let newSubst = Map.fromList args' `Map.union` subst'
+                               e' <-fn newSubst e
+                               return $ Alt lc{litArgs = map snd args'} e'
+                       alt (Alt lit e) = do e' <- fn subst' e
+                                            return $ Alt lit e'
+                   alts' <-mapM alt alts
+                   return $ caseUpdate $ ECase e' t new alts' def' fv
+          fn subst (EVar tvr)
+              = case Map.lookup tvr subst of
+                  Nothing  -> return $ EVar tvr
+                  Just new -> return $ EVar new
+          fn subst (ELit (LitCons name args ty alias))
+              = do args' <- mapM (fn subst) args
+                   return $ ELit (LitCons name args' ty alias)
+          fn subst e = emapE (fn subst) e
+          genNewId :: State Int Id
+          genNewId = do s <- get
+                        put (s+1)
+                        return (anonymous s)
+          rename tvr | idIsNamed (tvrIdent tvr) = return (tvr,tvr)
+                     | otherwise = do new <- genNewId
+                                      return (tvr, tvr{tvrIdent = new})
+
+
+
+
+
 {-# NOINLINE compile #-}
+{-
+  
+-}
 compile :: Program -> IO Grin
 compile prog@Program { progDataTable = dataTable } = do
     let entries = progEntryPoints prog
