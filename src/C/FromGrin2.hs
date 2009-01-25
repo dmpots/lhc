@@ -74,8 +74,10 @@ newtype C a = C (RWST Env Written HcHash Uniq a)
 runC :: Grin -> C a -> (a,HcHash,Written)
 runC grin (C m) =  execUniq1 (runRWST m Env { rCPR = cpr, rGrin = grin, rDeclare = False, rTodo = TodoExp [], rEMap = mempty, rInscope = mempty } emptyHcHash) where
     TyEnv tmap = grinTypeEnv grin
-    cpr = iw `Set.union` Set.insert cChar (Set.fromList [ a | (a,TyTy { tySlots = [s], tySiblings = Just [a'] }) <- Map.assocs tmap, a == a', isJust (good s) ])
-    iw = if fopts FO.FullInt then Set.empty else Set.fromList [cInt, cWord]
+    -- This controls the use of unboxed but tagged representations of types via VALUE and GETVALUE
+    -- Int and Word used to be included when -ffull-int was not on, but we don't want that at this time
+    cpr = Set.insert cChar (Set.fromList [ a | (a,TyTy { tySlots = [s], tySiblings = Just [a'] }) 
+                                                 <- Map.assocs tmap, a == a', isJust (good s) ])
     good s = do
         ct <- Op.toCmmTy s
         b <- Op.cmmTyBits ct
