@@ -261,7 +261,10 @@ import Prelude as Error (error)
 --INTERESTING probably the second definition (or deleting all asserts)
 --             is better for some purposes...
 --import TestingDebug
-assert :: b -> c -> a -> a; assert _ _ a = a
+assert :: Show e => e -> Bool -> a -> a
+assert _   True  x = x
+assert err False _ = error (show err)
+--assert :: b -> c -> a -> a; assert _ _ a = a
 
 --WORKAROUND
 --true, but breaks nhc/yhc currently:
