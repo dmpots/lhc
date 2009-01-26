@@ -13,7 +13,7 @@ import E.FreeVars
 import {-# SOURCE #-} E.Show
 import E.Subst
 import Name.Id (isEmptyId)
-
+import Name.Names (tc_Arrow)
 
 eval :: E -> E
 eval term = eval' term []  where
