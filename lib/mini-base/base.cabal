@@ -9,7 +9,7 @@ Library
   Exposed-Modules:
                  Control.Exception
 --                 Control.Applicative
---                 Control.Arrow
+                 Control.Arrow
                  Control.Monad
                  Data.Array
                  Data.Char,

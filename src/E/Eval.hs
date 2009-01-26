@@ -23,6 +23,7 @@ eval term = eval' term []  where
     eval' (EPi v body) [] = check_eta $ EPi v (eval body)
     eval' e@Unknown [] = e
     eval' e@ESort {} [] = e
+    eval' (ELit LitCons { litName = n, litArgs = [a, b] }) [] | n == tc_Arrow = tFunc (eval a) (eval b)
     eval' (ELit lc@LitCons { litArgs = es }) [] = ELit lc { litArgs = map eval es }
     eval' e@ELit {} [] = e
 
@@ -77,6 +78,10 @@ strong dsMap' term = eval' dsMap term [] where
         check_eta $ EPi v' body'
     eval' ds e@Unknown [] = return e
     eval' ds e@ESort {} [] = return e
+    eval' ds (ELit LitCons { litName = n, litArgs = [a,b] }) [] | n == tc_Arrow = do
+        a' <- eval' ds a []
+        b' <- eval' ds b []
+        return (tFunc a' b')
     eval' ds (ELit lc@LitCons { litArgs = es, litType = t }) [] = do
         es' <- mapM (\e -> eval' ds e []) es
         t' <-  (eval' ds t [])
