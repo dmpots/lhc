@@ -178,7 +178,7 @@ last             :: [a] -> a
 last []          =  error "Prelude.last: empty list"
 last (x:xs)      = last' x xs where
     last' x []     = x
-    last' _ (y:ys) = last' y xs
+    last' _ (y:ys) = last' y ys
 
 
 init             :: [a] -> [a]
