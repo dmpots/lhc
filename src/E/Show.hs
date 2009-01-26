@@ -83,7 +83,7 @@ showLit showBind l = do
         f LitCons { litName = s, litArgs = es } | Just n <- fromUnboxedNameTuple s, n == length es = do
             es' <- mapM (fmap unparse . showBind) es
             return $ atom $ encloseSep (text "(# ") (text " #)") (text ", ") es'
-        -- Fully-applied tc_Arrows are not good, to make them easy to spot
+        -- Fully-applied tc_Arrows are not good, so make them red so that they are easy to spot
         f LitCons { litName = n, litArgs = [a,b] } | tc_Arrow == n  = do
             a' <- showBind a
             b' <- showBind b
