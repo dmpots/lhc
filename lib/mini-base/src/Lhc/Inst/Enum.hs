@@ -11,6 +11,49 @@ import Lhc.Types
 import Lhc.IO(error)
 import Lhc.Basics
 
+----------------------------------------------------------------------
+-- Shamelessly stolen from GHC.Enum
+
+efdt :: Integral i => i -> i -> i -> [i]
+-- [x1,x2..y]
+efdt x1 x2 y
+ | x2 >= x1  = efdtUp x1 x2 y
+ | otherwise = efdtDn x1 x2 y
+
+-- Requires x2 >= x1
+efdtUp :: Integral i => i -> i -> i -> [i]
+efdtUp x1 x2 y    -- Be careful about overflow!
+ | y < x2    = if y < x1 then [] else [x1]
+ | otherwise = -- Common case: x1 <= x2 <= y
+               let delta = x2 - x1 -- >= 0
+                   y' = y - delta  -- x1 <= y' <= y; hence y' is representable
+
+                   -- Invariant: x <= y
+                   -- Note that: z <= y' => z + delta won't overflow
+                   -- so we are guaranteed not to overflow if/when we recurse
+                   go_up x | x > y'   = [x]
+                           | otherwise = x : go_up (x + delta)
+               in x1 : go_up x2
+
+-- Requires x2 <= x1
+efdtDn :: Integral i => i -> i -> i -> [i]
+efdtDn x1 x2 y    -- Be careful about underflow!
+ | y > x2    = if y > x1 then [] else [x1]
+ | otherwise = -- Common case: x1 >= x2 >= y
+               let delta = x2 - x1 -- <= 0
+                   y' = y - delta  -- y <= y' <= x1; hence y' is representable
+
+                   -- Invariant: x >= y
+                   -- Note that: z >= y' => z + delta won't underflow
+                   -- so we are guaranteed not to underflow if/when w-e recurse
+                   go_dn x | x < y'   = [x]
+                           | otherwise = x : go_dn (x + delta)
+               in x1 : go_dn x2
+
+-- End shameless theft
+----------------------------------------------------------------------
+
+
 m4_define(ENUMINST,{{
 instance Enum $1 where
     toEnum = fromInt
@@ -24,14 +67,7 @@ instance Enum $1 where
     enumFromTo x y = f x where
         f x | x > y = []
             | otherwise = x:f (x + 1)
-    enumFromThenTo x y z | y >= x = inc `seq` z `seq` f x where
-        inc = y - x
-        f x | x <= z = x:f (x + inc)
-            | otherwise = []
-    enumFromThenTo x y z  = dec `seq` z `seq` f x where
-        dec = x - y
-        f x | x >= z = x:f (x - dec)
-            | otherwise = []
+    enumFromThenTo x1 x2 y = x1 `seq` x2 `seq` y `seq` efdt x1 x2 y
 
 foreign import primitive "increment" increment$1 :: $1 -> $1
 foreign import primitive "decrement" decrement$1 :: $1 -> $1
