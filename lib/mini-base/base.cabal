@@ -8,7 +8,7 @@ Library
   hs-source-dirs:  src
   Exposed-Modules:
                  Control.Exception
---                 Control.Applicative
+                 Control.Applicative
                  Control.Arrow
                  Control.Monad
                  Data.Array
