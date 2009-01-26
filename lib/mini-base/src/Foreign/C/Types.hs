@@ -23,7 +23,7 @@ import Lhc.Addr
 data CChar = CChar Bits8_
 data CSChar
 data CUChar
-data CShort
+data CShort = CShort BitsShort_
 data CUShort
 data CInt = CInt BitsInt_
 data CUInt
@@ -43,7 +43,7 @@ data CLDouble
 data CFile
 data CJmpBuf
 data CFpos
-data CWint
+data CWint = CWint Bits32_
 
 m4_include(Lhc/Inst/Num.m4)
 m4_include(Lhc/Order.m4)

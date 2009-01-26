@@ -171,8 +171,12 @@ tc_BitsPtr = toName TypeConstructor ("Lhc.Types","BitsPtr_")
 tc_BitsMax = toName TypeConstructor ("Lhc.Types","BitsMax_")
 {-# NOINLINE tc_BitsSize #-}
 tc_BitsSize = toName TypeConstructor ("Lhc.Types","BitsSize_t_")
+{-# NOINLINE tc_BitsShort #-}
+tc_BitsShort = toName TypeConstructor ("Lhc.Types","BitsShort_")
 {-# NOINLINE tc_BitsInt #-}
 tc_BitsInt = toName TypeConstructor ("Lhc.Types","BitsInt_")
+{-# NOINLINE tc_BitsLong #-}
+tc_BitsLong = toName TypeConstructor ("Lhc.Types","BitsLong_")
 {-# NOINLINE tc_Float32 #-}
 tc_Float32 = toName TypeConstructor ("Lhc.Types","Float32_")
 {-# NOINLINE tc_Float64 #-}
