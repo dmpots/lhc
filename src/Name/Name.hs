@@ -35,6 +35,9 @@ import GenUtil
 import FrontEnd.HsSyn
 
 import Data.Word
+import Data.ByteString (ByteString)
+
+import Debug.Trace
 
 data NameType =
     TypeConstructor
@@ -48,24 +51,42 @@ data NameType =
     deriving(Ord,Eq,Enum,Read,Show)
 
 
-data Name = Name Atom Word32
+data Name = Name { nameAtom   :: Atom
+                 , nameHash   :: Word32
+                 , nameType   :: NameType
+                 , nameModule :: Maybe String
+                 , nameIdent  :: String
+                 }
     deriving(Typeable) --,Eq,Binary,ToAtom,FromAtom)
 
+nameString :: Name -> ByteString
+nameString = fromAtom . nameAtom
+
 instance Binary Name where
-    put (Name atom _) = put atom
+    put = put . nameAtom
     get = fmap fromAtom get
 
 instance FromAtom Name where
-    fromAtom atom = Name atom (hash32 atom)
+    fromAtom atom = let (nt, mod, i) = genNameParts atom
+                        name = Name { nameAtom = atom
+                                    , nameHash = hash32 atom
+                                    , nameType = nt
+                                    , nameModule = mod
+                                    , nameIdent = i }
+                    in name
 instance ToAtom Name where
-    toAtom (Name atom _) = atom
+    toAtom = nameAtom
 
 instance Eq Name where
-    Name _ a == Name _ b = a == b
-    Name _ a /= Name _ b = a /= b
+    a == b = (nameHash a, nameAtom a) == (nameHash b, nameAtom b)
+    a /= b = (nameHash a, nameAtom a) /= (nameHash b, nameAtom b)
 
 instance Ord Name where
-   Name _ a `compare` Name _ b = a `compare` b
+   a `compare` b = case nameHash a `compare` nameHash b of
+                     EQ -> if nameAtom a == nameAtom b
+                           then EQ
+                           else nameString a `compare` nameString b
+                     other -> other
 
 isTypeNamespace TypeConstructor = True
 isTypeNamespace ClassName = True
@@ -160,19 +181,22 @@ parseName t name = toName t (intercalate "." ms, intercalate "." (ns ++ [last sn
     validMod _ = False
 
 
-nameType :: Name -> NameType
-nameType (Name a _) = toEnum $ fromIntegral ( a `unsafeByteIndex` 0)  - ord '1'
+genNameType :: Atom -> NameType
+genNameType a = toEnum $ fromIntegral ( a `unsafeByteIndex` 0) - ord '1'
 
 nameName :: Name -> HsName
-nameName (Name a _) = f $ tail (fromAtom a) where
-    f (';':xs) = UnQual $ HsIdent xs
-    f xs | (a,_:b) <- span (/= ';') xs  = Qual (Module a) (HsIdent b)
-    f _ = error $ "invalid Name: " ++ (show $ (fromAtom a :: String))
+nameName (Name _ _ _ (Just mod) i)
+    = Qual (Module mod) (HsIdent i)
+nameName (Name _ _ _ Nothing i)
+    = UnQual $ HsIdent i
 
-nameParts :: Name -> (NameType,Maybe String,String)
-nameParts n@(Name a _) = f $ tail (fromAtom a) where
-    f (';':xs) = (nameType n,Nothing,xs)
-    f xs = (nameType n,Just a,b) where
+nameParts :: Name -> (NameType, Maybe String, String)
+nameParts name = (nameType name, nameModule name, nameIdent name)
+
+genNameParts :: Atom -> (NameType,Maybe String,String)
+genNameParts n = f $ tail (fromAtom n) where
+    f (';':xs) = (genNameType n,Nothing,xs)
+    f xs = (genNameType n,Just a,b) where
         (a,_:b) = span (/= ';') xs
 
 instance Show Name where
