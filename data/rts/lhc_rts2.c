@@ -162,7 +162,6 @@ lhc_valid_lazy(sptr_t s)
                 if(ds->head == BLACK_HOLE) return 1;
                 assert(GETTAG(ds->head) == P_FUNC);
                 fptr_t dhead = (fptr_t)DETAG(ds->head);
-                assert(dhead >= &_start && dhead < &_end);
                 return 1;
         } else
                 return lhc_valid_whnf((wptr_t)ds->head);

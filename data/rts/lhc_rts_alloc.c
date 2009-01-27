@@ -7,8 +7,6 @@
 #define lhc_malloc_atomic_whnf lhc_malloc_atomic
 #define lhc_malloc_sanity(p,t) (1)
 
-extern void _start,_end;
-
 #if _LHC_PROFILE
 
 #define BUCKETS 7
