@@ -17,6 +17,7 @@ Extra-Source-Files:  src/arch/generic.arch, src/arch/i686.arch, src/arch/x86_64.
 extra-source-files:  lib/base/base.cabal,
                      lib/base/Setup.hs,
                      lib/base/src/Control/*.hs,
+                     lib/base/src/Control/Monad/*.hs,
                      lib/base/src/Data/Array/*.hs,
                      lib/base/src/Data/*.hs,
                      lib/base/src/Debug/*.hs,
@@ -24,8 +25,9 @@ extra-source-files:  lib/base/base.cabal,
                      lib/base/src/Foreign/Marshal/*.hs,
                      lib/base/src/Foreign/*.hs,
                      lib/base/src/Foreign/Storable.m4,
+                     lib/base/src/Lhc/*.hs
                      lib/base/src/Lhc/Inst/*.hs,
-                     lib/base/src/Lhc/*.hs,
+                     lib/base/src/Lhc/Inst/Num.m4
                      lib/base/src/Lhc/Order.m4,
                      lib/base/src/Lhc/Text/*.hs,
                      lib/base/src/Prelude/*.hs,
