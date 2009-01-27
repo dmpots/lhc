@@ -10,7 +10,10 @@ Library
                  Control.Exception
                  Control.Applicative
                  Control.Arrow
+                 Control.Category
                  Control.Monad
+                 Control.Monad.Fix
+                 Control.Monad.Instances
                  Data.Array
                  Data.Char,
                  Data.Complex
