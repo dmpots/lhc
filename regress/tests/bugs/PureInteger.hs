@@ -363,7 +363,7 @@ intLargeExponentOfTwo, intSmallExponentOfTwo :: PInt
 twicePlusOne :: DInt -> DInt
 {-plusOne n = succ n --succ n or 1+n
 minusOne n = pred n --pred n or n - 1 or (-1)+n
-twice n = n + n --two*n or n+n ...-}
+twice n = n + n --two*n or n+n ... -}
 twicePlusOne n = succ (n + n) --or plusOne (twice n)
 
 --INTERESTING
@@ -442,7 +442,7 @@ intBaseGuesses
     f nLarge nLargeExponentOfTwo nSmall nSmallExponentOfTwo =
      let
        twoNLarge = twicePlusOne nLarge; fourNLarge = twicePlusOne twoNLarge
-     in {-traces "f" traces nLarge traces twoNLarge P.$-}
+     in {-traces "f" traces nLarge traces twoNLarge P.$ -}
      if safeToDoublePlusOne twoNLarge && safeToDoublePlusOne fourNLarge
      then f  (fourNLarge)           (nLargeExponentOfTwo + (pNat(2)))
              (twicePlusOne nSmall)  (nSmallExponentOfTwo + (pNat(1)))
@@ -653,7 +653,7 @@ synergisticAddOnlyCarrySmall integer carry =
                   (carry_, d_) -> d_ !: synergisticAddOnlyCarrySmall ds carry_
 
 destructive
-  :: (DInt -> DInt -> DInt) -> {-base::-}DInt
+  :: (DInt -> DInt -> DInt) -> {-base:: -}DInt
   -> HInteger__{-base-}
   -> HInteger__{-base-} -> HInteger__{-base-}
 --destructive _ _ [] [] = [] --not needed, with non-strictness...
@@ -667,7 +667,7 @@ destructive op base integer1 integer2
 --to allow subtracting negatives just as well
 --Now with abs, should be easy addDestructive too. or destructive (+)...
 destructive_
-  :: (DInt -> DInt -> DInt) -> {-base::-}DInt
+  :: (DInt -> DInt -> DInt) -> {-base:: -}DInt
   -> DInt -> HInteger__{-base-}
   -> HInteger__{-base-} -> HInteger__{-base-}
 destructive_ (+- {-either (+) or (-)-} ) base sign = sub
@@ -710,7 +710,7 @@ destructiveAddProducingMixedSign ds@(_:_) [] = ds
 destructiveAddProducingMixedSign [] ds@(_:_) = ds
 destructiveAddProducingMixedSign [] [] = []
 --}
-destructiveAdd :: {-base::-}DInt -> HInteger__{-base-} -> HInteger__{-base-}
+destructiveAdd :: {-base:: -}DInt -> HInteger__{-base-} -> HInteger__{-base-}
                                        -> HInteger__{-base-}
 destructiveAdd base integer1 integer2 =
   case compareAbsInteger integer1 integer2 of
@@ -737,7 +737,7 @@ destructiveAdd base integer1 integer2 =
 --integer must have no most-significant zeroes (so we can find its sign)
 --and the most-significant digit (or being the null list)
 --is the ONLY sure indicator of its sign.
-makeSignConsistent :: {-base::-}DInt -> [DInt] -> HInteger__{-base-}
+makeSignConsistent :: {-base:: -}DInt -> [DInt] -> HInteger__{-base-}
 makeSignConsistent base integer = makeSign_ integer
   where
     --addBaseToFlipSign starts with a nonzero, and MAY produce zero
@@ -952,7 +952,7 @@ naiveMultiplyIntegerSmall_ (d1:[]) i2 = mulBySmall d1 i2
 
 
 naiveMultiplyIntegerSmall_ i1 i2 =
-  collapseMassiveOverflow ({-sees "overflows" P.$-} multiplyToOverflowing i1)
+  collapseMassiveOverflow ({-sees "overflows" P.$ -} multiplyToOverflowing i1)
   where
     --as long as neither argument is zero, there should be no empty lists
     --in this [Overflow] structure
@@ -969,7 +969,7 @@ naiveMultiplyIntegerSmall_ i1 i2 =
 --       []:overflows -> (dNat(0)) : collapseMassiveOverflow overflows
        (overflow@(_:_)) : overflows ->
           case quotRemByIntSmallBase (L.foldr1 (+) overflow) of
-            (high, low) -> {-traces high P.$-} low !:
+            (high, low) -> {-traces high P.$ -} low !:
               if isZero high then collapseMassiveOverflow overflows
               else case overflows of
                    (o:os) -> collapseMassiveOverflow ((high:o):os)
@@ -1034,7 +1034,7 @@ zipIntoHead xs1@(_:_) (xs2:xss2) = (xs1 L.++ xs2) : xss2
 
 --needs commenting/description:
 determineDigitAndOverflow :: Overflow -> {-[DInt]
-             ->-} {-DInt{-smallBase-} ->-} ({-DiffList-} Overflow, DInt)
+             -> -} {-DInt{-smallBase-} -> -} ({-DiffList-} Overflow, DInt)
   -- maxSe14 = 2^14 - 1   --(all symmetric for negatives)
   -- maxProduct = maxSe14 * maxSe14
   -- maxInt = 2^29 - 1  --potentially
@@ -1546,7 +1546,7 @@ num `quotRemSmallGulp` denom = let
           -- Remainder = moderateSizeNumerator - (quotient * denominator) :
           -- The remainder is certainly no greater than the numerator here,
           -- so it's safe to consider it a destructive add/subtraction
-          (_:_) ->-} destructiveAdd intSmallBase
+          (_:_) -> -} destructiveAdd intSmallBase
                        (num)
                        (quotient `multiplyIntegerSmall_` negateInteger denom)
    in (quotient,remainder)
@@ -1581,7 +1581,7 @@ subBorrow (0:x)    ( d : ds) = base - d - 1 !: borrow (x) ds --LT
       -- 1.9 and 0.1 are just NOT ALLOWED to happen
       -- (they would cause trouble, and are quite poor estimates)
 -}
-twoMinusSomethingNearOne :: {-base::-}DInt -> [DInt] -> [DInt]
+twoMinusSomethingNearOne :: {-base:: -}DInt -> [DInt] -> [DInt]
 twoMinusSomethingNearOne base = sub_2
  where
   sub_2, subBorrow_2 :: SmallBaseLEList -> SmallBaseLEList
