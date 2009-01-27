@@ -78,9 +78,10 @@ instance ToAtom Name where
     toAtom = nameAtom
 
 instance Eq Name where
-    a == b = (nameHash a, nameAtom a) == (nameHash b, nameAtom b)
-    a /= b = (nameHash a, nameAtom a) /= (nameHash b, nameAtom b)
+    a == b = nameAtom a == nameAtom b
+    a /= b = nameAtom a /= nameAtom b
 
+-- Comparing ByteString's is relatively slow. Try to avoid it.
 instance Ord Name where
    a `compare` b = case nameHash a `compare` nameHash b of
                      EQ -> if nameAtom a == nameAtom b
