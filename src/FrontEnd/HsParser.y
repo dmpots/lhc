@@ -496,10 +496,13 @@ constrs :: { [HsConDecl] }
       | constr                        { [$1] }
 
 constr :: { HsConDecl }
-      : srcloc mexists scontype               { HsConDecl { hsConDeclSrcLoc = $1, hsConDeclName = (fst $3), hsConDeclConArg = (snd $3), hsConDeclExists = $2 } }
-      | srcloc mexists sbtype conop sbtype    { HsConDecl { hsConDeclSrcLoc = $1, hsConDeclName = $4, hsConDeclConArg = [$3,$5], hsConDeclExists = $2 } }
+      : srcloc mexists scontype            { HsConDecl { hsConDeclSrcLoc = $1, hsConDeclName = (fst $3),
+                                                         hsConDeclConArg = (snd $3), hsConDeclExists = $2 } }
+      | srcloc mexists sbtype conop sbtype { HsConDecl { hsConDeclSrcLoc = $1, hsConDeclName = $4,
+                                                         hsConDeclConArg = [$3,$5], hsConDeclExists = $2 } }
       | srcloc mexists con '{' fielddecls '}'
-                                      { HsRecDecl { hsConDeclSrcLoc = $1, hsConDeclName = $3, hsConDeclRecArg = (reverse $5), hsConDeclExists = $2 } }
+                                           { HsRecDecl { hsConDeclSrcLoc = $1, hsConDeclName = $3,
+                                                         hsConDeclRecArg = (reverse $5), hsConDeclExists = $2 } }
 
 mexists :: { [HsTyVarBind] }
         : 'exists' tbinds '.'         { $2 }
