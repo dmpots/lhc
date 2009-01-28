@@ -7,6 +7,7 @@ import Lhc.Order
 import Lhc.Types
 import Data.Int
 import Lhc.Prim
+import Lhc.Basics
 
 infixl 8 `shift`, `rotate`, `shiftL`, `shiftR`, `rotateL`, `rotateR`
 infixl 7 .&.
@@ -155,8 +156,24 @@ foreign import primitive "Or" or$1 :: $2 -> $2 -> $2
 foreign import primitive "Xor" xor$1 :: $2 -> $2 -> $2
 foreign import primitive "Com" complement$1 :: $2 -> $2
 foreign import primitive "Shl" shiftL$1 :: $2 -> Bits32_ -> $2
-foreign import primitive "Shra" shiftR$1 :: $2 -> Bits32_ -> $2
+m4_ifelse(`$3',`S',foreign import primitive "Shra" shiftR$1 :: $2 -> Bits32_ -> $2,
+                   foreign import primitive "Shr" shiftR$1 :: $2 -> Bits32_ -> $2)
+                                                        
 
 }})
 
-INST_BITS(Int,Bits32_)
+INST_BITS(Int,Bits32_,S)
+INST_BITS(Int8,Bits8_,S)
+INST_BITS(Int16,Bits16_,S)
+INST_BITS(Int32,Bits32_,S)
+INST_BITS(Int64,Bits64_,S)
+INST_BITS(IntPtr,BitsPtr_,S)
+INST_BITS(Integer,BitsMax_,S)
+
+INST_BITS(Word,Bits32_)
+INST_BITS(Word8,Bits8_)
+INST_BITS(Word16,Bits16_)
+INST_BITS(Word32,Bits32_)
+INST_BITS(Word64,Bits64_)
+INST_BITS(WordPtr,BitsPtr_)
+INST_BITS(WordMax,BitsMax_)
