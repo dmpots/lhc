@@ -1,4 +1,4 @@
-{-# OPTIONS_LHC -N #-}
+{-# OPTIONS_LHC -N -fm4 #-}
 module Data.Ix ( Ix(range, index, inRange, rangeSize) ) where
 
 import Lhc.Int
@@ -7,6 +7,8 @@ import Lhc.Order
 import Lhc.Basics
 import Lhc.Num
 import Lhc.IO
+import Data.Int
+import Data.Word
 
 class  Ord a => Ix a  where
     range     :: (a,a) -> [a]
@@ -67,3 +69,43 @@ instance  Ix Ordering  where
 -- instance Ix Bool                  -- as derived
 -- instance Ix Ordering              -- as derived
 -- instance Ix ()                    -- as derived
+
+
+--------------------------------------------------
+-- Instances for Integral types 
+--   (Do these really belong here?)
+
+-- FIXME: What about overflow?
+
+iRange   :: Integral n => (n,n) -> [n]
+iRange (n,m) = [n..m]
+
+iIndex   :: Integral n => (n,n) -> n -> Int
+iIndex b@(n,m) i 
+    | iInRange b i  =  fromIntegral (i - m)
+    | otherwise     =  error "Ix.index: Index out of range."
+
+iInRange :: Integral n => (n,n) -> n -> Bool
+iInRange (n,m) i = n <= i && i <= m
+
+m4_define(IXINST,{{
+instance Ix $1 where
+    range   b   = iRange   b
+    index   b i = iIndex   b i
+    inRange b i = iInRange b i
+}})
+
+IXINST(Int8)
+IXINST(Int16)
+IXINST(Int32)
+IXINST(Int64)
+IXINST(IntPtr)
+IXINST(Integer)
+
+IXINST(Word)
+IXINST(Word8)
+IXINST(Word16)
+IXINST(Word32)
+IXINST(Word64)
+IXINST(WordMax)
+IXINST(WordPtr)
