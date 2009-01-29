@@ -81,6 +81,7 @@ readFile fn = do
 foreign import ccall "stdio.h fopen" c_fopen :: CString -> CString -> IO (Ptr ())
 foreign import ccall "stdio.h fclose" c_fclose :: Ptr () -> IO CInt
 foreign import ccall "wchar.h lhc_utf8_getc" c_fgetwc :: Ptr () -> IO Int
+foreign import ccall "wchar.h lhc_utf8_putc" c_fputwc :: Int -> Ptr () -> IO ()
 
 -- | The 'interact' function takes a function of type @String->String@
 -- as its argument.  The entire input from the standard input device is
@@ -101,8 +102,12 @@ interact f  =  do hSetBuffering stdin  NoBuffering
 -}
 
 
-writeFile  :: FilePath -> String -> IO ()
-writeFile  =  error "writeFile"
+writeFile      :: FilePath -> String -> IO ()
+writeFile fn s = do
+    file <- withCString fn $ \fnc -> c_fopen fnc (ptrFromAddr__ "w"#)
+    if  (file == nullPtr) then (fail "Could not open file.") else do
+        let pc c = c_fputwc (ord c) file -- FIXME: EOF? what's that?
+        mapM_ pc s
 
 appendFile :: FilePath -> String -> IO ()
 appendFile =  error "appendFile"
