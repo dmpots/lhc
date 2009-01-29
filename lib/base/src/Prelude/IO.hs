@@ -30,6 +30,7 @@ import Lhc.Monad
 import Lhc.Order
 import Lhc.Show
 import Prelude.IOError
+import System.IO
 
 
 -- IO operations exported by the prelude
@@ -102,12 +103,8 @@ interact f  =  do hSetBuffering stdin  NoBuffering
 -}
 
 
-writeFile      :: FilePath -> String -> IO ()
-writeFile fn s = do
-    file <- withCString fn $ \fnc -> c_fopen fnc (ptrFromAddr__ "w"#)
-    if  (file == nullPtr) then (fail "Could not open file.") else do
-        let pc c = c_fputwc (ord c) file -- FIXME: EOF? what's that?
-        mapM_ pc s
+writeFile  :: FilePath -> String -> IO ()
+writeFile f txt = withFile f WriteMode (\hdl -> hPutStr hdl txt)
 
 appendFile :: FilePath -> String -> IO ()
 appendFile =  error "appendFile"
