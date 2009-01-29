@@ -92,5 +92,4 @@ main = do
 	scene = create level (V 0 (-1) 4) 1  
 	scale x = 0.5 + 255 * x / (ss*ss)
 	picture = [ toEnum $ truncate $ scale $ pixel_vals n scene y x | y <- [n-1,n-2..0], x <- [0..n-1]]
-    writeFile "test.png" $ "P5\n" ++ show ni ++ " " ++ show ni ++ "\n255\n" ++ picture
-    putStrLn "Done"
+    putStrLn $ "P5\n" ++ show ni ++ " " ++ show ni ++ "\n255\n" ++ picture
