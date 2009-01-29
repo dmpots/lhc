@@ -1,7 +1,10 @@
 define detag
-    print (void *)((uintptr_t)$arg0 & ~0x3)
+    printf "de-tagged value: %p\n", (void *)((uintptr_t)$arg0 & ~0x3)
 end
 
+define gettag
+    printf "tag of value: %p\n", (void *)((uintptr_t)$arg0 & 0x3)
+end
 
 define pnode
         if ((uintptr_t)$arg0 & 1)
