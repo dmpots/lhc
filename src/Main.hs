@@ -44,7 +44,8 @@ import FrontEnd.KindInfer(getConstructorKinds)
 import GenUtil hiding(replicateM,putErrLn,putErr,putErrDie)
 import Grin.DeadCode
 import Grin.Devolve(twiddleGrin,devolveTransform)
-import Grin.EvalInline(createEvalApply)
+import Grin.EvalInline(createEvalApply,inlineEvalApply)
+import Grin.PointsTo
 import Grin.FromE
 import Grin.Grin
 import Grin.Lint
@@ -68,6 +69,7 @@ import Util.Graph
 import Util.SetLike as S
 import LHCVersion
 import qualified C.FromGrin2 as FG2
+import qualified C.FromGrin3 as FG3
 import qualified E.CPR
 import qualified E.Demand as Demand(analyzeProgram)
 import qualified E.SSimplify as SS
@@ -659,8 +661,9 @@ compileModEnv cho = do
 -- | this gets rid of all type variables, replacing them with boxes that can hold any type
 -- the program is still type-safe, but all polymorphism has been removed in favor of
 -- implicit coercion to a universal type.
--- 
+--
 -- also, all rules are deleted.
+
 boxifyProgram :: Monad m => Program -> m Program
 boxifyProgram prog = ans where
     ans = do programMapDs f (progCombinators_u (map $ combRules_s []) prog)
@@ -753,9 +756,13 @@ compileToGrin prog = do
     wdump FD.OptimizationStats $ Stats.print "Optimization" stats
 
     wdump FD.GrinPreeval $ dumpGrin "preeval" x
-    x <- nodeAnalyze x
+    x <- if fopts FO.InlineEval
+         then return x
+         else nodeAnalyze x     -- This simple flow analysis is not needed with FO.InlineEval.
     lintCheckGrin x
-    x <- createEvalApply x
+    x <- if fopts FO.InlineEval
+         then inlineEvalApply x -- replace eval/apply with case expressions
+         else createEvalApply x -- Create eval/apply indirections
     lintCheckGrin x
     wdump FD.GrinPosteval $ dumpGrin "posteval" x
     x <- evaluate $ Grin.SSimplify.simplify x
@@ -768,6 +775,7 @@ compileToGrin prog = do
     dumpFinalGrin x
     -- don't generate C if we only ask for Ho and Grin files
     compileGrinToC x
+
 
 dumpFinalGrin grin = do
     wdump FD.GrinGraph $ do
@@ -782,7 +790,9 @@ dumpFinalGrin grin = do
 compileGrinToC grin | optMode options `elem` [GenerateExe
                                              ,GenerateC
                                              ,KeepTmpFiles] = do
-    let (cg,rls) = FG2.compileGrin grin
+    let (cg,rls) = if fopts FO.InlineEval
+                   then FG3.compileGrin grin -- Compile without indirections
+                   else FG2.compileGrin grin -- Compile with indirections
     let fn = optOutName options
     let cf = (fn ++ "_code.c")
     progress ("Writing " ++ show cf)

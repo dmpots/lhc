@@ -1,4 +1,6 @@
-module Grin.EvalInline(createEvalApply) where
+module Grin.EvalInline
+  (createEvalApply
+  ,inlineEvalApply) where
 
 
 import Control.Monad.Identity
@@ -15,6 +17,8 @@ import Support.FreeVars(freeVars)
 import Support.CanType(getType)
 import Util.Once
 import Util.UniqueMonad()
+
+import Grin.PointsTo
 
 {-
 data UpdateType =
@@ -162,6 +166,19 @@ createEvalApply grin = do
     return $ setGrinFunctions (apps ++ funcs) grin { grinTypeEnv = TyEnv (tyEnv `Map.union` appTyEnv) }
 
 
-
-
+inlineEvalApply :: Grin -> IO Grin
+inlineEvalApply grin
+  = do pointsTo <- pointsTo grin
+       let fs = flip map (grinFuncs grin) $ \(name, def) ->
+               (name, f def)
+           f (ls :-> exp) = ls :-> g exp
+           g (App fn [Var v vty] ty) | fn == funcEval
+             = Fetch (Var v vty) :>>= [Var (V 2) TyNode] :-> Case (Var (V 2) TyNode)
+                 (varToCaseStmts pointsTo grin v)
+           g (App fn [v1@(Var v _)] ty) | fn == funcApply
+             = Case v1 (genApplyStmts pointsTo grin v (Var (V 0) TyUnit) ty)
+           g (App fn [v1@(Var v _), v2] ty) | fn == funcApply
+             = Case v1 (genApplyStmts pointsTo grin v v2 ty)
+           g x = runIdentity (mapExpExp (return . g) x)
+       return (setGrinFunctions fs grin)
 

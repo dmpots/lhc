@@ -13,6 +13,7 @@ ffi support foreign function declarations
 cpp pass haskell source through c preprocessor
 m4 pass haskell source through m4 preprocessor
 unsafe disable runtime assertions
+inline-eval replace calls to eval/apply with case expressions
 
 !Typechecking
 monomorphism-restriction enforce monomorphism restriction
