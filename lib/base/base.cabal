@@ -29,6 +29,7 @@ Library
                  Data.Ratio,
                  Data.Unicode
                  Data.Function
+                 Data.Typeable
                  Debug.Trace
                  Foreign
                  Foreign.C
@@ -74,6 +75,9 @@ Library
                  System
                  Text.Show.Functions
                  Text.Printf
+
+  include-dirs: include
+  install-includes: Typeable.h
 
   if !impl(lhc)
     buildable:     False
