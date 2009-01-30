@@ -720,12 +720,12 @@ deconstructionExpression dataTable name typ@(ELit LitCons { litName = pn, litArg
                             return $ tVr (anonymous $ 2*s) t
                     as <- mapM g es
                     f vs ss (reverse as ++ rs) ((v,ELit litCons { litName = n,
-                                                                  litArgs = map EVar as,
-                                                                  litType = e }):ls)
+                                                                  litArgs = map (sub . EVar) as,
+                                                                  litType = sub e }):ls)
                 f [] [] rs ls = return $ Alt (litCons { litName = name,
                                                         litArgs = map (tvrType_u sub) $ reverse rs,
                                                         litType = typ })
-                                             (sub $ eLetRec ls e)
+                                             (eLetRec ls e)
                 f _ _ _ _ = error "DataConstructors.deconstructuonExpression.f"
             f vs (conOrigSlots mc) [] []
 deconstructionExpression wdt n ty vs e | Just fa <- followAlias wdt ty  = deconstructionExpression wdt n fa vs e
