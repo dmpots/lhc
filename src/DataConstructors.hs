@@ -594,6 +594,7 @@ toDataTable km cm ds currentDataTable = newDataTable  where
         tell (Seq.fromList dataCons)
         tell $ Seq.singleton theType { conChildren = DataNormal (map conName dataCons) }
 
+    -- FIXME: comment this code!
     makeData alias (theType,theTypeArgs,theTypeExpr) x = theData where
         theData = emptyConstructor {
             conName = dataConsName,
@@ -616,10 +617,13 @@ toDataTable km cm ds currentDataTable = newDataTable  where
 
         -- substitution is only about substituting type variables
         (ELit LitCons { litArgs = thisTypeArgs }, origArgs) = fromPi $ runVarName $ do
-            let (vs,ty) = case Map.lookup dataConsName cm of Just (TForAll vs (_ :=> ty)) -> (vs,ty); ~(Just ty) -> ([],ty)
+            let (vs,ty) = case Map.lookup dataConsName cm of
+                            Just (TForAll vs (_ :=> ty)) -> (vs,ty)
+                            Just ty                      -> ([],ty)
             mapM_ (newName (map anonymous [2,4..]) ()) vs
             tipe' ty
-        subst = substMap $ fromList [ (tvrIdent tv ,EVar $ tv { tvrIdent = anonymous p }) | EVar tv <- thisTypeArgs | p <- [2,4..] ]
+        subst = substMap $ fromList [ (tvrIdent tv ,EVar $ tv { tvrIdent = anonymous p })
+                                      | EVar tv <- thisTypeArgs | p <- [2,4..] ]
 
         origSlots = map SlotExistential existentials ++ map f tslots where
             f (Left (e,_)) = SlotNormal (getType e)
@@ -704,18 +708,24 @@ deconstructionExpression ::
 deconstructionExpression dataTable name typ@(ELit LitCons { litName = pn, litArgs = xs }) vs  e | pn == conName pc = ans where
     Just mc = getConstructor name dataTable
     Just pc = getConstructor (conInhabits mc) dataTable
+    sub = substMap $ fromDistinctAscList [ (anonymous i,sl) | sl <- xs | i <- [2,4..] ]
     ans = case conVirtual mc of
         Just _ -> return $ let ELit LitCons {  litArgs = [ELit (LitInt n t)] } = conExpr mc in Alt (LitInt n t) e
         Nothing -> do
-            let f vs (SlotExistential t:ss) rs ls = f vs ss (t:rs) ls
-                f (v:vs) (SlotNormal e:ss) rs ls = f vs ss (v:rs) ls
+            let f  vs    (SlotExistential t  :ss) rs ls = f vs ss (t:rs) ls
+                f (v:vs) (SlotNormal e       :ss) rs ls = f vs ss (v:rs) ls
                 f (v:vs) (SlotUnpacked e n es:ss) rs ls = do
                     let g t = do
                             s <- newUniq
                             return $ tVr (anonymous $ 2*s) t
                     as <- mapM g es
-                    f vs ss (reverse as ++ rs) ((v,ELit litCons { litName = n, litArgs = map EVar as, litType = e }):ls)
-                f [] [] rs ls = return $ Alt (litCons { litName = name, litArgs = reverse rs, litType = typ }) (eLetRec ls e)
+                    f vs ss (reverse as ++ rs) ((v,ELit litCons { litName = n,
+                                                                  litArgs = map EVar as,
+                                                                  litType = e }):ls)
+                f [] [] rs ls = return $ Alt (litCons { litName = name,
+                                                        litArgs = map (tvrType_u sub) $ reverse rs,
+                                                        litType = typ })
+                                             (sub $ eLetRec ls e)
                 f _ _ _ _ = error "DataConstructors.deconstructuonExpression.f"
             f vs (conOrigSlots mc) [] []
 deconstructionExpression wdt n ty vs e | Just fa <- followAlias wdt ty  = deconstructionExpression wdt n fa vs e
