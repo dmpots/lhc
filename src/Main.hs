@@ -540,7 +540,7 @@ compileModEnv cho = do
         targetIndex = 0
     prog <- return $ runIdentity $ flip programMapDs prog $ \(t,e) -> return $ if tvrIdent t == toId v_target then (t { tvrInfo = setProperty prop_INLINE mempty },theTarget) else (t,e)
 
-    wdump FD.Core $ (progress "Before typeAnalyze:" >> printProgram prog)
+    -- wdump FD.Core $ (progress "Before typeAnalyze:" >> printProgram prog)
     prog <- if (fopts FO.TypeAnalysis) then do typeAnalyze False prog else return prog
     when (verbose) $ do putStrLn "Type analyzed methods"
                         flip mapM_ (programDs prog) $ \ (t,e) -> do
