@@ -106,7 +106,6 @@ pointsTo grin
        let (_,eqs, _n) = unGenEnv (loop (grinFuncs grin)) funcArgs Map.empty 0
        putStrLn "Raw"
        showEnv eqs
-       mapM_ print (Map.toList (mkRDepGraph eqs))
        let eqs' = solve eqs
        putStrLn "Solved"
        showEnv eqs'
@@ -236,19 +235,13 @@ inspect = [] -- [ Equation (V n) | n <- [906,101960,1151883282,101824,2678383972
 
 solve :: Equations -> Equations
 solve eqs
-    = let rdeps = mkRDepGraph eqs
-          iterate [] = return ()
+    = let iterate [] = return ()
           iterate (var:xs)
               = do orig    <- lookupEq var
                    reduced <- reduceEqs (eqs ! var)
                    let new = eqUnion orig reduced
-                   when (var `elem` inspect) $ trace ("Value: " ++ show (var,orig,new)) (return ())
-                   when (new /= orig) $ updateEq var new
-                   let reverse_deps = Map.findWithDefault Set.empty var rdeps
-                   if new /= orig
-                      then -- (if var `elem` inspect then trace ("Updated: " ++ show (var,reverse_deps) ) else id)
-                           iterate xs
-                      else iterate xs
+                   updateEq var new
+                   iterate xs
           loop prev = case runSimplify (iterate (Map.keys eqs)) prev of
                         (_, absEqs) -> if prev == absEqs then absEqs
                                          else loop absEqs
@@ -286,26 +279,6 @@ reduceEq (Apply a b)
                                   Nothing       -> error "Apply to data constructor"
          liftM eqUnions $ mapM f vals
 reduceEq e =  error $ "Unhandled input: " ++ show e
-
--- Associate each EqPointer with all EqPointers that depend on it.
-mkRDepGraph :: Equations -> Map.Map EqPointer (Set.Set EqPointer)
-mkRDepGraph eqs
-    = Map.fromListWith Set.union $
-      flip concatMap (Map.toList eqs) $ \(eqPtr, values) ->
-        [ (dep, Set.singleton eqPtr) | dep <- getDependencies values ]
-
-getDependencies :: [Equation] -> [EqPointer]
-getDependencies [] = []
-getDependencies (e:es)
-    = case e of
-        Base           -> []
-        Extract es _ _ -> getDependencies es
-        Eval var       -> [Equation var]
-        Apply a b      -> [Equation a, Equation b]
-        Heap hp        -> [HeapPointer hp]
-        Ident var      -> [Equation var]
-        Tag _ ess      -> concatMap getDependencies ess
-      ++ getDependencies es
 
 lookupEq :: EqPointer -> Simplify [Equation]
 lookupEq v
