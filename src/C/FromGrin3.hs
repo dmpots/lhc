@@ -553,7 +553,8 @@ convertExp e = return (err (show e),err "nothing")
 ccaf :: (Var,Val) -> P.Doc
 ccaf (v,val) = text "/* " <> text (show v) <> text " = " <> (text $ show (pprint val :: P.Doc)) <> text "*/\n" <>
      text "static node_t _" <> tshow (varName v) <> text ";\n" <>
-     text "#define " <> tshow (varName v) <+>  text "(EVALTAGC(&_" <> tshow (varName v) <> text "))\n";
+--     text "#define " <> tshow (varName v) <+>  text "(EVALTAGC(&_" <> tshow (varName v) <> text "))\n";
+     text "#define " <> tshow (varName v) <+>  text "((&_" <> tshow (varName v) <> text "))\n";
 
 
 buildConstants grin fh = P.vcat (map cc (Grin.HashConst.toList fh)) where

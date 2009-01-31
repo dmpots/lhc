@@ -25,6 +25,7 @@ import Debug.Trace
 data Equation = Extract [Equation] Tag Int
               | Eval Var
               | Apply Var Var
+              | PartialApply Var Var
               | Ident Var
               | Base
               | Heap HeapPointer
@@ -126,11 +127,11 @@ setupEnv (Store val)
 setupEnv (App func [Var arg _] _) | func == funcEval
   = do return [Eval arg]
 setupEnv (App func [Var arg1 _, Var arg2 _] _) | func == funcApply
-  = do applications =: [Apply arg1 arg2]
+  = do applications =: [PartialApply arg1 arg2]
        return [Apply arg1 arg2]
 setupEnv (App func [Var arg1 _] _) | func == funcApply
   = do let arg2 = V 0
-       applications =: [Apply arg1 arg2]
+       applications =: [PartialApply arg1 arg2]
        return [Apply arg1 arg2]
 setupEnv (App func args _)
   = do funcArgs <- lookupFuncArgs func
@@ -269,6 +270,9 @@ reduceEq (Eval i)
                                    then reduceEq (Ident (atomToVar (tagFlipFunction tag) "_result"))
                                    else return [Tag tag args]
              f (Heap hp) = lookupEq (HeapPointer hp)
+             -- FIXME: It should be impossible to encounter a 'Base' here.
+             f Base = return []
+             f t = error $ "reduceEq: eval: " ++ show (t,i,vals)
          liftM eqUnions $ mapM f vals
 reduceEq (Apply a b)
     = do vals <- lookupEq (Equation a)
@@ -277,6 +281,15 @@ reduceEq (Apply a b)
                                   Just (1,func) -> reduceEq (Ident (atomToVar func "_result"))
                                   Just (n,func) -> return [Tag (partialTag func (n-1)) (args ++ [[Ident b]])]
                                   Nothing       -> error "Apply to data constructor"
+             f t = error $ "reduceEq: apply: " ++ show t
+         liftM eqUnions $ mapM f vals
+reduceEq (PartialApply a b)
+    = do vals <- lookupEq (Equation a)
+         let f (Tag tag args) = case tagUnfunction tag of
+                                  Just (0,func) -> error $ "Apply to fully applied function. " ++ show (a,b,vals)
+                                  Just (n,func) -> return [Tag (partialTag func (n-1)) (args ++ [[Ident b]])]
+                                  Nothing       -> error "Apply to data constructor"
+             f t = error $ "reduceEq: apply: " ++ show t
          liftM eqUnions $ mapM f vals
 reduceEq e =  error $ "Unhandled input: " ++ show e
 
