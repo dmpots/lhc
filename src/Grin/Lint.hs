@@ -6,7 +6,7 @@ module Grin.Lint(
     dumpGrin
     ) where
 
-import Control.Exception
+import Control.Exception.Extensible as Ex
 import Control.Monad.Reader
 import Data.Monoid
 import System.IO
@@ -73,15 +73,11 @@ transformGrin tp prog = do
         putErrLn $ "\n>>> Before " ++ name
         dumpGrin ("lint-before-" ++ name) prog
         putErrLn $ "\n>>>"
-#if BASE4
         putErrLn (show (e::SomeException))
-#else
-        putErrLn (show e)
-#endif
         maybeDie
         return prog
     let istat = grinStats prog
-    prog' <- Control.Exception.catch (transformOperation tp prog { grinStats = mempty } >>= Control.Exception.evaluate ) ferr
+    prog' <- Ex.catch (transformOperation tp prog { grinStats = mempty } >>= Ex.evaluate ) ferr
     let estat = grinStats prog'
     let onerr grin' = do
             putErrLn $ "\n>>> Before " ++ name

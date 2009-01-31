@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Main(main) where
 
-import Control.Exception
+import Control.Exception.Extensible as Ex
 import qualified Prelude as P (catch)
 import Control.Monad.Identity
 import Control.Monad.Writer
@@ -83,16 +83,9 @@ import qualified System.IO as IO
 import System.FilePath (takeExtension)
 import System.Directory (removeFile)
 
-#if BASE4
-runMain action = Control.Exception.catches (action >> return ())
+runMain action = Ex.catches (action >> return ())
                    [ Handler $ \ (e::Exit.ExitCode) -> throw e
                    , Handler $ \ (e::SomeException) -> putErrDie $ show e ]
-#else
-runMain action = Control.Exception.catch (action >> return ()) $ \e ->
-                   case e of
-                     ExitException c -> throw (ExitException c)
-                     other -> putErrDie $ show e
-#endif
 
 progress str = wdump FD.Progress $  (putErrLn str) >> hFlush stderr
 progressM c  = wdump FD.Progress $ (c >>= putErrLn) >> hFlush stderr
@@ -893,14 +886,10 @@ transformProgram tp prog = liftIO $ do
         putErrLn $ "\n>>> Before " ++ name
         printProgram prog
         putErrLn $ "\n>>>"
-#if BASE4
         putErrLn (show (e::SomeException))
-#else
-        putErrLn (show e)
-#endif
         maybeDie
         return prog
-    prog' <- Control.Exception.catch (transformOperation tp prog { progStats = mempty }) ferr
+    prog' <- Ex.catch (transformOperation tp prog { progStats = mempty }) ferr
     let estat = progStats prog'
         onerr = do
             putErrLn $ "\n>>> Before " ++ name

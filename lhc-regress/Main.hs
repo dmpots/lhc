@@ -11,10 +11,9 @@ import System.IO
 import System.Exit
 import System.Directory
 import Control.Monad
-import Control.Exception
+import Control.Exception.Extensible
 import System.Timeout
 import Control.Concurrent
-import Control.Exception
 import Text.Printf
 import qualified Data.ByteString.Char8 as B
 
@@ -154,11 +153,7 @@ execProcess :: FilePath -> [String] -> B.ByteString -> IO (ExitCode, B.ByteStrin
 execProcess cmd args input = do
   (inh, outh, errh, pid) <- runInteractiveProcess cmd args Nothing Nothing
   handle (\e -> do terminateProcess pid
-#if BASE4
                    throw (e::SomeException)) $ do
-#else
-                   throw e) $ do
-#endif
   outVar <- newEmptyMVar
   forkIO $ B.hGetContents outh >>= putMVar outVar
   errVar <- newEmptyMVar
