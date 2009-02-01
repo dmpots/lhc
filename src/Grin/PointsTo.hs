@@ -129,6 +129,7 @@ setupEnv (App func [Var arg _] _) | func == funcEval
 setupEnv (App func [Var arg1 _, Var arg2 _] _) | func == funcApply
   = do applications =: [PartialApply arg1 arg2]
        return [Apply arg1 arg2]
+-- Handle special case for IO functions.
 setupEnv (App func [Var arg1 _] _) | func == funcApply
   = do let arg2 = V 0
        applications =: [PartialApply arg1 arg2]
@@ -149,7 +150,7 @@ setupEnv (Case val alts)
                                 setupEnv alt
            Lit{}          -> setupEnv alt
            Var v ty       -> setupEnv alt
-           _              -> error $ "Case: " ++ show l
+           _              -> error $ "setupEnv: Invalid case: " ++ show l
        return $ eqUnions rets
 setupEnv (Return vals)
   = do prims <- mapM processVal vals
@@ -166,12 +167,9 @@ setupEnv (exp :>>= binds :-> rest)
            NodeC tag args -> forM_ (zip args [0..]) $ \(Var arg _,n) ->
                               arg =: [Extract b tag n]
        setupEnv rest
-setupEnv (exp :>>= [] :-> rest)
-  = do setupEnv exp
-       setupEnv rest
 setupEnv Error{} = return []
 setupEnv (Fetch val) = processVal val
-setupEnv body = error (show body) -- return (Set [NotDone])
+setupEnv body = error $ "setupEnv: Unhandled case: " ++ show body
 
 processVal (NodeC tag args) = do args' <- mapM processVal args
                                  funcArgs <- lookupFuncArgs (tagFlipFunction tag)
