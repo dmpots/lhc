@@ -50,13 +50,13 @@ newtype HoIDeps = HoIDeps {
     }
 
 data HoHeader = HoHeader {
-    -- * my sha1 id
+    -- | my sha1 id
     hohHash       :: HoHash,
-    -- * Haskell Source files depended on
+    -- | Haskell Source files depended on
     hohDepends    :: [(Module,Maybe SourceHash)],
-    -- * Other objects depended on to be considered up to date.
+    -- | Other objects depended on to be considered up to date.
     hohModDepends :: [HoHash],
-    -- * metainformation, filled for hl-files, empty for normal objects.
+    -- | metainformation, filled for hl-files, empty for normal objects.
     hohMetaInfo   :: [(String,PackedString)]
     }
 

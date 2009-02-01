@@ -135,7 +135,7 @@ localEnv te act = do
      else local (tcCurrentEnv_u (Map.fromList te' `Map.union`)) act
 
 -- | add to the collected environment which will be used to annotate uses of variables with their instantiated types.
--- should contain @-aliases for each use of a polymorphic variable or pattern match.
+-- should contain \@-aliases for each use of a polymorphic variable or pattern match.
 
 addToCollectedEnv :: TypeEnv -> Tc ()
 addToCollectedEnv te = do

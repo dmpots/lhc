@@ -3,7 +3,7 @@
 -- |
 -- Module      :  Data.IntBag
 -- Copyright   :  (c) Daan Leijen 2002
--- Copyright   :  (c) John Meacham 2007
+--                (c) John Meacham 2007
 -- License     :  BSD-style
 -- Maintainer  :  libraries@haskell.org
 -- Stability   :  provisional
@@ -12,7 +12,7 @@
 -- An efficient implementation of maps from integer keys to integers.
 --
 -- modified from Data.IntMap
---
+-------------------------------------------------------------------------------
 
 module Util.IntBag  (
             -- * Map type
@@ -428,7 +428,7 @@ union t (Tip k x) = insert k x t
 union Nil t       = t
 union t Nil       = t
 
--- | /O(n+m)/. The union with a combining function.
+---- | /O(n+m)/. The union with a combining function.
 --unionWith :: (a -> a -> a) -> IntMap a -> IntMap a -> IntMap a
 --unionWith f m1 m2
 --  = unionWithKey (\k x y -> f x y) m1 m2
@@ -457,7 +457,7 @@ union t Nil       = t
 {--------------------------------------------------------------------
   Difference
 --------------------------------------------------------------------}
--- | /O(n+m)/. Difference between two maps (based on keys).
+---- | /O(n+m)/. Difference between two maps (based on keys).
 --difference :: IntMap a -> IntMap b -> IntMap a
 --difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
 --  | shorter m1 m2  = difference1
@@ -582,7 +582,7 @@ union t Nil       = t
 {--------------------------------------------------------------------
   Submap
 --------------------------------------------------------------------}
--- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal).
+---- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal).
 -- Defined as (@'isProperSubmapOf' = 'isProperSubmapOfBy' (==)@).
 --isProperSubmapOf :: Eq a => IntMap a -> IntMap a -> Bool
 --isProperSubmapOf m1 m2

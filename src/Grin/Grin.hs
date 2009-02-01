@@ -169,15 +169,15 @@ data Exp =
                   expFuncCalls :: (Set.Set Atom,Set.Set Atom),            -- ^ cache
                   expIsNormal :: Bool,                                    -- ^ cache, True = definitely normal, False = maybe normal
                   expNonNormal :: Set.Set Atom,                           -- ^ cache, a superset of functions called in non-tail call position.
-                  expInfo :: Info.Info }-}                                  -- ^ A let of local functions
+                  expInfo :: Info.Info }                                  -- ^ A let of local functions -}
 {-    | MkClosure { expValue :: Val,
                   expArgs :: [Val],
                   expRegion :: Val,
                   expType :: [Ty],
-                  expInfo :: Info.Info }-}                   -- ^ create a closure
+                  expInfo :: Info.Info }                   -- ^ create a closure -}
 {-    | MkCont    { expCont :: Lam,                          -- ^ the continuation routine
                   expLam :: Lam,                           -- ^ the computation that is passed the newly created computation
-                  expInfo :: Info.Info }-}                   -- ^ Make a continuation, always allocated on region encompasing expLam
+                  expInfo :: Info.Info }                   -- ^ Make a continuation, always allocated on region encompasing expLam -}
     deriving(Eq,Show,Ord)
 
 data Val =
