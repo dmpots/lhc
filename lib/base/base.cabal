@@ -7,74 +7,117 @@ Library
   Extensions:      ForeignFunctionInterface
   hs-source-dirs:  src
   Exposed-Modules:
-                 Control.Exception
-                 Control.Applicative
-                 Control.Arrow
-                 Control.Category
-                 Control.Monad
-                 Control.Monad.Fix
-                 Control.Monad.Instances
-                 Data.Array
-                 Data.Char,
-                 Data.Complex
-                 Data.List
-                 Data.Tuple
-                 Data.Word,
-                 Data.Monoid
-                 Data.Bits
-                 Data.Int
-                 Data.IORef
-                 Data.Ix
-                 Data.Maybe
-                 Data.Ratio,
-                 Data.Unicode
-                 Data.Function
-                 Data.Typeable
-                 Debug.Trace
-                 Foreign
-                 Foreign.C
-                 Foreign.C.Types,
-                 Foreign.C.String,
-                 Foreign.C.Error,
-                 Foreign.ForeignPtr
-                 Foreign.Marshal
-                 Foreign.Marshal.Alloc,
-                 Foreign.Marshal.Array,
-                 Foreign.Marshal.Error,
-                 Foreign.Marshal.Pool
-                 Foreign.Marshal.Utils,
-                 Foreign.Ptr,
-                 Foreign.StablePtr
-                 Foreign.Storable,
-                 Lhc.Addr,
-                 Lhc.Basics,
-                 Lhc.Float
-                 Lhc.Array
-                 Data.Array.IO
-                 Data.Array.Unboxed
-                 Lhc.Handle,
-                 Lhc.IO,
-                 Lhc.Tuples,
-                 Numeric,
-                 Prelude.Float,
-                 Prelude.IO,
-                 Prelude.IOError,
-                 Prelude.Text,
-                 Prelude
-                 System.Console.GetOpt
-                 System.CPUTime
-                 System.Directory
-                 System.Info
-                 System.IO
-                 System.IO.Error
-                 System.IO.Unsafe,
-                 System.IO.Binary
-                 System.Locale
---                 System.Random,
---                 System.Time,
-                 System
-                 Text.Show.Functions
-                 Text.Printf
+-- These are in base 4
+                Control.Applicative
+                Control.Arrow
+                Control.Category
+                -- Control.Concurrent
+                -- Control.Concurrent.Chan         
+                -- Control.Concurrent.MVar         
+                -- Control.Concurrent.QSem         
+                -- Control.Concurrent.QSemN                
+                -- Control.Concurrent.SampleVar
+                -- this is the wrong Control.Exception
+                Control.Exception
+                Control.Monad
+                Control.Monad.Fix
+                Control.Monad.Instances
+                -- Control.Monad.ST
+                -- Control.Monad.ST.Lazy
+                -- Control.Monad.ST.Lazy
+                -- Control.OldException
+                Data.Bits
+                -- Data.Bool
+                Data.Char
+                Data.Complex
+--                 Data.Data
+                -- Data.Dynamic
+                -- Data.Either
+                -- Data.Eq
+                -- Data.Fixed
+                -- Data.Foldable
+                Data.Function
+                Data.HashTable
+                Data.IORef
+                Data.Int
+                Data.Ix
+                Data.List
+                Data.Maybe
+                Data.Monoid
+                -- Data.Ord
+                Data.Ratio
+                -- Data.STRef
+                -- Data.STRef.Lazy
+                -- Data.STRef.Strict
+                -- Data.Traversable
+                Data.Tuple
+                Data.Typeable
+                -- Data.Unique
+                -- Data.Version
+                Data.Word
+                Debug.Trace
+                Foreign
+                Foreign.C
+                Foreign.C.Error
+                Foreign.C.String
+                Foreign.C.Types
+                -- Foreign.Concurrent
+                Foreign.ForeignPtr
+                Foreign.Marshal
+                Foreign.Marshal.Alloc
+                Foreign.Marshal.Array
+                Foreign.Marshal.Error
+                Foreign.Marshal.Pool
+                Foreign.Marshal.Utils
+                Foreign.Ptr
+                Foreign.StablePtr
+                Foreign.Storable
+                Numeric
+                Prelude
+                System.CPUTime
+                System.Console.GetOpt
+                -- System.Environment
+                -- System.Exit
+                System.IO
+                System.IO.Error
+                System.IO.Unsafe
+                System.Info
+                -- System.Mem
+                -- System.Mem.StableName
+                -- System.Mem.Weak
+                -- System.Posix.Types
+                -- System.Timeout
+                -- Text.ParserCombinators.ReadP            
+                -- Text.ParserCombinators.ReadPrec
+                Text.Printf
+                -- Text.Read
+                -- Text.Read.Lex
+                -- Text.Show
+                Text.Show.Functions
+                Unsafe.Coerce
+-- These aren't
+                Data.Array
+                Data.Unicode
+                System
+                System.Directory
+                System.IO.Binary
+                System.Locale
+--                 System.Random
+--                 System.Time
+                Lhc.Addr
+                Lhc.Basics
+                Lhc.Float
+                Lhc.Array
+                Data.Array.IO
+                Data.Array.Unboxed
+                Lhc.Handle
+                Lhc.IO
+                Lhc.Tuples
+                Prelude.Float
+                Prelude.IO
+                Prelude.IOError
+                Prelude.Text
+
 
   include-dirs: include
   install-includes: Typeable.h
