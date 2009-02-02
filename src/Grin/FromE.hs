@@ -176,11 +176,11 @@ disambiguateProgram prog
                   let newSubst = Map.insert old new subst
                   liftM (ELam new) (fn newSubst e)
           fn subst (EPi tvr e)  
-              | isEmptyId (tvrIdent tvr) = liftM (EPi tvr) (fn subst e)
-              | otherwise = do
-                   (old,new) <- rename tvr
-                   let newSubst = Map.insert old new subst
-                   liftM (EPi new) (fn newSubst e)
+              = do (old,new) <- rename tvr
+                   newty <- fn subst (tvrType new)
+                   let new' = tvr { tvrType = newty }
+                   let newSubst = Map.insert old new' subst
+                   liftM (EPi new') (fn newSubst e)
           fn subst (ELetRec defs body)
               = do nameSubst <- forM defs $ \(tvr,_) -> rename tvr
                    let newSubst = Map.fromList nameSubst `Map.union` subst
@@ -213,7 +213,8 @@ disambiguateProgram prog
           genNewId = do s <- get
                         put (s+1)
                         return (anonymous s)
-          rename tvr | idIsNamed (tvrIdent tvr) = return (tvr,tvr)
+          rename tvr | isEmptyId (tvrIdent tvr) = return (tvr,tvr)
+                     | idIsNamed (tvrIdent tvr) = return (tvr,tvr)
                      | otherwise = do new <- genNewId
                                       return (tvr, tvr{tvrIdent = new})
 
