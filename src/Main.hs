@@ -706,8 +706,17 @@ simplifyParms = transformParms {
 compileToGrin prog = do
     stats <- Stats.new
     progress "Converting to Grin..."
-    prog <- return $ atomizeApps True prog
-    prog <- return $ Grin.FromE.disambiguateProgram prog
+    prog <- transformProgram transformParms { transformDumpProgress = verbose,
+                                              transformCategory = "atomizeApps",
+                                              transformPass = "ToGrin",
+                                              transformOperation =  return . atomizeApps True }
+                             prog
+    prog <- transformProgram transformParms { transformDumpProgress = verbose,
+                                              transformCategory = "disambiguateProgram",
+                                              transformPass = "ToGrin",
+                                              transformOperation =  return . Grin.FromE.disambiguateProgram }
+                             prog
+
     wdump FD.CoreMangled $ printProgram prog
     x <- Grin.FromE.compile prog
     when verbose $ Stats.print "Grin" Stats.theStats
