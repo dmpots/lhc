@@ -79,13 +79,10 @@ import System.FilePath (takeExtension)
 -- the CFF magic for the files is the string "LHC"
 --
 -- JHDR - header info, contains a list of modules contained and dependencies that need to be checked to read the file
--- LIBR - only present if this is a library, contains library metainfo
 -- IDEP - immutable import information
 -- RDRT - redirect to another file for systems without symlinks
 -- DEFS - definitions and exports for modules, all that is needed for name resolution
--- TCIN - type checking information
 -- CORE - compiled core and associated data
--- GRIN - compiled grin code
 --
 --
 
