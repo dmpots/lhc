@@ -378,7 +378,7 @@ compileModules need ifunc func = do
     processCug cug >>= mkPhonyCompNode needed >>= compileCompNode ifunc func
 
 
--- this takes a list of modules or files to load, and produces a compunit graph
+-- | this takes a list of modules or files to load, and produces a compunit graph
 loadModules :: [String]                 -- ^ libraries to load
             -> [Either Module String]   -- ^ a list of modules or filenames
             -> IO ([Module],CompUnitGraph)         -- ^ the resulting acyclic graph of compilation units
@@ -487,8 +487,8 @@ findModule need ifunc func  = do
     cho <- compileCompNode ifunc func rnode
     return (cho,undefined,undefined)
 
--- Read in a Ho file.
 
+-- | Read in a Ho file.
 readHoFile :: FilePath -> IO (HoHeader,HoIDeps,Ho)
 readHoFile fn = do
     bs <- BS.readFile fn

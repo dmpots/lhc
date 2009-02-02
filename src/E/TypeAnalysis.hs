@@ -49,7 +49,7 @@ extractValMap ds = fromList [ (tvrIdent t,f e []) | (t,e) <- ds] where
     f (ELam tvr e) rs | sortKindLike (getType tvr) = f e (runIdentity (Info.lookup $ tvrInfo tvr):rs)
     f _ rs = reverse rs
 
--- all variables _must_ be unique before running this
+-- | all variables _must_ be unique before running this
 {-# NOINLINE typeAnalyze #-}
 typeAnalyze :: Bool -> Program -> IO Program
 typeAnalyze doSpecialize prog = do

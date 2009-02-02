@@ -1,13 +1,14 @@
 {-# OPTIONS -funbox-strict-fields  -O2 #-}
 
--- chunked file format.
+-- | chunked file format.
 -- A generalization of the PNG format for user defined file formats.
 
 module Support.CFF(
-    ChunkType(),
-    FileType(),
     FileOffset(),
     ChunkLength(),
+
+    ChunkType(),
+    FileType(),
     chunkType,
     isCritical,
     isPrivate,
@@ -65,15 +66,15 @@ chunkType [b1,b2,b3] = chunkType [b1,b2,b3,' ']
 chunkType _ = error "chunkType: not a chunk."
 
 
--- critical if the first letter is capitalized
+-- | critical if the first letter is capitalized
 isCritical :: ChunkType -> Bool
 isCritical (ChunkType w) =  w .&. 0x20000000 == 0
 
--- private if the second letter is capitalized
+-- | private if the second letter is capitalized
 isPrivate :: ChunkType -> Bool
 isPrivate  (ChunkType w) =  w .&. 0x00200000 == 0
 
--- chunk should be copied if unrecognized by an editor
+-- | chunk should be copied if unrecognized by an editor
 isSafeToCopy :: ChunkType -> Bool
 isSafeToCopy (ChunkType w) =  w .&. 0x00000020 == 0
 
@@ -199,7 +200,7 @@ readCFF h = do
     xs <- readChunk
     return (cffType,xs)
 
--- this verifies a cff is of a specific type, and reads a specific chunk only.
+-- | this verifies a cff is of a specific type, and reads a specific chunk only.
 readChunk :: Handle -> ChunkType -> ChunkType -> IO BS.ByteString
 readChunk h eft ect = do
     cffType <- readCFFHeader h

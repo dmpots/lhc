@@ -484,6 +484,7 @@ shouldBeExported exports tvr
 
 transTypeAnalyze = transformParms { transformCategory = "typeAnalyze",  transformOperation = typeAnalyze True }
 
+-- | Actually put together all the E code and compile a program
 compileModEnv cho = do
     if optMode options == GenerateHo then return () else do
 
