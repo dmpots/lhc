@@ -1,4 +1,14 @@
 == 0.6.*
+* Removed some extern'd glibc variables that only caused build
+  failures on e.g. OS X under very certain conditions.
+* Rewrote variable Id situation; previously used Integers
+  to essentially represent ADTs using a number scheme. We have now
+  replaced this with a nice, type-safe ADT.
+* No Int/Word tagging.
+* Rewrote much of the base library to get it to compile
+  under -flint, and now base is a bit bigger.
+* Fixed many typeclass bugs and kind inference issues.
+* Automated regression-suite using lhc-regress
 * No longer uses autoconf etc - we have a cabal build system.
 * The E simplifier is now O(n) instead of O(n^2) - this cuts down
   build time.
@@ -8,8 +18,6 @@
 * Now uses utf8-string from hackage.
 * Now uses pureMD5 from hackage.
 * Now requires binary >= 0.4.4
-* Now uses haskeline from hackage for the (dull) interactive mode
-  instead of readline.
 * We now use the derive package >= 0.1.4 instead of DrIFT,
   because derive allows us to use template haskell, thus avoiding
   a need for preprocessing.
