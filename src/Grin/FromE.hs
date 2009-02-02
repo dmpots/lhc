@@ -175,8 +175,10 @@ disambiguateProgram prog
              = do (old,new) <- rename tvr
                   let newSubst = Map.insert old new subst
                   liftM (ELam new) (fn newSubst e)
-          fn subst (EPi tvr e)
-              = do (old,new) <- rename tvr
+          fn subst (EPi tvr e)  
+              | isEmptyId (tvrIdent tvr) = liftM (EPi tvr) (fn subst e)
+              | otherwise = do
+                   (old,new) <- rename tvr
                    let newSubst = Map.insert old new subst
                    liftM (EPi new) (fn newSubst e)
           fn subst (ELetRec defs body)
