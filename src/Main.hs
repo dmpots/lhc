@@ -721,6 +721,7 @@ compileToGrin prog = do
     x <- Grin.FromE.compile prog
     when verbose $ Stats.print "Grin" Stats.theStats
     wdump FD.GrinInitial $ do dumpGrin "initial" x
+    lintCheckGrin x
     --x <- return $ normalizeGrin x
     x <- transformGrin simplifyParms x
     wdump FD.GrinNormalized $ do dumpGrin "normalized" x
