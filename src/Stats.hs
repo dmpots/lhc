@@ -1,5 +1,5 @@
 module Stats(
-    -- mutable
+    -- * Imperative things
     Stats,
     new,
     tick,
@@ -11,14 +11,14 @@ module Stats(
     Stats.print,
     clear,
     combine,
-    -- pure
+    -- * Pure things
     printStat,
     printLStat,
     Stat,
     Stats.singleton,
     Stats.singleStat,
     prependStat,
-    -- monad
+    -- * Monadic things
     MonadStats(..),
     StatT,
     StatM,
@@ -27,7 +27,7 @@ module Stats(
     runStatT,
     runStatIO,
     runStatM,
-    -- combined
+    -- * combined
     tickStat
     ) where
 
@@ -68,6 +68,7 @@ splitUp n str = filter (not . Prelude.null) (f n str)  where
         _ -> error "this can't happen"
 
 
+print :: String -> Stats -> IO ()
 print greets stats = do
     l <- toList stats
     let fs = createForest 0 $ sort [(splitUp (-1) $ fromAtom x,y) | (x,y) <- l]
@@ -109,12 +110,14 @@ newtype Stat = Stat IB.IntBag
 prependStat :: String -> Stat -> Stat
 prependStat name (Stat m) = Stat $ IB.fromList [ (fromAtom (toAtom $ "{" ++ name ++ "}." ++ fromAtom (unsafeIntToAtom x)),y) | (x,y) <- IB.toList m ]
 
+printStat :: String -> Stat -> IO ()
 printStat greets (Stat s) = do
     let fs = createForest 0 $ sort [(splitUp (-1) $ fromAtom (unsafeIntToAtom x),y) | (x,y) <- IB.toList s]
     mapM_ CharIO.putErrLn $ ( draw . fmap p ) (Node (greets,0) fs)  where
         p (x,0) = x
         p (x,n) = x ++ ": " ++ show n
 
+printLStat :: Int -> String -> Stat -> IO ()
 printLStat n greets (Stat s) = do
     let fs = createForest 0 $ [ (x,y) | (x,y) <- Map.toList $ Map.fromListWith (+) [( splitUp n (fromAtom (unsafeIntToAtom x)),y) | (x,y) <- IB.toList s]]
     mapM_ CharIO.putErrLn $ ( draw . fmap p ) (Node (greets,0) fs)  where
@@ -167,7 +170,11 @@ runStatM (StatM a s) = (a,s)
 -- These are inlined so the 'toAtom' can become a caf and be shared
 {-# INLINE mtick  #-}
 {-# INLINE mticks #-}
+
+mtick :: (MonadStats m, StringTable.Atom.ToAtom a) => a -> m ()
 mtick k = mticks 1 k
+
+mticks :: (MonadStats m, StringTable.Atom.ToAtom a) => Int -> a -> m ()
 mticks 0 _ = return ()
 mticks n k = let k' = toAtom k in k' `seq` n `seq` mticks' n k'
 
@@ -188,12 +195,14 @@ instance Monad m => MonadStats (StatT m) where
     mticks' n k = StatT $ tell (Stat $ IB.msingleton (fromAtom k) n)
     mtickStat s =  StatT $ tell s
 
+singleton :: (StringTable.Atom.ToAtom a) => a -> Stat
 singleton n = Stat $ IB.singleton (fromAtom $ toAtom n)
 
 singleStat :: ToAtom a => Int -> a -> Stat
 singleStat 0 _ = mempty
 singleStat n k = Stat $ IB.msingleton (fromAtom $ toAtom k) n
 
+null :: Stat -> Bool
 null (Stat r) = IB.null r
 
 instance MonadStats IO where
@@ -232,19 +241,25 @@ combine (Stats s1) (Stats s2) = do
     s <- readIORef s2
     modifyIORef s1 (mappend s)
 
+new :: IO Stats
 new = Stats `liftM` newIORef mempty
 
+clear :: Stats -> IO ()
 clear (Stats h) = writeIORef h mempty
 
+toList :: Stats -> IO [(Atom, Int)]
 toList (Stats r) = do
     Stat s <- readIORef r
     return [(unsafeIntToAtom x,y) | (x,y) <- IB.toList s]
 
+isEmpty :: Stats -> IO Bool
 isEmpty (Stats r) = null `liftM` readIORef r
 
+tick :: (ToAtom a) => Stats -> a -> IO ()
 tick stats k = ticks stats 1 k
 
 
+ticks :: (ToAtom a) => Stats -> Int -> a -> IO ()
 ticks (Stats r) c k = modifyIORef r (mappend $ singleStat c k)
 
 -----------------

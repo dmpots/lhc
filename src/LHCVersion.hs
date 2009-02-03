@@ -5,6 +5,8 @@ import Data.List
 import System.Info
 import qualified Paths_lhc as P
 
+package, tag, version, shortVersion :: String
+
 package        = "lhc"
 tag            = "scio"
 version        = showVersion P.version
@@ -12,8 +14,10 @@ shortVersion   = concat $ intersperse "." $ map show $ take 3 $ versionBranch P.
 
 -- | Simple version string
 {-# NOINLINE versionSimple #-}
+versionSimple :: String
 versionSimple = unwords [package, version, "("++tag++")"]
 
 -- | Full version string containing OS/compiler info
 {-# NOINLINE versionString #-}
+versionString :: String
 versionString = concat [versionSimple, " compiled by ",compilerName,"-",showVersion compilerVersion," on a ",arch," running ",os]

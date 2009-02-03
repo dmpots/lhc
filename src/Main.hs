@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_HADDOCK ignore-exports #-}
+
 module Main(main) where
 
 import Control.Exception.Extensible as Ex
@@ -194,9 +196,6 @@ processInitialHo accumho aho = do
 
 
 
-
--- | this is called on parsed, typechecked haskell code to convert it to the internal representation
-
 coreMini = dump FD.CoreMini
 corePass = dump FD.CorePass
 coreSteps = dump FD.CoreSteps
@@ -204,6 +203,7 @@ miniCorePass = coreMini && corePass
 miniCoreSteps = coreMini && coreSteps
 
 
+-- | This is called on parsed, typechecked haskell code to convert it to the internal representation
 processDecls ::
     CollectedHo          -- ^ Collected ho
     -> Ho                   -- ^ preliminary haskell object  data
@@ -485,6 +485,7 @@ shouldBeExported exports tvr
 transTypeAnalyze = transformParms { transformCategory = "typeAnalyze",  transformOperation = typeAnalyze True }
 
 -- | Actually put together all the E code and compile a program
+compileModEnv :: CollectedHo -> IO ()
 compileModEnv cho = do
     if optMode options == GenerateHo then return () else do
 
@@ -659,7 +660,7 @@ compileModEnv cho = do
                                   isOptMode GenerateHoGrin) $ rm [n++".ho"]
                           unless (isOptMode GenerateC) $ rm [n ++ "_code.c"]
 
--- | this gets rid of all type variables, replacing them with boxes that can hold any type
+-- | This gets rid of all type variables, replacing them with boxes that can hold any type
 -- the program is still type-safe, but all polymorphism has been removed in favor of
 -- implicit coercion to a universal type.
 --
@@ -687,7 +688,7 @@ boxifyProgram prog = ans where
     boxify s@ESort {} = s
     boxify x = error $ "boxify: " ++ show x
 
--- | get rid of unused bindings
+-- | Get rid of unused bindings
 cleanupE :: E -> E
 cleanupE e = runIdentity (f e) where
     f (ELam t@TVr { tvrIdent = v } e) | not (isEmptyId v), v `notMember` freeIds e = f (ELam t { tvrIdent = emptyId } e)
