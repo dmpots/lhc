@@ -44,7 +44,7 @@ typecheckGrin grin = do
 
 dumpGrin pname grin = do
     let fn = optOutName options ++ "_" ++ pname ++ ".grin"
-    --putErrLn $ "Writing: " ++ fn
+    putErrLn $ "Writing: " ++ fn
     h <- openFile fn  WriteMode
     (argstring,sversion) <- getArgString
     hPutStrLn h $ unlines [ "-- " ++ argstring,"-- " ++ sversion,""]
