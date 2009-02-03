@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -w #-} {- -*- Haskell -*- -}
+{-# OPTIONS_GHC -w -fno-warn-missing-signatures #-} {- -*- Haskell -*- -}
 -- -----------------------------------------------------------------------------
 -- $Id: HsParser.ly,v 1.4 2001/11/25 08:52:13 bjpop Exp $
 
