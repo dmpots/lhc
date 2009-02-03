@@ -31,8 +31,10 @@ mapDomain f r = Set.map (\ (x,y) -> (f x,y)) r
 mapRange :: (Ord a, Ord b, Ord c) => (b -> c) -> Rel a b -> Rel a c
 mapRange f r = Set.map (\ (x,y) -> (x,f y)) r
 
+partitionDomain :: (Ord a, Ord b) => (a -> Bool) -> Set (a, b) -> (Set (a, b), Set (a, b))
 partitionDomain f r = Set.partition (f . fst) r
 
+partitionRange :: (Ord a, Ord b) => (b -> Bool) -> Set (a, b) -> (Set (a, b), Set (a, b))
 partitionRange f r = Set.partition (f . snd) r
 
 applyRelation :: (Ord a, Ord b) => Rel a b -> a -> [b]

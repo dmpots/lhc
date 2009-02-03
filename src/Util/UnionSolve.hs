@@ -47,7 +47,8 @@ data CL l v = (Either v l) `Clte` (Either v l) | (Either v l) `Cset` (Either v l
 instance (Show e,Show l) => Show (C l e) where
     showsPrec _ (C xs) = showString "" . foldr (.) id (intersperse (showString "\n") (map shows (xs []))) . showString "\n"
 
-seither (Left x) = shows x
+seither :: (Show a, Show b) => Either a b -> ShowS
+seither (Left x)  = shows x
 seither (Right x) = shows x
 
 instance (Show e,Show l) => Show (CL l e) where
@@ -78,6 +79,7 @@ data Result l a = ResultJust a l
 instance (Show l, Show a) => Show (Result l a) where
     showsPrec _ x = (showResult x ++)
 
+showResult :: (Show l, Show a) => Result l a -> String
 showResult (ResultJust a l) = show a ++ " = " ++ show l
 showResult rb@ResultBounded {} = sb (resultLB rb) (resultLBV rb) ++ " <= " ++ show (resultRep rb) ++ " <= " ++ sb (resultUB rb) (resultUBV rb)  where
     sb Nothing n | null n = "_"
@@ -88,6 +90,7 @@ showResult rb@ResultBounded {} = sb (resultLB rb) (resultLBV rb) ++ " <= " ++ sh
 
 
 
+collectVars :: [CL l v] -> [Either v l]
 collectVars (Cset x y:xs) = x:y:collectVars xs
 collectVars (Clte x y:xs) = x:y:collectVars xs
 collectVars [] = []
