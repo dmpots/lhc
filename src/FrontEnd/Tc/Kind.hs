@@ -55,12 +55,14 @@ data KBase =
         | KNamed Name
     deriving(Eq, Ord)   -- but we need them for kind inference
 
+isSubsumedBy2 :: KBase -> KBase -> Bool
 KNamed s1 `isSubsumedBy2` KNamed s2   = s1 == s2
 _         `isSubsumedBy2` KQuest      = True
 Star      `isSubsumedBy2` KQuestQuest = True
 KHash     `isSubsumedBy2` KQuestQuest = True
 k1        `isSubsumedBy2` k2          = k1 == k2
 
+kindStar, kindHash, kindUTuple, kindFunRet, kindArg :: Kind
 kindStar   = KBase Star
 kindHash   = KBase KHash
 kindUTuple = KBase KUTuple
@@ -74,6 +76,7 @@ data Kind  = KBase KBase
 
 infixr `Kfun`
 
+isSubsumedBy :: Kind -> Kind -> Bool
 KBase kb    `isSubsumedBy` KBase kb'    = isSubsumedBy2 kb kb'
 Kfun  k1 k2 `isSubsumedBy` Kfun k1' k2' = isSubsumedBy k1 k1' && isSubsumedBy k2 k2'
 _           `isSubsumedBy` _            = False
@@ -99,14 +102,14 @@ kindCombine x y = g x y where
     g x y = fail $ "kindCombine: " ++ show (x,y)
 
 data KindConstraint
-    = KindSimple     -- ^ * | kindSimple -> kindSimple
-    | KindQuest      -- ^ ?, so * or (#) or #
-    | KindQuestQuest -- ^ ??, * or #
-    | KindStar       -- ^ must be *
+    = KindSimple     -- ^ @*@ | kindSimple -> kindSimple
+    | KindQuest      -- ^ @?@, so @*@ or @(#)@ or @#@
+    | KindQuestQuest -- ^ @??@, @*@ or @#@
+    | KindStar       -- ^ must be @*@
     | KindAny        -- ^ may be anything
     deriving(Eq,Ord,Show)
 
--- note that named kinds are never infered, so we don't need constraints
+-- note that named kinds are never inferred, so we don't need constraints
 -- mentioning them.
 
 instance Monoid KindConstraint where
