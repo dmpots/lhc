@@ -143,23 +143,23 @@ import System.CPUTime
 {-# RULES "snub/[]" snub [] = [] #-}
 {-# RULES "snub/[x]" forall x . snub [x] = [x] #-}
 
--- | sorted nub of list, much more efficient than nub, but doesnt preserve ordering.
+-- | Sorted nub of list, much more efficient than nub, but doesnt preserve ordering.
 snub :: Ord a => [a] -> [a]
 snub = map head . group . sort
 
--- | sorted nub of list of tuples, based solely on the first element of each tuple.
+-- | Sorted nub of list of tuples, based solely on the first element of each tuple.
 snubFst :: Ord a => [(a,b)] -> [(a,b)]
 snubFst = map head . groupBy (\(x,_) (y,_) -> x == y) . sortBy (\(x,_) (y,_) -> compare x y)
 
--- | sorted nub of list based on function of values
+-- | Sorted nub of list based on function of values
 snubUnder :: Ord b => (a -> b) -> [a] -> [a]
 snubUnder f = map head . groupUnder f . sortUnder f
 
--- | sort list of tuples, based on first element of each tuple.
+-- | Sort list of tuples, based on first element of each tuple.
 sortFst :: Ord a => [(a,b)] -> [(a,b)]
 sortFst = sortBy (\(x,_) (y,_) -> compare x y)
 
--- | group list of tuples, based only on equality of the first element of each tuple.
+-- | Group list of tuples, based only on equality of the first element of each tuple.
 groupFst :: Eq a => [(a,b)] -> [[(a,b)]]
 groupFst = groupBy (\(x,_) (y,_) -> x == y)
 
@@ -213,14 +213,14 @@ rtakeWhile fn xs = f xs [] where
 rbdropWhile :: (a -> Bool) -> [a] -> [a]
 rbdropWhile fn xs = rdropWhile fn (dropWhile fn xs)
 
--- | group a list based on a function of the values.
+-- | Group a list based on a function of the values.
 groupUnder :: Eq b => (a -> b) -> [a] -> [[a]]
 groupUnder f = groupBy (\x y -> f x == f y)
--- | sort a list based on a function of the values.
+-- | Sort a list based on a function of the values.
 sortUnder :: Ord b => (a -> b) -> [a] -> [a]
 sortUnder f = sortBy (\x y -> f x `compare` f y)
 
--- | merge sorted lists in linear time
+-- | Merge sorted lists in linear time
 smerge :: Ord a => [a] -> [a] -> [a]
 smerge (x:xs) (y:ys)
     | x == y = x:smerge xs ys
@@ -272,7 +272,7 @@ putErrDie :: String -> IO a
 putErrDie s = putErrLn s >> System.exitFailure
 
 
--- | exit program successfully. 'exitFailure' is
+-- | Exit program successfully. 'exitFailure' is
 -- also exported from System.
 exitSuccess :: IO a
 exitSuccess = System.exitWith System.ExitSuccess
@@ -288,7 +288,7 @@ fromLeft :: Either a b -> a
 fromLeft (Left x) = x
 fromLeft _ = error "fromLeft"
 
--- | recursivly apply function to value until it returns Nothing
+-- | Recursivly apply function to value until it returns Nothing
 repMaybe :: (a -> Maybe a) -> a -> a
 repMaybe f e = case f e of
     Just e' -> repMaybe f e'
@@ -298,42 +298,52 @@ repMaybe f e = case f e of
 {-# INLINE liftT3 #-}
 {-# INLINE liftT4 #-}
 
-liftT4 (f1,f2,f3,f4) (v1,v2,v3,v4) = (f1 v1, f2 v2, f3 v3, f4 v4)
-liftT3 (f,g,h) (x,y,z) = (f x, g y, h z)
--- | apply functions to values inside a tupele. 'liftT3' and 'liftT4' also exist.
+-- | Apply functions to values inside a pair.
 liftT2 :: (a -> b, c -> d) -> (a,c) -> (b,d)
 liftT2 (f,g) (x,y) = (f x, g y)
 
+-- | Apply functions to values inside a triple.
+liftT3 :: (a -> b, c -> d, e -> f) -> (a,c,e) -> (b,d,f)
+liftT3 (f,g,h) (x,y,z) = (f x, g y, h z)
 
--- | class for monads which can generate
--- unique values.
+-- | Apply functions to values inside a 4-tuple
+liftT4 :: (a -> b, c -> d, e -> f, g -> h) -> (a,c,e,g) -> (b,d,f,h)
+liftT4 (f1,f2,f3,f4) (v1,v2,v3,v4) = (f1 v1, f2 v2, f3 v3, f4 v4)
+
+-- | Class for monads which can generate unique values.
 class Monad m => UniqueProducer m where
-    -- | produce a new unique value
+    -- | Produce a new unique value
     newUniq :: m Int
 
 
+rtup :: a -> b -> (b,a)
 rtup a b = (b,a)
+
+triple :: a -> b -> c -> (a,b,c)
 triple a b c = (a,b,c)
 
+fst3 :: (a,b,c) -> a
 fst3 (a,_,_) = a
+snd3 :: (a,b,c) -> b
 snd3 (_,b,_) = b
+thd3 :: (a,b,c) -> c
 thd3 (_,_,c) = c
 
--- | the standard unix epoch
+-- | The standard unix epoch
 epoch :: ClockTime
 epoch = toClockTime $ CalendarTime { ctYear = 1970, ctMonth = January, ctDay = 0, ctHour = 0, ctMin = 0, ctSec = 0, ctTZ = 0, ctPicosec = 0, ctWDay = undefined, ctYDay = undefined, ctTZName = undefined, ctIsDST = undefined}
 
--- | an arbitrary time in the future
+-- | An arbitrary time in the future
 endOfTime :: ClockTime
 endOfTime = toClockTime $ CalendarTime { ctYear = 2020, ctMonth = January, ctDay = 0, ctHour = 0, ctMin = 0, ctSec = 0, ctTZ = 0, ctPicosec = 0, ctWDay = undefined, ctYDay = undefined, ctTZName = undefined, ctIsDST = undefined}
 
 {-# INLINE fsts #-}
--- | take the fst of every element of a list
+-- | Take the fst of every element of a list
 fsts :: [(a,b)] -> [a]
 fsts = map fst
 
 {-# INLINE snds #-}
--- | take the snd of every element of a list
+-- | Take the snd of every element of a list
 snds :: [(a,b)] -> [b]
 snds = map snd
 
@@ -360,12 +370,12 @@ repeatM_ x = sequence_ $ repeat x
 --replicateM_ :: Monad m => Int -> m a -> m ()
 --replicateM_ n x = sequence_ $ replicate n x
 
--- | convert a maybe to an arbitrary failable monad
+-- | Convert a maybe to an arbitrary failable monad
 maybeToMonad :: Monad m => Maybe a -> m a
 maybeToMonad (Just x) = return x
 maybeToMonad Nothing = fail "Nothing"
 
--- | convert a maybe to an arbitrary failable monad
+-- | Convert a maybe to an arbitrary failable monad with the supplied error message
 maybeM :: Monad m => String -> Maybe a -> m a
 maybeM _ (Just x) = return x
 maybeM s Nothing = fail s
@@ -388,7 +398,7 @@ foldlM_ f v xs = foldlM f v xs >> return ()
 foldl1M_ ::Monad m => (a -> a -> m a)  -> [a] -> m ()
 foldl1M_ f xs = foldl1M f xs >> return ()
 
--- | partition a list of eithers.
+-- | Partition a list of eithers.
 splitEither :: [Either a b] -> ([a],[b])
 splitEither  (r:rs) = case splitEither rs of
     (xs,ys) -> case r of
@@ -396,9 +406,11 @@ splitEither  (r:rs) = case splitEither rs of
         Right y -> (xs,y:ys)
 splitEither          [] = ([],[])
 
+isLeft :: Either a b -> Bool
 isLeft Left {} = True
 isLeft _ = False
 
+isRight :: Either a b -> Bool
 isRight Right {} = True
 isRight _ = False
 
@@ -406,6 +418,7 @@ perhapsM :: Monad m => Bool -> a -> m a
 perhapsM True a = return a
 perhapsM False _ = fail "perhapsM"
 
+sameLength :: [a] -> [b] -> Bool
 sameLength (_:xs) (_:ys) = sameLength xs ys
 sameLength [] [] = True
 sameLength _ _ = False
@@ -446,7 +459,7 @@ ioM action = catch (fmap return action) (\e -> return (fail (show e)))
 ioMp :: MonadPlus m => IO a -> IO (m a)
 ioMp action = catch (fmap return action) (\_ -> return mzero)
 
--- | reformat a string to not be wider than a given width, breaking it up
+-- | Reformat a string to not be wider than a given width, breaking it up
 -- between words.
 
 paragraph :: Int -> String -> String
@@ -504,7 +517,7 @@ expandTabs' sz off (c:cs) = c: expandTabs' sz (off + 1) cs
 expandTabs' _ _ "" = ""
 
 
--- | expand tabs into spaces in a string assuming tabs are every 8 spaces and we are starting at column 0.
+-- | Expand tabs into spaces in a string assuming tabs are every 8 spaces and we are starting at column 0.
 expandTabs :: String -> String
 expandTabs s = expandTabs' 8 0 s
 
@@ -512,7 +525,7 @@ expandTabs s = expandTabs' 8 0 s
 
 -- | Translate characters to other characters in a string, if the second argument is empty,
 -- delete the characters in the first argument, else map each character to the
--- cooresponding one in the second argument, cycling the second argument if
+-- corresponding one in the second argument, cycling the second argument if
 -- necessary.
 
 tr :: String -> String -> String -> String
@@ -525,7 +538,7 @@ tr as bs s = map (f as bs) s where
     --f _ _ _ = error "invalid tr"
 
 
--- | quote strings rc style. single quotes protect any characters between
+-- | Quote strings rc style. single quotes protect any characters between
 -- them, to get an actual single quote double it up. Inverse of 'simpleUnquote'
 simpleQuote :: [String] -> String
 simpleQuote ss = unwords (map f ss) where
@@ -534,7 +547,7 @@ simpleQuote ss = unwords (map f ss) where
     dquote s = concatMap (\c -> if c == '\'' then "''" else [c]) s
     isBad c = isSpace c || c == '\''
 
--- | inverse of 'simpleQuote'
+-- | Inverse of 'simpleQuote'
 simpleUnquote :: String -> [String]
 simpleUnquote s = f (dropWhile isSpace s)  where
     f [] = []
@@ -545,7 +558,7 @@ simpleUnquote s = f (dropWhile isSpace s)  where
     quote' a (x:xs) = quote' (x:a) xs
     quote' a [] = (reverse a, "")
 
--- | quote a set of strings as would be appropriate to pass them as
+-- | Quote a set of strings as would be appropriate to pass them as
 -- arguments to a sh style shell
 shellQuote :: [String] -> String
 shellQuote ss = unwords (map f ss) where
@@ -555,7 +568,7 @@ shellQuote ss = unwords (map f ss) where
     isGood c = isAlphaNum c || c `elem` "@/.-_"
 
 
--- | looks up an enviornment variable and returns it in an arbitrary Monad rather
+-- | Looks up an enviornment variable and returns it in an arbitrary Monad rather
 -- than raising an exception if the variable is not set.
 lookupEnv :: Monad m => String -> IO (m String)
 lookupEnv s = catch (fmap return $ System.getEnv s) (\e -> if IO.isDoesNotExistError e then return (fail (show e)) else ioError e)
@@ -576,20 +589,20 @@ fmapRight fn = fmap f where
 {-# SPECIALIZE isConjoint :: [String] -> [String] -> Bool #-}
 {-# SPECIALIZE isDisjoint :: [Int] -> [Int] -> Bool #-}
 {-# SPECIALIZE isConjoint :: [Int] -> [Int] -> Bool #-}
--- | set operations on lists. (slow!)
+-- | Set operations on lists. (slow!)
 isDisjoint, isConjoint :: Eq a => [a] -> [a] -> Bool
 isConjoint xs ys = or [x == y | x <- xs, y <- ys]
 isDisjoint xs ys = not (isConjoint xs ys)
 
--- | 'concat' composed with 'List.intersperse'. Can be used similarly to join in perl.
+-- -- | 'concat' composed with 'List.intersperse'. Can be used similarly to join in perl.
 --intercalate :: [a] -> [[a]] -> [a]
 --intercalate x xss = concat (intersperse x xss)
 
--- | place spaces before each line in string.
+-- | Place spaces before each line in string.
 indentLines :: Int -> String -> String
 indentLines n s = unlines $ map (replicate n ' ' ++)$ lines s
 
--- | trim blank lines at beginning and end of string
+-- | Trim blank lines at beginning and end of string
 trimBlankLines :: String -> String
 trimBlankLines cs = unlines $ rbdropWhile (all isSpace) (lines cs)
 
@@ -604,13 +617,13 @@ buildTableLL ps = map f ps where
     f (x,y) = x ++ replicate (bs - length x) ' ' ++ replicate 4 ' ' ++ y
     bs = maximum (map (length . fst) ps)
 
-{- INLINE foldl' -}
--- | strict version of 'foldl'
+-- {-# INLINE foldl' #-}
+-- -- | strict version of 'foldl'
 --foldl' :: (a -> b -> a) -> a -> [b] -> a
 --foldl' _ a []     = a
 --foldl' f a (x:xs) = (foldl' f $! f a x) xs
 
--- | count elements of list that have a given property
+-- | Count elements of list that have a given property
 count :: (a -> Bool) -> [a] -> Int
 count f xs = g 0 xs where
     g n [] = n
@@ -618,35 +631,35 @@ count f xs = g 0 xs where
         | f x = let x = n + 1 in x `seq` g x xs
         | otherwise = g n xs
 
--- | randomly permute a list, using the standard random number generator.
+-- | Randomly permute a list, using the standard random number generator.
 randomPermuteIO :: [a] -> IO [a]
 randomPermuteIO xs = newStdGen >>= \g -> return (randomPermute g xs)
 
--- | randomly permute a list given a RNG
+-- | Randomly permute a list given a RNG
 randomPermute :: StdGen -> [a] -> [a]
 randomPermute _   []  = []
 randomPermute gen xs  = (head tl) : randomPermute gen' (hd ++ tail tl)
    where (idx, gen') = randomR (0,length xs - 1) gen
          (hd,  tl)   = splitAt idx xs
 
+hasRepeatUnder :: Ord b => (a -> b) -> [a] -> Bool
 hasRepeatUnder f xs = any (not . null . tail) $ sortGroupUnder f xs
 
--- | compute the power set of a list
-
+-- | Compute the power set of a list
 powerSet       :: [a] -> [[a]]
 powerSet []     = [[]]
 powerSet (x:xs) = xss /\/ map (x:) xss
                 where xss = powerSet xs
 
--- | interleave two lists lazily, alternating elements from them. This can also be
+-- | Interleave two lists lazily, alternating elements from them. This can also be
 -- used instead of concatination to avoid space leaks in certain situations.
-
 (/\/)        :: [a] -> [a] -> [a]
 []     /\/ ys = ys
 (x:xs) /\/ ys = x : (ys /\/ xs)
 
 
 
+readHexChar :: Monad m => Char -> m Int
 readHexChar a | a >= '0' && a <= '9' = return $ ord a - ord '0'
 readHexChar a | z >= 'a' && z <= 'f' = return $ 10 + ord z - ord 'a' where z = toLower a
 readHexChar x = fail $ "not hex char: " ++ [x]
@@ -660,14 +673,13 @@ readHex cs = mapM readHexChar cs >>= \cs' -> return (rh $ reverse cs') where
 
 {-# SPECIALIZE overlaps :: (Int,Int) -> (Int,Int) -> Bool #-}
 
--- | determine if two closed intervals overlap at all.
-
+-- | Determine if two closed intervals overlap at all.
 overlaps :: Ord a => (a,a) -> (a,a) -> Bool
 (a,_) `overlaps` (_,y) | y < a = False
 (_,b) `overlaps` (x,_) | b < x = False
 _ `overlaps` _ = True
 
--- | translate a number of seconds to a string representing the duration expressed.
+-- | Translate a number of seconds to a string representing the duration expressed.
 showDuration :: Integral a => a -> String
 showDuration x = st "d" dayI ++ st "h" hourI ++ st "m" minI ++ show secI ++ "s" where
         (dayI, hourI) = divMod hourI' 24
@@ -676,10 +688,9 @@ showDuration x = st "d" dayI ++ st "h" hourI ++ st "m" minI ++ show secI ++ "s" 
         st _ 0 = ""
         st c n = show n ++ c
 
--- | behave like while(<>) in perl, go through the argument list, reading the
+-- | Behave like while(<>) in perl, go through the argument list, reading the
 -- concation of each file name mentioned or stdin if '-' is on it. If no
 -- arguments are given, read stdin.
-
 getArgContents :: IO String
 getArgContents = do
     as <- System.getArgs
@@ -766,7 +777,7 @@ buildTable ts rs = bt [ x:xs | (x,xs) <- ("",ts):rs ] where
         cw = [ maximum (map length xs) | xs <- transpose ts]
     es n s = replicate (n - length s) ' ' ++ s
 
--- | time task
+-- | Time task
 doTime :: String -> IO a -> IO a
 doTime str action = do
     start <- getCPUTime
