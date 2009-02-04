@@ -30,6 +30,7 @@ instance Show Property where
 
 
 {-# NOINLINE readProp #-}
+readProp :: Monad m => String -> m Property
 readProp "INLINE" = return PROP_INLINE
 readProp "MULTISPECIALIZE" = return PROP_MULTISPECIALIZE
 readProp "NOINLINE" = return PROP_NOINLINE
@@ -38,26 +39,49 @@ readProp "SUPERINLINE" = return PROP_SUPERINLINE
 readProp "NOETA" = return PROP_NOETA
 readProp p = fail $ "Invalid Property: " ++ p
 
+prop_INLINE :: Property
 prop_INLINE = PROP_INLINE
+prop_MULTISPECIALIZE :: Property
 prop_MULTISPECIALIZE = PROP_MULTISPECIALIZE
+prop_NOINLINE :: Property
 prop_NOINLINE = PROP_NOINLINE
+prop_SRCLOC_ANNOTATE :: Property
 prop_SRCLOC_ANNOTATE = PROP_SRCLOC_ANNOTATE
+prop_SUPERINLINE :: Property
 prop_SUPERINLINE = PROP_SUPERINLINE
+prop_NOETA :: Property
 prop_NOETA = PROP_NOETA
+prop_CYCLIC :: Property
 prop_CYCLIC = PROP_CYCLIC
+prop_EXPORTED :: Property
 prop_EXPORTED = PROP_EXPORTED
+prop_INSTANCE :: Property
 prop_INSTANCE = PROP_INSTANCE
+prop_JOINPOINT :: Property
 prop_JOINPOINT = PROP_JOINPOINT
+prop_METHOD :: Property
 prop_METHOD = PROP_METHOD
+prop_ONESHOT :: Property
 prop_ONESHOT = PROP_ONESHOT
+prop_PLACEHOLDER :: Property
 prop_PLACEHOLDER = PROP_PLACEHOLDER
+prop_RULEBINDER :: Property
 prop_RULEBINDER = PROP_RULEBINDER
+prop_SCRUTINIZED :: Property
 prop_SCRUTINIZED = PROP_SCRUTINIZED
+prop_SPECIALIZATION :: Property
 prop_SPECIALIZATION = PROP_SPECIALIZATION
+prop_SRCLOC_ANNOTATE_FUN :: Property
 prop_SRCLOC_ANNOTATE_FUN = PROP_SRCLOC_ANNOTATE_FUN
+prop_SUPERSPECIALIZE :: Property
 prop_SUPERSPECIALIZE = PROP_SUPERSPECIALIZE
+prop_UNSHARED :: Property
 prop_UNSHARED = PROP_UNSHARED
+prop_WHNF :: Property
 prop_WHNF = PROP_WHNF
+prop_WORKER :: Property
 prop_WORKER = PROP_WORKER
+prop_WRAPPER :: Property
 prop_WRAPPER = PROP_WRAPPER
+prop_HASRULE :: Property
 prop_HASRULE = PROP_HASRULE
