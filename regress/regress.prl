@@ -56,9 +56,9 @@ my ($regress_dir,$lhc_dir);
 if (-d "tests" && -d "results") {
     $regress_dir = ".";
     $lhc_dir = "../dist/build/lhc";
-} elsif (-d "regress" && -f "Makefile") {
+} elsif (-d "regress" && -f "lhc.cabal") {
     $regress_dir = "regress";
-    $lhc_dir = "."
+    $lhc_dir = "./dist/build/lhc"
 } else { die "could not figure out where I am" }
 
 my $test_dir = "$regress_dir/tests";
