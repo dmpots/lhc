@@ -42,8 +42,10 @@ foreach my $d (@ds) {
     next if $done{"tc_$sname"}++;
     next if $done{"dc_$sname"}++;
     print "{-# NOINLINE tc_$sname #-}\n";
+    print "tc_$sname :: Name\n";
     print "tc_$sname = toName TypeConstructor (\"$mname\",\"$sname\")\n";
     print "{-# NOINLINE dc_$sname #-}\n";
+    print "dc_$sname :: Name\n";
     print "dc_$sname = toName DataConstructor (\"$mname\",\"$sname\")\n";
 }
 
@@ -53,6 +55,7 @@ foreach my $ort (sort keys %rt) {
     my $rt = $ort;
     $rt =~ s/[ <>]/_/g;
     print "{-# NOINLINE rt_$rt #-}\n";
+    print "rt_$rt :: Name\n";
     print "rt_$rt = toName RawType \"$ort\"\n";
 
 }
@@ -69,6 +72,7 @@ while(<$fd>) {
     $name = $leader . "_" . $name;
     next if $done{$name};
     print "{-# NOINLINE $name #-}\n";
+    print "$name :: Name\n";
     if (defined $mod) {
         print "$name = toName $nametype (\"$mod\",\"$var\")\n";
     } else {
