@@ -75,7 +75,7 @@ instance Foldable Located where
 instance Traversable Located where
     traverse f (Located l x) = Located l <$> f x
 
-located :: SrcSpan -> a -> Located a
+located :: HasLocation a => a -> b -> Located b
 located ss x = Located (srcSpan ss) x
 
 
