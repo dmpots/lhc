@@ -2,7 +2,6 @@ module Name.Name(
     NameType(..),
     Name(..),
     nameName,
-    nameType,
     getModule,
     toUnqualified,
     qualifyName,
@@ -89,15 +88,18 @@ instance Ord Name where
                            else nameString a `compare` nameString b
                      other -> other
 
+isTypeNamespace :: NameType -> Bool
 isTypeNamespace TypeConstructor = True
 isTypeNamespace ClassName = True
 isTypeNamespace TypeVal = True
 isTypeNamespace _ = False
 
+isValNamespace :: NameType -> Bool
 isValNamespace DataConstructor = True
 isValNamespace Val = True
 isValNamespace _ = False
 
+isConstructorLike :: String -> Bool
 isConstructorLike xs@(x:_) =  isUpper x || x `elem` ":("  || xs == "->"
 isConstructorLike [] = error "isConstructorLike: empty"
 
@@ -111,6 +113,7 @@ fromValishHsName name
     | otherwise = toName Val name
     where (x:_) = (hsIdentString . hsNameIdent  $ name)
 
+createName :: NameType -> String -> String -> Name
 createName _ "" i = error $ "createName: empty module "  ++ i
 createName _ m "" = error $ "createName: empty ident "   ++ m
 createName t m i = fromAtom $  toAtom $ (chr $  ord '1' + fromEnum t):m ++ ";" ++ i
@@ -211,6 +214,7 @@ mapName (f,g) n = case nameParts n of
     (nt,Nothing,i) -> toName nt (g i)
     (nt,Just m,i) -> toName nt (Just (f m :: String),g i)
 
+mainModule :: Module
 mainModule = Module "Main@"
 
 ffiExportName :: FfiExport -> Name
