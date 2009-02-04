@@ -430,7 +430,7 @@ data HsAlt = HsAlt SrcLoc HsPat HsRhs [HsDecl]
   deriving(Eq,Show)
 
 -----------------------------------------------------------------------------
--- Deriving stuff
+-- * Derived stuff
 
 $(derive makeUpdate ''HsIdentifier)
 $(derive makeIs ''HsName)
