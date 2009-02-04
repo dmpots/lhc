@@ -7,9 +7,11 @@ import DerivingDrift.DataP
 
 -- Rule Declarations
 
+x, f :: Doc
 x = text "x"
 f = text "f"
 
+rArrow, lArrow, blank, semicolon :: Doc
 rArrow = text "->"
 lArrow = text "<-"
 --equals = text "="
@@ -47,7 +49,9 @@ opt1 [x] _ g = g x
 opt1 a f g = f a
 
 -- new simple docs
+commentLine :: Doc -> Doc
 commentLine x = text "--" <+> x -- useful for warnings / error messages
+commentBlock :: Doc -> Doc
 commentBlock x = text "{-" <> x <> text "-}"
 
 --- Utility Functions -------------------------------------------------------

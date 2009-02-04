@@ -19,6 +19,7 @@ newtype Module = Module String
 instance Show Module where
     showsPrec _ (Module n) = showString n
 
+fromModule :: Module -> String
 fromModule (Module s) = s
 
 -- Names
@@ -77,6 +78,8 @@ instance HasLocation HsImportDecl where
 data HsKind = HsKind HsName | HsKindFn HsKind HsKind
   deriving(Data,Typeable,Eq,Ord,Show)
 
+
+hsKindStar, hsKindHash, hsKindBang, hsKindQuest, hsKindQuestQuest, hsKindStarBang :: HsKind
 hsKindStar = HsKind (Qual (Module "Lhc@") (HsIdent "*"))
 hsKindHash = HsKind (Qual (Module "Lhc@") (HsIdent "#"))
 hsKindBang = HsKind (Qual (Module "Lhc@") (HsIdent "!"))
@@ -121,6 +124,7 @@ data HsTyVarBind = HsTyVarBind {
     hsTyVarBindKind :: Maybe HsKind }
   deriving(Data,Typeable,Eq,Ord,Show)
 
+hsTyVarBind :: HsTyVarBind
 hsTyVarBind = HsTyVarBind { hsTyVarBindSrcLoc = bogusASrcLoc, hsTyVarBindName = undefined, hsTyVarBindKind = Nothing }
 
 instance HasLocation HsTyVarBind where
@@ -232,6 +236,7 @@ instance HasLocation HsDecl where
     srcLoc (HsPatBind	 sl _ _ _) = sl
     srcLoc (HsPragmaProps sl _ _) = sl
 
+hsDataDecl :: HsDecl
 hsDataDecl = HsDataDecl {
     hsDeclKindDecl = False,
     hsDeclSrcLoc = bogusASrcLoc,
@@ -243,6 +248,7 @@ hsDataDecl = HsDataDecl {
     hsDeclDerives = []
     }
 
+hsNewTypeDecl :: HsDecl
 hsNewTypeDecl = HsNewTypeDecl {
     hsDeclSrcLoc = bogusASrcLoc,
     hsDeclContext = [],
@@ -290,6 +296,7 @@ data HsConDecl
 	 | HsRecDecl { hsConDeclSrcLoc :: SrcLoc, hsConDeclExists :: [HsTyVarBind], hsConDeclName :: HsName, hsConDeclRecArg :: [([HsName],HsBangType)] }
   deriving(Eq,Show)
 
+hsConDeclArgs :: HsConDecl -> [HsBangType]
 hsConDeclArgs HsConDecl { hsConDeclConArg = as } = as
 hsConDeclArgs HsRecDecl { hsConDeclRecArg = as } = concat [ replicate (length ns) t | (ns,t) <- as]
 
@@ -307,6 +314,7 @@ data HsGuardedRhs
 	 = HsGuardedRhs SrcLoc HsExp HsExp
   deriving(Eq,Show)
 
+hsQualTypeHsContext :: HsQualType -> HsContext
 hsQualTypeHsContext HsQualType { hsQualTypeContext = c } = c
 
 --type HsAsst    = (HsName,[HsType])	-- for multi-parameter type classes
@@ -328,6 +336,7 @@ data HsLiteral
   deriving(Eq,Ord, Show)
 
 
+hsParen :: HsExp -> HsExp
 hsParen x@HsVar {} = x
 hsParen x@HsCon {} = x
 hsParen x@HsParen {} = x
