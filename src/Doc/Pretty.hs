@@ -73,8 +73,10 @@ putDocMLn putStr d = displayM putStr (renderPretty 0.4 80 d) >> putStr "\n"
 -- "indentation" used to insert tabs but tabs seem to cause
 -- more trouble than they solve :-)
 -----------------------------------------------------------
+spaces :: Int -> String
 spaces n        | n <= 0    = ""
                 | otherwise = replicate n ' '
 
+indentation :: Int -> String
 indentation n   = spaces n
 

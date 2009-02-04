@@ -63,6 +63,7 @@ adjecent file n y@Blank       (x@(Pre _)      :xs) = x: adjecent file (n+1) y xs
 adjecent file n _             (x@next         :xs) = x: adjecent file (n+1) x xs
 adjecent file n _             []                    = []
 
+message :: String -> Int -> String -> String -> String
 message "\"\"" n p c = "Line "++show n++": "++p++ " line before "++c++" line.\n"
 message []     n p c = "Line "++show n++": "++p++ " line before "++c++" line.\n"
 message file   n p c = "In file " ++ file ++ " at line "++show n++": "++p++ " line before "++c++" line.\n"
@@ -70,6 +71,7 @@ message file   n p c = "In file " ++ file ++ " at line "++show n++": "++p++ " li
 
 -- Re-implementation of 'lines', for better efficiency (but decreased laziness).
 -- Also, importantly, accepts non-standard DOS and Mac line ending characters.
+inlines :: String -> [String]
 inlines s = lines' s id
   where
   lines' []             acc = [acc []]

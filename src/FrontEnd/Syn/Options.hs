@@ -11,17 +11,22 @@ parseOptions :: String -> [(String,String)]
 parseOptions s = case readP_to_S parse s of
     os -> head $ sortBy (\x y -> compare (negate $ length x) (negate $ length y)) [ x | (x,_) <- os ]
 
+token :: ReadP a -> ReadP a
 token x = x >>= \r -> spaces >> return r
 
+parse :: ReadP [(String, String)]
 parse = do
     spaces
     many (token pragma)
 
 
+spaces :: ReadP ()
 spaces = do
     skipSpaces
     optional (comment >> spaces)
 
+
+pragma :: ReadP (String, String)
 pragma = do
     string "{-#"
     skipSpaces
@@ -31,6 +36,7 @@ pragma = do
     return $ (nn,body)
 
 
+comment :: ReadP ()
 comment = plone +++ pline +++ line +++ block where
     line = do
         string "--"

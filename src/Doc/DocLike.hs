@@ -84,6 +84,7 @@ backslash       = char '\\'
 equals          = char '='
 
 
+squotes, dquotes, parens, braces, brackets, angles :: DocLike a => a -> a
 squotes x = enclose squote squote x
 dquotes x = enclose dquote dquote x
 parens x = enclose lparen rparen x
@@ -94,6 +95,7 @@ angles x = enclose langle rangle x
 -----------------------------------------------------------
 -- punctuate p [d1,d2,...,dn] => [d1 <> p,d2 <> p, ... ,dn]
 -----------------------------------------------------------
+punctuate :: DocLike a => a -> [a] -> [a]
 punctuate _ []      = []
 punctuate _ [d]     = [d]
 punctuate p (d:ds)  = (d <> p) : punctuate p ds

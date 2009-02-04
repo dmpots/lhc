@@ -7,6 +7,7 @@ data Attr = Attr { attrBold :: Doc -> Doc
                  , attrColor :: String -> Doc -> Doc
                  }
 
+attrEmpty :: Attr
 attrEmpty = Attr { attrBold = id, attrColor = \_ -> id }
 
 
@@ -23,6 +24,7 @@ html = attrEmpty {
         }
 
 
+ansiColor :: String -> Doc -> Doc
 ansiColor "black"       = dullblack -- "0;30"
 ansiColor "red"         = dullred -- "0;31"
 ansiColor "green"       = dullgreen -- "0;32"
@@ -36,6 +38,7 @@ ansiColor "lightred"    = red -- "0;91"
 ansiColor "brightblue"  = blue -- "0;94"
 ansiColor _ = id -- "0"
 
+attrClear :: String
 attrClear = "\27[0m"
 
 

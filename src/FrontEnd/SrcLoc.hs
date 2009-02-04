@@ -23,7 +23,10 @@ data SrcSpan = SrcSpan { srcSpanBegin :: !SrcLoc, srcSpanEnd :: !SrcLoc }
     deriving(Data,Typeable,Eq,Ord)
 $(derive makeUpdate ''SrcSpan)
 
+bogusASrcLoc :: SrcLoc
 bogusASrcLoc = SrcLoc "bogus#" (-1) (-1)
+
+bogusSrcSpan :: SrcSpan
 bogusSrcSpan = SrcSpan bogusASrcLoc bogusASrcLoc
 
 instance Monoid SrcLoc where
@@ -72,7 +75,7 @@ instance Foldable Located where
 instance Traversable Located where
     traverse f (Located l x) = Located l <$> f x
 
-
+located :: SrcSpan -> a -> Located a
 located ss x = Located (srcSpan ss) x
 
 
