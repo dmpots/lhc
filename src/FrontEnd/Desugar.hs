@@ -47,12 +47,15 @@ import Name.VConsts
 import FrontEnd.Syn.Traverse
 import FrontEnd.SrcLoc
 
+removeSynonymsFromType :: [HsDecl] -> HsType -> HsType
 removeSynonymsFromType _ t = t
+removeSynsFromSig :: [HsDecl] -> HsDecl -> HsDecl
 removeSynsFromSig _ t = t
 
--- (unique int, list of type synoyms)
+-- (unique int, list of type synonyms)
 type PatState = (Int, [HsDecl])
 
+getUnique :: PatSM Int
 getUnique = do
     n <- readUnique
     incUnique
@@ -81,8 +84,11 @@ instance MonadSetSrcLoc PatSM where
 
 {------------------------------------------------------------------------------}
 
+readPatSM :: PatSM PatState
 readPatSM = get
+updatePatSM :: (PatState -> PatState) -> PatSM ()
 updatePatSM = modify
+runPatSM :: PatState -> PatSM a -> (a, PatState)
 runPatSM = flip runState
 
 
@@ -196,6 +202,7 @@ desugarDecl anyOtherDecl = return [anyOtherDecl]
 
 
 
+createSelectors :: Monad m => SrcLoc -> [HsConDecl] -> m [HsDecl]
 createSelectors _sloc ds = ans where
     ds' :: [(HsName,[(HsName,HsBangType)])]
     ds' = [ (c,[(n,t) | (ns,t) <- rs , n <- ns ]) | HsRecDecl { hsConDeclName = c, hsConDeclRecArg = rs } <- ds ]
@@ -386,10 +393,11 @@ remSynsQualType qualtype
 
 -- flatten out do notation into an expression
 -- involving ">>" and ">>="
--- TODO -  THIS IS BROKEN
+-- FIXME -  THIS IS BROKEN
 
 
 
+f_bind, f_bind_, f_concatMap, f_map, f_foldr, f_fail, f_filter, f_and :: HsName
 f_bind = nameName $ toUnqualified (func_bind sFuncNames)
 f_bind_ = nameName $ toUnqualified (func_bind_ sFuncNames)
 f_concatMap = nameName $ toUnqualified v_concatMap
@@ -398,6 +406,8 @@ f_foldr = nameName $ toUnqualified v_foldr
 f_fail = nameName $ toUnqualified v_fail
 f_filter = nameName $ toUnqualified v_filter
 f_and = nameName $ toUnqualified v_and
+
+con_cons :: HsName
 con_cons = nameName $ toUnqualified dc_Cons
 
 doToExp :: Monad m => [HsStmt] -> m HsExp
@@ -421,8 +431,11 @@ doToExp (HsLetStmt decls:ss) = do
     ss <- doToExp ss
     return $ HsLet decls ss
 
+hsApp :: HsExp -> [HsExp] -> HsExp
 hsApp e es = hsParen $ foldl HsApp (hsParen e) (map hsParen es)
+hsIf :: HsExp -> HsExp -> HsExp -> HsExp
 hsIf e a b = hsParen $ HsIf e a b
+patVar :: HsExp
 patVar = HsVar newPatVarName
 
 listCompToExp :: HsExp -> [HsStmt] -> HsExp
@@ -460,20 +473,24 @@ listCompToExp exp ss = hsParen (f ss) where
 -- failable is a subset of refutable
 
 
+isFailablePat :: HsPat -> Bool
 isFailablePat p | isStrictPat p = f (openPat p) where
     f (HsPTuple ps) = any isFailablePat ps
     f (HsPUnboxedTuple ps) = any isFailablePat ps
     f _ = True
 isFailablePat _ = False
 
+isLazyPat :: HsPat -> Bool
 isLazyPat pat = not (isStrictPat pat)
+isStrictPat :: HsPat -> Bool
 isStrictPat p = f (openPat p) where
     f HsPVar {} = False
     f HsPWildCard = False
-    f (HsPIrrPat p) = False -- isStrictPat p  -- TODO irrefutable patterns
+    f (HsPIrrPat p) = False -- isStrictPat p  -- FIXME irrefutable patterns
     f _ = True
 
 
+openPat :: HsPat -> HsPat
 openPat (HsPParen p) = openPat p
 openPat (HsPNeg p) = openPat p
 openPat (HsPAsPat _ p) = openPat p

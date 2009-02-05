@@ -50,13 +50,15 @@ restrictFixityMap f (FixityMap fm) = FixityMap (Map.filterWithKey (\k _ -> f k) 
 syn_err_msg :: String
 syn_err_msg = "Syntax error in input, run through a compiler to check.\n"
 
+syn_err_bad_oparg :: (Show a, Show b) => a -> b -> String
 syn_err_bad_oparg op exp =    syn_err_msg ++ "\tERROR: cannot apply " ++ show op
                            ++ " to the expression: " ++ show exp
 
+syn_err_precedence :: (Show a, Show b) => a -> b -> String
 syn_err_precedence op exp =    syn_err_msg ++ "\tERROR: the precedence of " ++ show op
-                            ++ " is incompatible with the precendence of it's argument: " ++ show exp
+                            ++ " is incompatible with the precedence of it's argument: " ++ show exp
 
-defaultFixity :: (Int, HsAssoc)     -- Fixity assigned to operators without explict infix declarations.
+defaultFixity :: (Int, HsAssoc)     -- Fixity assigned to operators without explicit infix declarations.
 defaultFixity = (9, HsAssocLeft)
 
 terminalFixity :: (Int, HsAssoc)    -- Fixity given to variables, etc. Used to terminate descent.
@@ -115,6 +117,7 @@ buildFixityMap ds = FixityMap (Map.fromList $ concatMap f ds)  where
 --            (Qual a_module name)   -> (a_module, name)
 --            (UnQual name)          -> (unqualModule, name)
 
+lookupSM :: SymbolMap -> HsExp -> FixityInfo
 lookupSM infixMap  exp = case exp of
     HsAsPat _ e -> lookupSM infixMap e
     HsVar qname    -> Map.findWithDefault defaultFixity (toName Val qname) infixMap
@@ -206,6 +209,7 @@ processFUpdt infixMap (HsFieldUpdate qname exp) = HsFieldUpdate qname new_exp
         new_exp = fst $ processExp infixMap exp
 
 
+procPat :: SymbolMap -> HsPat -> HsPat
 procPat sm p = fst $ processPat sm p
 processPat :: SymbolMap -> HsPat -> (HsPat, FixityInfo)
 processPat infixMap exp = case exp of
