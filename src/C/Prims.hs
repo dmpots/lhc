@@ -92,6 +92,7 @@ primIsCheap PrimTypeInfo {} = True
 primIsCheap Op { primCOp = op } = Op.isCheap op
 primIsCheap _ = False
 
+aprimIsCheap :: APrim -> Bool
 aprimIsCheap (APrim p _) = primIsCheap p
 
 
@@ -117,6 +118,7 @@ primEagerSafe _ = False
 
 
 
+parsePrimString :: Monad m => String -> m APrim
 parsePrimString s = do
     ws@(_:_) <- return $ words s
     let v = case last ws of
@@ -127,6 +129,7 @@ parsePrimString s = do
     return (APrim v (mconcat (map f (init ws))))
 
 
+primPrim :: String -> APrim
 primPrim s = APrim (PrimPrim $ toAtom s) mempty
 
 data APrim = APrim Prim Requires

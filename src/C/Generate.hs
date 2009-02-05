@@ -89,6 +89,7 @@ import Doc.DocLike
 import Util.Gen
 import Util.SetLike
 
+($+$) :: Doc -> Doc -> Doc
 ($+$) = (<$$>)
 
 data Env = Env {
@@ -98,6 +99,7 @@ data Env = Env {
 
 --envInScope_u f e = e { envInScope = f $ envInScope e }
 
+emptyEnv :: Env
 emptyEnv = Env { envUsedLabels = mempty, envInScope = mempty }
 
 newtype G a = G (RWS Env [(Name,Type)] (Int,Map.Map [Type] Name) a)
@@ -119,9 +121,11 @@ data TypeHint = TypeHint {
     thOmittable :: Bool
     }
 
+hintConst, hintPtr :: TypeHint
 hintConst = typeHint { thConst = True, thOmittable = True }
 hintPtr   = typeHint { thPtr = True }
 
+typeHint :: TypeHint
 typeHint = TypeHint { thPtr = False, thConst = False, thNoAssign = False, thOmittable = False }
 
 data Expression = Exp TypeHint E
@@ -139,7 +143,9 @@ data Stmt =
 
 newtype Constant = C (G Doc)
 
+sd :: G Doc -> Statement
 sd x = stmt (SD x)
+stmt :: Stmt -> Statement
 stmt s = St (Seq.singleton s)
 
 stmtMapStmt :: Monad m => (Stmt -> m Stmt) -> Stmt -> m Stmt
@@ -162,6 +168,7 @@ data Type = TB String Bool | TPtr Type | TAnon [Type] | TNStruct Name | TFunPtr 
 
 data E = ED (G Doc) | EP E | EE
 
+terr :: DocLike d => String -> d
 terr s = text "/* ERROR: " <> text s <> text " */"
 
 class Draw d where
@@ -198,6 +205,7 @@ instance Draw Stmt where
         sc (Nothing,ss) = do ss <- draw (SBlock ss); return $ text "default:"  <$$>  ( indent 4 ss <$$> text "break;")
         md = if any isNothing (fsts ts) then empty else text "default: lhc_case_fell_off(__LINE__);"
 
+subBlockBody :: Statement -> G Doc
 --subBlockBody s = draw s
 subBlockBody s = do
     let vcmp (n,t@(TB _ b)) = (not b,n)
@@ -256,6 +264,7 @@ cast :: Type -> Expression -> Expression
 cast t e = expDC (parens (draw t) <> pdraw e)
 
 
+functionCall' :: Draw a => a -> [Expression] -> Expression
 functionCall' fe es = expD (draw fe <> tupled (map draw es))
 
 functionCall :: Name -> [Expression] -> Expression
@@ -302,6 +311,7 @@ instance Monoid Statement where
     mempty = St mempty
     mappend (St as) (St bs) = St $ pairOpt stmtPairOpt as bs
 
+stmtPairOpt :: Stmt -> Stmt -> Maybe Stmt
 stmtPairOpt a b = f a b where
     f (SGoto l) y@(SLabel l')
         | l == l' = Just y
@@ -311,7 +321,7 @@ stmtPairOpt a b = f a b where
     f x@SReturn {} _  = Just x
     f _ _ = Nothing
 
--- combine two sequences, attempting pairwise peephole optimizations
+-- | Combine two sequences, attempting pairwise peephole optimizations
 
 pairOpt :: (s -> s -> Maybe s) -> Seq.Seq s -> Seq.Seq s -> Seq.Seq s
 pairOpt peep as bs = f as bs where
@@ -321,10 +331,13 @@ pairOpt peep as bs = f as bs where
     f as bs =  as Seq.>< bs
 
 
+emptyExpression :: Expression
 emptyExpression = Exp typeHint EE
 
+expressionRaw :: String -> Expression 
 expressionRaw s = expD $ text s
 
+isEmptyExpression :: Expression -> Bool
 isEmptyExpression (Exp _ EE) = True
 isEmptyExpression _ = False
 {-
@@ -361,10 +374,13 @@ constant c = expD (draw c)
 string :: String -> Expression
 string s = Exp hintPtr (ED (return $ text (show s))) -- TODO, use C quoting conventions
 
+nullPtr :: Expression
 nullPtr = Exp hintPtr (ED $ text "NULL")
 
+name :: String -> Name
 name = Name
 
+expDO, expD, expDC, expC :: G Doc -> Expression
 expDO x = Exp typeHint { thOmittable = True } (ED x)
 expD x = Exp typeHint (ED x)
 expDC x = Exp hintConst (EP $ ED x)
@@ -383,6 +399,7 @@ floating i = C (tshow i)
 character :: Char -> Constant
 character c = C (tshow c)
 
+cTrue, cFalse :: Constant
 cTrue = C (text "true")
 cFalse = C (text "false")
 
@@ -407,6 +424,7 @@ goto :: Name -> Statement
 goto n = stmt $ SGoto n
 
 
+newTmpVar :: (UniqueProducer m, Draw d) => d -> Expression -> m (Statement, Expression)
 newTmpVar t e = do
     u <- newUniq
     let n = name $ 'x':show u
@@ -416,6 +434,7 @@ newTmpVar t e = do
             return $ t <+> va
     return (d,variable n)
 
+newAssignVar :: (Monad m, Draw d) => d -> Name -> Expression -> m Statement
 newAssignVar t n e = do
     let d = sd $ do
             va <- draw (variable n `assign` e)
@@ -423,12 +442,14 @@ newAssignVar t n e = do
             return $ t <+> va
     return d
 
+newVar :: (UniqueProducer m) => Type -> m Expression
 newVar t = do
     u <- newUniq
     let n = name $ 'x':show u
     return (localVariable t n)
 
 
+newDeclVar :: (UniqueProducer m) => Type -> m (Statement, Expression)
 newDeclVar t = do
     u <- newUniq
     let n = name $ 'x':show u
@@ -453,6 +474,7 @@ cif exp thn els = (stmt $ SIf exp thn' els') `mappend` la `mappend` lb where
     (thn',la) = labelPull thn
     (els',lb) = labelPull els
 
+subBlock :: Statement -> Statement
 subBlock st = stmt (SBlock st') `mappend` la  where
     (st',la) = labelPull st
 
@@ -481,6 +503,7 @@ function :: Name -> Type -> [(Name,Type)] -> [FunctionOpts] -> Statement -> Func
 function n t as o s = F n t as o s
 
 
+drawFunction :: Function -> G (Doc, Doc)
 drawFunction f = do
     frt <- draw (functionReturnType f)
     cenv <- ask
@@ -545,6 +568,7 @@ instance Annotate Statement where
     annotate c s = sd (text "/* " <> text c <> text " */") `mappend` s
 
 
+mangleIdent :: [Char] -> [Char]
 mangleIdent xs =  concatMap f xs where
         f '.' = "__"
         f '@' = "_a"
@@ -566,6 +590,7 @@ mangleIdent xs =  concatMap f xs where
         f c | isAlphaNum c = [c]
         f c = '_':'x':showHex (ord c) ""
 
+toName :: [Char] -> Name
 toName s = Name (mangleIdent s)
 
 data Structure = Structure {
@@ -576,6 +601,7 @@ data Structure = Structure {
     structureAligned :: Bool                -- ^ this structure needs to be aligned to a pointer boundry, even if it woudn't be otherwise.
     }
 
+basicStructure :: Structure
 basicStructure = Structure {
     structureName = error "basicStructure: Name",
     structureFields = [],
@@ -626,13 +652,16 @@ generateC fs ss = ans where
         return $ text "struct" <+> tshow n <+> lbrace <$$> indent 4 (vcat $ (if structureNeedsDiscriminator s  then text "what_t what;" else empty):ts') <$$> rbrace <> semi
 
 
+line :: Doc
 line = text ""
+vsep :: [Doc] -> Doc
 vsep xs = vcat $ intersperse line xs
 
 
 instance Show Expression where
     show e = renderG e
 
+renderG :: Draw d => d -> String
 renderG x = show $ drawG x
 
 drawG :: Draw d => d -> Doc
