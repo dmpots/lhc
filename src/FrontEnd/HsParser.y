@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -w -fno-warn-missing-signatures #-} {- -*- Haskell -*- -}
+{- -*- Haskell -*- -}
 -- -----------------------------------------------------------------------------
 -- $Id: HsParser.ly,v 1.4 2001/11/25 08:52:13 bjpop Exp $
 
@@ -16,6 +16,7 @@
 -- ToDo: Differentiate between record updates and labeled construction.
 
 {
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module FrontEnd.HsParser (parse, parseHsStmt) where
 
 import FrontEnd.HsSyn
