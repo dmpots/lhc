@@ -31,12 +31,14 @@ class Expression t e | e -> t where
     fromUnOp _ = Nothing
     equalsExpression _ _ = False
 
+tyLte :: Ty -> Ty -> Bool
 TyBool `tyLte` _ = True
 TyBits (Bits x) _ `tyLte` TyBits (Bits y) _ = x <= y
 _ `tyLte` TyBits (BitsArch BitsMax) _ = True
 TyBits (Bits x) _ `tyLte` TyBits (BitsArch BitsPtr) _ = x <= 32
 x `tyLte` y  = x == y
 
+tyLt, tyGt, tyGte, tyEq :: Ty -> Ty -> Bool
 x `tyLt` y = (x `tyLte` y) && not (y `tyLte` x)
 x `tyGt` y = y `tyLt` x
 x `tyGte` y = y `tyLte` x

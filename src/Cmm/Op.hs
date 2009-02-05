@@ -174,6 +174,7 @@ readTy ('f':rs) = do TyBits x _ <- readTy rs; return $ TyBits x HintFloat
 readTy ('c':rs) = do TyBits x _ <- readTy rs; return $ TyBits x HintCharacter
 readTy _ = fail "readTy: not type"
 
+bool, bits_ptr, bits_max, bits8, bits16, bits32, bits64 :: Ty
 bool = TyBool
 bits_ptr = TyBits (BitsArch BitsPtr) HintNone
 bits_max = TyBits (BitsArch BitsMax) HintNone
@@ -193,6 +194,7 @@ instance ToCmmTy String where
 
 cmmTyBits :: ToCmmTy a => a -> Maybe Int
 cmmTyBits x = do TyBits (Bits b) _ <- toCmmTy x; return b
+cmmTyHint :: ToCmmTy a => a -> Maybe TyHint
 cmmTyHint x = do TyBits _ hint <- toCmmTy x; return hint
 
 instance Show TyHint where
