@@ -36,8 +36,6 @@ import FrontEnd.HsSyn
 import Data.Word
 import Data.ByteString (ByteString)
 
-import Debug.Trace
-
 data NameType =
     TypeConstructor
     | DataConstructor
