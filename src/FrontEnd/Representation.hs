@@ -95,8 +95,10 @@ instance Binary MetaVar where
   get = error "get not defined for MetaVar"
   put = error "put not defined for MetaVar"
 
+tList :: Type
 tList = TCon (Tycon tc_List (Kfun kindStar kindStar))
 
+tArrow :: Type
 tArrow = TCon (Tycon tc_Arrow (kindArg `Kfun` kindFunRet `Kfun` kindStar))
 
 instance Eq Type where
@@ -107,9 +109,11 @@ instance Eq Type where
     (TArrow a' a) == (TArrow b' b) = a' == b' && b == a
     _ == _ = False
 
+tAp :: Type -> Type -> Type
 tAp (TAp c@TCon{} a) b | c == tArrow = TArrow a b
 tAp a b = TAp a b
 
+tassocToAp :: Type -> Type
 tassocToAp TAssoc { typeCon = con, typeClassArgs = cas, typeExtraArgs = eas } = foldl tAp (TCon con) (cas ++ eas)
 
 -- Unquantified type variables
@@ -120,10 +124,12 @@ data Tyvar = Tyvar { tyvarAtom :: {-# UNPACK #-} !Atom, tyvarName ::  !Name, tyv
 instance Show Tyvar where
     showsPrec _ Tyvar { tyvarName = hn, tyvarKind = k } = shows hn . ("::" ++) . shows k
 
+tForAll :: [Tyvar] -> Qual Type -> Type
 tForAll [] ([] :=> t) = t
 tForAll vs (ps :=> TForAll vs' (ps' :=> t)) = tForAll (vs ++ vs') ((ps ++ ps') :=> t)
 tForAll x y = TForAll x y
 
+tExists :: [Tyvar] -> Qual Type -> Type
 tExists [] ([] :=> t) = t
 tExists vs (ps :=> TExists vs' (ps' :=> t)) = tExists (vs ++ vs') ((ps ++ ps') :=> t)
 tExists x y = TExists x y
@@ -132,6 +138,7 @@ tExists x y = TExists x y
 instance Show (IORef a) where
     showsPrec _ _ = ("<IORef>" ++)
 
+tyvar :: Name -> Kind -> Tyvar
 tyvar n k = Tyvar (toAtom $ show n) n k
 
 instance Eq Tyvar where
@@ -230,10 +237,15 @@ instance DocLike d => PPrint d HsIdentifier where
 instance DocLike d => PPrint d Type where
     pprint = prettyPrintType
 
+withNewNames :: Monad m =>
+                [Tyvar]
+                -> ([String] -> VarNameT Kind Tyvar String m a)
+                -> VarNameT Kind Tyvar String m a
 withNewNames ts action = subVarName $ do
     ts' <- mapM newTyvarName ts
     action ts'
 
+newTyvarName :: Monad m => Tyvar -> VarNameT Kind Tyvar String m String
 newTyvarName t = case tyvarKind t of
     x@(KBase Star) -> newLookupName (map (:[]) ['a' ..]) x t
     y@(KBase Star `Kfun` KBase Star) -> newLookupName (map (('f':) . show) [0 :: Int ..]) y t
@@ -317,15 +329,22 @@ instance DocLike d => PPrint d MetaVar where
         | KBase Star <- k =  pprint t <> tshow u
         | otherwise = parens $ pprint t <> tshow u <> text " :: " <> pprint k
 
+-- | Return the head and arguments of whatever arity application was
+-- given. (Non-applications are just 0-arity applications.)
+fromTAp :: Type -> (Type, [Type])
 fromTAp t = f t [] where
     f (TAp a b) rs = f a (b:rs)
     f (TArrow a b) rs = f (tAp tArrow a) (b:rs)
     f t rs = (t,rs)
 
+-- | Given a function type, return @(argtys, resty)@.
+fromTArrow :: Type -> ([Type], Type)
 fromTArrow t = f t [] where
     f (TArrow a b) rs = f b (a:rs)
     f t rs = (reverse rs,t)
 
+-- | If the given type can be considered an application, return
+-- @'Just' (function, argument)@, otherwise 'Nothing'.
 splitTAp_maybe :: Type -> Maybe (Type, Type)
 splitTAp_maybe (TAp a b) = Just (a, b)
 splitTAp_maybe (TArrow a b) = Just (tAp tArrow a, b)
@@ -352,9 +371,13 @@ instance CanType Type Kind where
   getType (TMetaVar mv) = getType mv
   getType ta@TAssoc {} = getType (tassocToAp ta)
 
+-- | Construct a tuple type
+tTTuple :: [Type] -> Type
 tTTuple ts | length ts < 2 = error "tTTuple"
 tTTuple ts = foldl TAp (toTuple (length ts)) ts
 
+-- | Construct an unboxed tuple type
+tTTuple' :: [Type] -> Type
 tTTuple' ts = foldl TAp (TCon $ Tycon (unboxedNameTuple TypeConstructor  n) (foldr Kfun kindUTuple $ replicate n kindStar)) ts where
     n = length ts
 
