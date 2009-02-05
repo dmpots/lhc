@@ -25,6 +25,7 @@ standardRules = Map.fromList [
 
 -- Eq
 
+eqfn :: Data -> Doc
 eqfn = instanceSkeleton "Eq" [(makeEq,defaultEq)]
 
 makeEq :: IFunction
@@ -39,12 +40,14 @@ makeEq (Body{constructor=constructor,types=types})
 		zipWith (\x y -> (x <+> text "==" <+> y)) v v'
 	in d v <+> fsep (head ++  body)
 
+defaultEq :: Doc
 defaultEq = hsep $ texts ["_", "==", "_", "=" ,"False"]
 
 ----------------------------------------------------------------------
 
 -- Ord
 
+ordfn :: Data -> Doc
 ordfn d = let
    ifn = [f c c'
 		| c <- zip (body d) [1 :: Int ..]
@@ -80,6 +83,7 @@ ordfn d = let
 --
 -- Show
 
+showfn :: Data -> Doc
 showfn = instanceSkeleton "Show" [(makeShow,empty)]
 
 makeShow :: IFunction
@@ -105,9 +109,10 @@ makeShow (Body{constructor=constructor,labels=labels,types=types})
 	comp = char '.'
 
 -- Read
-
+readfn :: Data -> Doc
 readfn d = simpleInstance "Read" d <+> text "where" $$ readsPrecFn d
 
+readsPrecFn :: Data -> Doc
 readsPrecFn d = let
 	fnName = text "readsPrec"
 	bodies = vcat $ sepWith (text "++") (map makeRead (body d))
@@ -157,6 +162,7 @@ makeRead (Body{constructor=constructor,labels=labels,types=types})
 -- Enum -- a lot of this code should be provided as default instances,
 -- 	 but currently isn't
 
+enumfn :: Data -> Doc
 enumfn d = let
 	fromE = fromEnumFn d
 	toE = toEnumFn d
@@ -200,18 +206,21 @@ enumFromThenFn = let
 
 -- Bounded - as if anyone uses this one :-) ..
 
+boundedfn :: Data -> Doc
 boundedfn d@D{name=name,body=body,derives=derives}
 	| all (null . types) body  = boundedEnum d
 	| singleton body = boundedSingle d
        | otherwise = commentLine $ text "Warning -- can't derive Bounded for"
 			<+> text name
 
+boundedEnum :: Data -> Doc
 boundedEnum d@D{body=body} = let f = constructor . head $ body
 			         l = constructor . last $ body
 	in simpleInstance "Bounded" d <+> text "where" $$ block [
 		hsep (texts[ "minBound","=",f]),
 		hsep (texts[ "maxBound","=",l])]
 
+boundedSingle :: Data -> Doc
 boundedSingle d@D{body=body} = let f = head $ body
 	in simpleInstance "Bounded" d <+> text "where" $$ block [
 		hsep . texts $ [ "minBound","=",constructor f] ++
@@ -219,6 +228,7 @@ boundedSingle d@D{body=body} = let f = head $ body
 		hsep . texts $ [ "maxBound","=",constructor f] ++
 			replicate (length (types f)) "maxBound"]
 
+singleton :: [a] -> Bool
 singleton [x] = True
 singleton _ = False
 
