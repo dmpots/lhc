@@ -938,8 +938,11 @@ tyvar :: { HsName }
 -- -----------------------------------------------------------------------------
 
 {
+
 {-# NOINLINE parse #-}
 {-# NOINLINE parseHsStmt #-}
+parse       :: P HsModule
+parseHsStmt :: P HsStmt
 
 happyError = parseError "Parse error"
 hsSymbol x = HsIdent x
