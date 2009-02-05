@@ -43,10 +43,14 @@ instance ConNames Name where
 --instance ToTuple Name where
 --    toTuple n = toName DataConstructor (toTuple n :: (String,String))
 
+nameTuple :: NameType -> Int -> Name
 nameTuple _ n | n < 2 = error "attempt to create tuple of length < 2"
 nameTuple t n = toName t  $ (toTuple n:: (String,String)) -- Qual (HsIdent ("(" ++ replicate (n - 1) ',' ++ ")"))
 
+unboxedNameTuple :: NameType -> Int -> Name
 unboxedNameTuple t n = toName t $ "(#" ++ show n ++ "#)"
+
+fromUnboxedNameTuple :: Monad m => Name -> m Int
 fromUnboxedNameTuple n = case show n of
     '(':'#':xs | (ns@(_:_),"#)") <- span isDigit xs -> return (read ns::Int)
     _ -> fail $ "Not unboxed tuple: " ++ show n
@@ -61,6 +65,7 @@ instance FromTupname Name where
 -- The constructors
 
 
+tc_Arrow, tc_Int__, tc_Array__, tc_MutArray__, tc_Ref__ :: Name
 tc_Arrow = toName TypeConstructor  ("Lhc.Basics","->")
 tc_Int__ = toName TypeConstructor  ("Lhc.Prim","Int__")
 tc_Array__ = toName TypeConstructor  ("Lhc.Array","Array__")
@@ -68,14 +73,17 @@ tc_MutArray__ = toName TypeConstructor  ("Lhc.Array","MutArray__")
 tc_Ref__ = toName TypeConstructor ("Data.IORef","Ref__")
 
 
+tc_Boolzh, tc_List :: Name
 tc_Boolzh = toName TypeConstructor ("Lhc.Order","Bool#")
 tc_List = toName TypeConstructor  ("Lhc.Prim","[]")
 
 
+s_Star, s_Hash :: Name
 s_Star = toName SortName ("Lhc@","*")
 s_Hash = toName SortName ("Lhc@","#")
 
 
+sFuncNames :: FuncNames Name
 sFuncNames = FuncNames {
     func_bind = v_bind,
     func_bind_ = v_bind_,

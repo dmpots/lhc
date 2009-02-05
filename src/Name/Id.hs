@@ -153,6 +153,7 @@ runIdNameT' (IdNameT x) = do
     (r,(used,bound)) <- State.runStateT x (mempty,mempty)
     return (r,bound)
 
+fromIdNameT :: IdNameT m a -> State.StateT (IdSet, IdSet) m a
 fromIdNameT (IdNameT x) = x
 
 instance GenName Id where
@@ -183,11 +184,14 @@ instance Monad m => NameMonad Id (IdNameT m) where
                 st = abs i + 2 + abs i `mod` 2
         fromIdNameT $ newNameFrom  (genNames (size used + size bound))
 
+addNamesIdSet :: Monad m => IdSet -> IdNameT m ()
 addNamesIdSet nset = IdNameT $ do
     State.modify (\ (used,bound) -> (nset `union` used, bound) )
+addBoundNamesIdSet :: Monad m => IdSet -> IdNameT m ()
 addBoundNamesIdSet nset = IdNameT $ do
     State.modify (\ (used,bound) -> (nset `union` used, nset `union` bound) )
 
+addBoundNamesIdMap :: Monad m => IdMap a -> IdNameT m ()
 addBoundNamesIdMap nmap = IdNameT $ do
     State.modify (\ (used,bound) -> (nset `union` used, nset `union` bound) ) where
         nset = idMapToIdSet nmap
@@ -222,9 +226,11 @@ instance Show v => Show (IdMap v) where
 etherialIds :: [Id]
 etherialIds = map Etherial [2, 3 ..  ]
 
+isEtherialId :: Id -> Bool
 isEtherialId Etherial{} = True
 isEtherialId _ = False
 
+isInvalidId :: Id -> Bool
 isInvalidId Etherial{} = True
 isInvalidId Empty = True
 isInvalidId _ = False
