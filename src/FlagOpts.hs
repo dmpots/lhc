@@ -56,6 +56,7 @@ instance Show Flag where
     show Debug = "debug"
     show Raw = "raw"
 
+one :: String -> Either String (Set.Set Flag -> Set.Set Flag)
 one "profile" = Right $ Set.insert Profile
 one "no-profile" = Right $ Set.delete Profile
 one "boehm" = Right $ Set.insert Boehm
@@ -108,11 +109,14 @@ one "no-type-analysis" = Right $ Set.delete TypeAnalysis
 one x = Left x
 
 {-# NOINLINE process #-}
+process :: Set.Set Flag -> [String] -> (Set.Set Flag, [String])
 process s xs = foldr f (s,[]) (map one xs) where
    f (Right g) (s,xs) = (g s,xs)
    f (Left x) (s,xs) = (s,x:xs)
 
 {-# NOINLINE helpMsg #-}
+helpMsg :: String
 helpMsg = "\n-- Code options --\n cpp\n    pass haskell source through c preprocessor\n ffi\n    support foreign function declarations\n inline-eval\n    replace calls to eval/apply with case expressions\n m4\n    pass haskell source through m4 preprocessor\n unboxed-tuples\n    allow unboxed tuple syntax to be recognized\n unboxed-values\n    allow unboxed value syntax\n unsafe\n    disable runtime assertions\n\n-- Typechecking --\n defaulting\n    perform defaulting of ambiguous types\n monomorphism-restriction\n    enforce monomorphism restriction\n\n-- Debugging --\n lint\n    perform lots of extra type checks\n\n-- Optimization Options --\n cpr\n    do CPR analysis\n float-in\n    perform float inward transform\n global-optimize\n    perform whole program E optimization\n inline-pragmas\n    use inline pragmas\n rules\n    use rules\n strictness\n    perform strictness analysis\n type-analysis\n    perhaps a basic points-to analysis on types right after method generation\n\n-- Code Generation --\n boehm\n    use Boehm garbage collector\n debug\n    enable debugging code in generated executable\n profile\n    enable profiling code in generated executable\n raw\n    just evaluate main to WHNF and nothing else.\n wrapper\n    wrap main in exception handler\n\n-- Default settings --\n default\n    inline-pragmas rules wrapper float-in strictness defaulting type-analysis monomorphism-restriction boxy eval-optimize global-optimize\n"
+helpFlags :: [String]
 helpFlags = ["boehm", "controlled", "cpp", "cpr", "debug", "default", "defaulting", "ffi", "float-in", "global-optimize", "inline-eval", "inline-pragmas", "lint", "m4", "monomorphism-restriction", "negate", "profile", "raw", "rules", "strictness", "type-analysis", "unboxed-tuples", "unboxed-values", "unsafe", "wrapper"]
 
