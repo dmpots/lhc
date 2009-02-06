@@ -34,6 +34,7 @@ render doc =  displayS (renderPretty 100.0 (optColumns options)  doc) ""
 prettyE :: E -> String
 prettyE e = render $ ePretty e
 
+ePrettyEx :: E -> Doc
 ePrettyEx = ePretty
 
 showId :: DocLike d => Id -> d
@@ -61,6 +62,7 @@ instance PPrint String (Lit E E) where
 newtype SEM a = SEM { _unSEM :: VarNameT E Id String Identity a }
     deriving(Monad,Functor)
 
+enumList :: [(Name, [String])]
 enumList = [
     (tc_Boolzh,["False#","True#"]),
     (toName TypeConstructor ("Lhc.Order","Ordering#"),["LT#","EQ#","GT#"])
@@ -113,11 +115,15 @@ showLit showBind l = do
         cons = bop (R,5) (text ":")
     f l
 
+app, appCon :: Unparse Doc -> Unparse Doc -> Unparse Doc
 app = bop (L,100) (text " ")
 appCon = bop (L,99) (text " ")
+col :: String -> Doc -> Doc
 col n x = attrColor attr n x
+attr :: Attr
 attr = if dump FD.Html then html else ansi
 
+showI :: DocLike d => Id -> SEM d
 showI i = do
     n <- SEM $ maybeLookupName i
     case n of
@@ -131,6 +137,7 @@ showTVr TVr { tvrIdent = i, tvrType =  t, tvrInfo = nfo}  = do
     ty <- showE t
     ii <- showI i
     return $ atom (si ii) `inhabit` ty
+showTVr' :: TVr' t -> SEM (Unparse Doc)
 showTVr' TVr { tvrIdent = i} = do
     ii <- showI i
     return $ atom ii
@@ -147,9 +154,12 @@ allocTVr tvr (SEM action) | not $ idIsNamed (tvrIdent tvr) = do
     SEM $ subVarName $ newName (map (('v':) . show) [1::Int ..]) Unknown (tvrIdent tvr) >> action
 allocTVr _ action = action
 
+-- FIXME this should not be here!
+tBoolzh :: E
 tBoolzh = ELit litCons { litName = tc_Boolzh, litType = eHash, litAliasFor = Just tIntzh }
 
 -- collects lambda and pi abstractions
+collectAbstractions :: TextLike a => E -> ([(a, TVr, Bool)], E)
 collectAbstractions e0 = go e0 [] where
     go e1@(EPi tvr e)  xs | isEmptyId (tvrIdent tvr)         = done e1 xs
                           | not (sortKindLike (tvrType tvr)) = go e ((UC.pI,     tvr, True) :xs)
@@ -258,19 +268,24 @@ showE e = do
 
     f e
 
+subSEM :: SEM a -> SEM a
 subSEM (SEM act) = SEM $ subVarName act
 
 
+retOp :: Doc -> Doc
 retOp x = col "lightgreen" x
+inhabit :: Unparse Doc -> Unparse Doc -> Unparse Doc
 inhabit = bop (N,-2) $ retOp UC.coloncolon
 bold :: Doc -> Doc
 bold = attrBold attr
 
+ePretty :: E -> Doc
 ePretty e = unparse pe where
     (SEM pe') = showE e
     Identity pe = runVarNameT pe'
 
 -- skip to the current nesting level, breaking the line if already past it
+skipToNest :: Doc
 skipToNest      = column (\k ->
                   nesting (\i -> if k > i
                                  then linebreak
