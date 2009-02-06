@@ -68,6 +68,7 @@ instance Applicative RM where
 newtype RM a = RM (RWS Env [Warning] ScopeState a)
     deriving(Monad,Functor,MonadReader Env, MonadWriter [Warning], MonadState ScopeState)
 
+unRM :: RM a -> RWS Env [Warning] ScopeState a
 unRM (RM x) = x
 
 instance MonadWarn RM where
@@ -111,6 +112,7 @@ addTopLevels  hsDecls action = do
     action
 
 
+ambig :: Show a => a -> [a] -> String
 ambig x ys = "Ambiguous Name: " ++ show x ++ "\nCould refer to: " ++ tupled (map show ys)
 
 runRename :: MonadWarn m => (a -> RM a) -> Module -> FieldMap -> [(Name,[Name])] -> a -> m a
@@ -142,10 +144,12 @@ runRename doit mod fls ns m = mapM_ addWarning errors >> return renamedMod where
     (renamedMod, _, errors) = runRWS (unRM $ doit m) startEnv startState
 
 {-# NOINLINE renameModule #-}
+-- | Rename an entire module.
 renameModule :: MonadWarn m => FieldMap -> [(Name,[Name])] -> HsModule -> m HsModule
 renameModule fls ns m = runRename renameDecls (hsModuleName m) fls ns m
 
 {-# NOINLINE renameStatement #-}
+-- | Rename just one statement.
 renameStatement :: MonadWarn m => FieldMap -> [(Name,[Name])] -> Module -> HsStmt -> m HsStmt
 renameStatement fls ns modName stmt = runRename rename modName fls ns stmt
 
@@ -344,6 +348,7 @@ instance Rename HsType where
         HsErrors.hsType t
         return t
 
+renameHsType' :: Bool -> HsType -> RM HsType
 renameHsType' dovar t = pp (rt t) where
     rt :: HsType -> RM HsType
     rt (HsTyVar hsName) | dovar = do
@@ -491,14 +496,17 @@ instance Rename HsGuardedRhs where
 uqFuncNames :: V.FuncNames HsName
 Identity uqFuncNames = T.mapM (return . nameName . toUnqualified) sFuncNames
 
+func_fromRational :: HsExp
 func_fromRational = (HsVar $ V.func_fromRational uqFuncNames)
 
+newVar :: RM HsName
 newVar = do
     unique <- newUniq
     mod <- getCurrentModule
     let hsName'' = (Qual mod (HsIdent $ show unique {- ++ fromHsName hsName' -} ++ "_var@"))
     return hsName''
 
+wrapInAsPat :: HsExp -> RM HsExp
 wrapInAsPat e = do
     unique <- newUniq
     mod <- getCurrentModule
@@ -588,13 +596,17 @@ renameHsExp (HsWildCard sl) _ = do
     return e
 renameHsExp p subTable = traverseHsExp (flip renameHsExp subTable) p
 
+desugarEnum :: String -> [HsExp] -> HsExp
 desugarEnum s as = foldl HsApp (HsVar (nameName $ toName Val s)) as
 
 
+-- | Create a _|_ with given error type and message referring to the current source location
+createError :: MonadSrcLoc m => HsErrorType -> String -> m HsExp
 createError et s = do
     sl <- getSrcLoc
     return $ HsError { hsExpSrcLoc = sl, hsExpErrorType = et, hsExpString = (show sl ++ ": " ++ s) }
 
+failRename :: String -> RM a
 failRename s = do
     sl <- getSrcLoc
     fail (show sl ++ ": " ++ s)
@@ -698,6 +710,7 @@ instance Rename HsFieldUpdate where
 instance Rename HsName where
     rename n = renameOld $ renameHsName n
 
+renameTypeName :: HsName -> RM HsName
 renameTypeName n = renameOld $ renameTypeHsName n
 
 -- This looks up a replacement name in the subtable.
@@ -723,6 +736,7 @@ renameHsName hsName subTable = case Map.lookup hsName subTable of
             return $ hsName
             --return (Qual modName name)
 
+renameTypeHsName :: HsName -> SubTable -> RM HsName
 renameTypeHsName hsName subTable  =  gets typeSubTable  >>= \t -> case Map.lookup hsName t of
     Just _ -> renameHsName hsName t
     Nothing -> renameHsName hsName subTable
@@ -745,7 +759,7 @@ renameAndQualify name unique currentMod
 renameName :: HsName -> Int -> HsName
 renameName n unique = hsNameIdent_u (hsIdentString_u ((show unique ++ "_") ++)) n
 
--- | unRename gets the original identifier name from the renamed version
+-- | 'unRename' gets the original identifier name from the renamed version
 
 unRename :: HsName -> HsName
 unRename name
@@ -844,6 +858,7 @@ collectDefsHsModule m = execWriter (mapM_ f (hsModuleDecls m)) where
     zup cs = tellS (map g cs) where
         g ca = (toName DataConstructor (hsConDeclName ca), length $ hsConDeclArgs ca)
 
+namesHsConDecl' :: (NameType -> HsName -> Name) -> HsConDecl -> [(Name, SrcLoc, [Name])]
 namesHsConDecl' toName c = ans where
     dc = (toName DataConstructor $ hsConDeclName c,sl,fls')
     sl = hsConDeclSrcLoc c
@@ -853,6 +868,7 @@ namesHsConDecl' toName c = ans where
         HsRecDecl { hsConDeclRecArg = ra } -> concatMap fst ra -- (map (rtup (hsConDeclSrcLoc c). toName FieldLabel) . fst) ra
         _ -> []
 
+namesHsDeclTS' :: (NameType -> HsName -> a) -> HsDecl -> ([(a, SrcLoc)], [a])
 namesHsDeclTS' toName (HsTypeSig sl ns _) = ((map (rtup sl . toName Val) ns),[])
 namesHsDeclTS' toName (HsTypeDecl sl n _ _) = ([(toName TypeConstructor n,sl)],[])
 namesHsDeclTS' _ _ = ([],[])
@@ -872,9 +888,11 @@ namesHsDecl cd@(HsClassDecl sl _ ds) = (mconcatMap namesHsDeclTS ds) `mappend` (
         _ -> error "really not a class name"
 namesHsDecl _ = mempty
 
+namesHsDeclTS :: HsDecl -> ([(HsName, SrcLoc)], [a])
 namesHsDeclTS (HsTypeSig sl ns _) = ((map (rtup sl) ns),[])
 namesHsDeclTS _ = ([],[])
 
+namesHsConDecl :: HsConDecl -> [(HsName, SrcLoc)]
 namesHsConDecl c = (hsConDeclName c,hsConDeclSrcLoc c) : case c of
     -- HsRecDecl { hsConDeclRecArg = ra } -> concatMap (map (rtup (hsConDeclSrcLoc c)) . fst) ra
     _ -> []
