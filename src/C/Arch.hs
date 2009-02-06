@@ -38,7 +38,6 @@ import qualified Data.Map as Map
 import C.Prims
 import Options
 import Util.Gen
-import qualified FlagOpts as FO
 import qualified Cmm.Op as Op
 
 #include "../arch/generic.arch"
