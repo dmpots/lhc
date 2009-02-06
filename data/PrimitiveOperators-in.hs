@@ -5,7 +5,6 @@ module PrimitiveOperators(
     constantMethods,
     create_uintegralCast_toInt,
     create_uintegralCast_fromInt,
-    theMethods,
     allCTypes
     ) where
 

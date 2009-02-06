@@ -5,7 +5,6 @@ module PrimitiveOperators(
     constantMethods,
     create_uintegralCast_toInt,
     create_uintegralCast_fromInt,
-    theMethods,
     allCTypes
     ) where
 
@@ -277,6 +276,7 @@ v0 t = tVr emptyId t
 {-# NOINLINE allCTypes #-}
 
 
+primitiveInsts :: [Qual Pred]
 primitiveInsts = [
    [] :=> IsIn n_Lhc_Enum_Bounded tc_Lhc_Prim_Int
   ,[] :=> IsIn n_Foreign_Storable_Storable tc_Lhc_Prim_Int
@@ -438,6 +438,7 @@ primitiveInsts = [
   ,[] :=> IsIn n_Lhc_Order_Ord tc_Foreign_C_Types_CTime
   ,[] :=> IsIn n_Lhc_Num_Num tc_Foreign_C_Types_CTime ]
 
+constantMethods :: [(Name, Name, E)]
 constantMethods = [
    (n_Foreign_Storable_Storable, toInstName "Foreign.Storable.sizeOf.Lhc.Prim.Int", ELam (v0 t_Lhc_Prim_Int) $ prim_sizeof "bits32")
   ,(n_Foreign_Storable_Storable, toInstName "Foreign.Storable.poke.Lhc.Prim.Int", buildPoke dc_Int t_Lhc_Prim_Int "bits32")
@@ -1118,9 +1119,7 @@ constantMethods = [
   ,(n_Lhc_Num_Num,toInstName "Lhc.Num.*.Foreign.C.Types.CTime", op_aaa  Op.Mul "bits<time_t>" dc_CTime t_Foreign_C_Types_CTime)
   ,(n_Lhc_Num_Num,toInstName "Lhc.Num.negate.Foreign.C.Types.CTime", op_aa  Op.Neg "bits<time_t>" dc_CTime t_Foreign_C_Types_CTime) ]
 
-theMethods = [
-    ]
-
+allCTypes :: [(Name, Name, E, String, String)]
 allCTypes = [
    (dc_Int, tc_Int, r_bits32, "bits32", "int")
   ,(dc_Integer, tc_Integer, r_bits_max_, "bits<max>", "int")
@@ -1147,60 +1146,113 @@ allCTypes = [
   ,(dc_CTime, tc_CTime, r_bits_time_t_, "bits<time_t>", "float")
  ]
 
+t_Data_Word_WordMax :: E
 t_Data_Word_WordMax = ELit litCons { litName = tc_WordMax, litType = eStar}
+t_Lhc_Basics_Integer :: E
 t_Lhc_Basics_Integer = ELit litCons { litName = tc_Integer, litType = eStar}
+t_Foreign_C_Types_CInt :: E
 t_Foreign_C_Types_CInt = ELit litCons { litName = tc_CInt, litType = eStar}
+t_Data_Word_Word64 :: E
 t_Data_Word_Word64 = ELit litCons { litName = tc_Word64, litType = eStar}
+t_Data_Int_IntMax :: E
 t_Data_Int_IntMax = ELit litCons { litName = tc_IntMax, litType = eStar}
+t_Foreign_C_Types_CTime :: E
 t_Foreign_C_Types_CTime = ELit litCons { litName = tc_CTime, litType = eStar}
+t_Foreign_C_Types_CShort :: E
 t_Foreign_C_Types_CShort = ELit litCons { litName = tc_CShort, litType = eStar}
+t_Data_Int_Int8 :: E
 t_Data_Int_Int8 = ELit litCons { litName = tc_Int8, litType = eStar}
+t_Foreign_C_Types_CChar :: E
 t_Foreign_C_Types_CChar = ELit litCons { litName = tc_CChar, litType = eStar}
+t_Lhc_Prim_Int :: E
 t_Lhc_Prim_Int = ELit litCons { litName = tc_Int, litType = eStar}
+t_Data_Word_Word :: E
 t_Data_Word_Word = ELit litCons { litName = tc_Word, litType = eStar}
+t_Data_Int_Int16 :: E
 t_Data_Int_Int16 = ELit litCons { litName = tc_Int16, litType = eStar}
+t_Data_Word_Word8 :: E
 t_Data_Word_Word8 = ELit litCons { litName = tc_Word8, litType = eStar}
+t_Data_Word_Word32 :: E
 t_Data_Word_Word32 = ELit litCons { litName = tc_Word32, litType = eStar}
+t_Foreign_C_Types_CWchar :: E
 t_Foreign_C_Types_CWchar = ELit litCons { litName = tc_CWchar, litType = eStar}
+t_Foreign_C_Types_CSize :: E
 t_Foreign_C_Types_CSize = ELit litCons { litName = tc_CSize, litType = eStar}
+t_Data_Word_Word16 :: E
 t_Data_Word_Word16 = ELit litCons { litName = tc_Word16, litType = eStar}
+t_Foreign_C_Types_CUInt :: E
 t_Foreign_C_Types_CUInt = ELit litCons { litName = tc_CUInt, litType = eStar}
+t_Data_Int_Int32 :: E
 t_Data_Int_Int32 = ELit litCons { litName = tc_Int32, litType = eStar}
+t_Foreign_C_Types_CWint :: E
 t_Foreign_C_Types_CWint = ELit litCons { litName = tc_CWint, litType = eStar}
+t_Data_Int_Int64 :: E
 t_Data_Int_Int64 = ELit litCons { litName = tc_Int64, litType = eStar}
+t_Data_Int_IntPtr :: E
 t_Data_Int_IntPtr = ELit litCons { litName = tc_IntPtr, litType = eStar}
+t_Data_Word_WordPtr :: E
 t_Data_Word_WordPtr = ELit litCons { litName = tc_WordPtr, litType = eStar}
 
+tc_Data_Word_WordMax :: Type
 tc_Data_Word_WordMax = TCon (Tycon tc_WordMax kindStar)
+tc_Lhc_Basics_Integer :: Type
 tc_Lhc_Basics_Integer = TCon (Tycon tc_Integer kindStar)
+tc_Foreign_C_Types_CInt :: Type
 tc_Foreign_C_Types_CInt = TCon (Tycon tc_CInt kindStar)
+tc_Data_Word_Word64 :: Type
 tc_Data_Word_Word64 = TCon (Tycon tc_Word64 kindStar)
+tc_Data_Int_IntMax :: Type
 tc_Data_Int_IntMax = TCon (Tycon tc_IntMax kindStar)
+tc_Foreign_C_Types_CTime :: Type
 tc_Foreign_C_Types_CTime = TCon (Tycon tc_CTime kindStar)
+tc_Foreign_C_Types_CShort :: Type
 tc_Foreign_C_Types_CShort = TCon (Tycon tc_CShort kindStar)
+tc_Data_Int_Int8 :: Type
 tc_Data_Int_Int8 = TCon (Tycon tc_Int8 kindStar)
+tc_Foreign_C_Types_CChar :: Type
 tc_Foreign_C_Types_CChar = TCon (Tycon tc_CChar kindStar)
+tc_Lhc_Prim_Int :: Type
 tc_Lhc_Prim_Int = TCon (Tycon tc_Int kindStar)
+tc_Data_Word_Word :: Type
 tc_Data_Word_Word = TCon (Tycon tc_Word kindStar)
+tc_Data_Int_Int16 :: Type
 tc_Data_Int_Int16 = TCon (Tycon tc_Int16 kindStar)
+tc_Data_Word_Word8 :: Type
 tc_Data_Word_Word8 = TCon (Tycon tc_Word8 kindStar)
+tc_Data_Word_Word32 :: Type
 tc_Data_Word_Word32 = TCon (Tycon tc_Word32 kindStar)
+tc_Foreign_C_Types_CWchar :: Type
 tc_Foreign_C_Types_CWchar = TCon (Tycon tc_CWchar kindStar)
+tc_Foreign_C_Types_CSize :: Type
 tc_Foreign_C_Types_CSize = TCon (Tycon tc_CSize kindStar)
+tc_Data_Word_Word16 :: Type
 tc_Data_Word_Word16 = TCon (Tycon tc_Word16 kindStar)
+tc_Foreign_C_Types_CUInt :: Type
 tc_Foreign_C_Types_CUInt = TCon (Tycon tc_CUInt kindStar)
+tc_Data_Int_Int32 :: Type
 tc_Data_Int_Int32 = TCon (Tycon tc_Int32 kindStar)
+tc_Foreign_C_Types_CWint :: Type
 tc_Foreign_C_Types_CWint = TCon (Tycon tc_CWint kindStar)
+tc_Data_Int_Int64 :: Type
 tc_Data_Int_Int64 = TCon (Tycon tc_Int64 kindStar)
+tc_Data_Int_IntPtr :: Type
 tc_Data_Int_IntPtr = TCon (Tycon tc_IntPtr kindStar)
+tc_Data_Word_WordPtr :: Type
 tc_Data_Word_WordPtr = TCon (Tycon tc_WordPtr kindStar)
 
+n_Lhc_Num_Integral :: Name
 n_Lhc_Num_Integral = toClassName "Lhc.Num.Integral"
+n_Lhc_Num_Num :: Name
 n_Lhc_Num_Num = toClassName "Lhc.Num.Num"
+n_Data_Bits_Bits :: Name
 n_Data_Bits_Bits = toClassName "Data.Bits.Bits"
+n_Lhc_Order_Eq :: Name
 n_Lhc_Order_Eq = toClassName "Lhc.Order.Eq"
+n_Lhc_Enum_Bounded :: Name
 n_Lhc_Enum_Bounded = toClassName "Lhc.Enum.Bounded"
+n_Lhc_Order_Ord :: Name
 n_Lhc_Order_Ord = toClassName "Lhc.Order.Ord"
+n_Foreign_Storable_Storable :: Name
 n_Foreign_Storable_Storable = toClassName "Foreign.Storable.Storable"
 
 {-# NOINLINE n_Lhc_Num_Integral #-}
@@ -1213,15 +1265,25 @@ n_Foreign_Storable_Storable = toClassName "Foreign.Storable.Storable"
 
 
 
+r_bits_max_ :: E
 r_bits_max_    = ELit litCons { litName = rt_bits_max_, litType = eHash }
+r_bits_ptr_ :: E
 r_bits_ptr_    = ELit litCons { litName = rt_bits_ptr_, litType = eHash }
+r_bits_int_ :: E
 r_bits_int_    = ELit litCons { litName = rt_bits_int_, litType = eHash }
+r_bits32 :: E
 r_bits32       = ELit litCons { litName = rt_bits32, litType = eHash }
+r_bits_short_ :: E
 r_bits_short_  = ELit litCons { litName = rt_bits_short_, litType = eHash }
+r_bits_size_t_ :: E
 r_bits_size_t_ = ELit litCons { litName = rt_bits_size_t_, litType = eHash }
+r_bits_time_t_ :: E
 r_bits_time_t_ = ELit litCons { litName = rt_bits_time_t_, litType = eHash }
+r_bits8 :: E
 r_bits8        = ELit litCons { litName = rt_bits8, litType = eHash }
+r_bits16 :: E
 r_bits16       = ELit litCons { litName = rt_bits16, litType = eHash }
+r_bits64 :: E
 r_bits64       = ELit litCons { litName = rt_bits64, litType = eHash }
 
 
