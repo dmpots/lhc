@@ -14,7 +14,7 @@ module E.Subst(
 
 -- This is a little tricky.
 
-{-
+{- 
 
 Consider the following example.
 fn = \x0 -> let x1 = 10+x0      -- x1 is only used once, let's inline it.
@@ -61,8 +61,8 @@ eLetRec ds e = f (filter ((not . isEmptyId) . tvrIdent . fst) ds) where
 subst ::
     TVr   -- ^ Variable to substitute
     -> E  -- ^ What to substitute with
-    -> E  -- ^ input term
-    -> E  -- ^ output term
+    -> E  -- ^ Input term
+    -> E  -- ^ Output term
 subst (TVr { tvrIdent = i }) _ e | isEmptyId i = e
 subst (TVr { tvrIdent = i }) w e = doSubst' False False (msingleton i w) (\n -> n `member` (freeVars w `union` freeVars e :: IdSet))  e
 
@@ -79,6 +79,7 @@ subst' (TVr { tvrIdent = (i) }) w e = doSubst' True False (msingleton i w) (\n -
 
 
 
+litSMapM :: Monad m => (t -> m e) -> Lit t t -> m (Lit e e)
 litSMapM f LitCons { litName = s, litArgs = es, litType = t, litAliasFor = af } = do
     t' <- f t
     es' <- mapM f es
@@ -92,11 +93,11 @@ litSMapM f (LitInt n t) = do
 substMap :: IdMap E -> E -> E
 substMap im e = doSubst' False False im (\n -> n `member` (unions $ (freeVars e :: IdSet):map freeVars (melems im))) e
 
--- | doesn't seed with free variables.
+-- | Doesn't seed with free variables.
 substMap' :: IdMap E -> E -> E
 substMap' im = doSubst' False False im (`mmember` im)
 
--- | doesn't seed with free variables.
+-- | Doesn't seed with free variables.
 substMap'' :: IdMap (Maybe E) -> E -> E
 substMap'' im = doSubst' False False (mapMaybeIdMap id im) (`mmember` im)
 
@@ -184,6 +185,7 @@ mnv allShadow xs i checkTaken s ss
 
 
 
+eAp :: E -> E -> E
 eAp (EPi t b) e = if isEmptyId (tvrIdent t) then b else subst t e b
 eAp (ELam t b) e = if isEmptyId (tvrIdent t) then b else subst t e b
 --eAp (EPrim n es t@(EPi _ _)) b = EPrim n (es ++ [b]) (eAp t b)  -- only apply if type is pi-like
@@ -203,16 +205,17 @@ typeSubst' termSub typeSub e = typeSubst  (fmap Just termSub `union` fmap ((`mlo
     fvs = (freeVars e `union` fvmap termSub `union` fvmap typeSub)
     fvmap m = unions (map freeVars (melems m))
 
+substType :: Id -> E -> E -> E
 substType t e e' = typeSubst (freeVars e `union` freeVars e') (msingleton t e) e'
 
--- | substitution routine that can substitute different values at the term and type level.
+-- | Substitution routine that can substitute different values at the term and type level.
 -- this is useful to enforce the invarient that let-bound variables must not occur at the type level, yet
 -- non-atomic values (even typelike ones) cannot appear in argument positions at the term level.
 
 typeSubst ::
-    IdMap (Maybe E)  -- ^ substitution to carry out at term level as well as a list of in-scope variables
-    -> IdMap E       -- ^ substitution to carry out at type level
-    -> (E -> E)           -- ^ the substitution function
+    IdMap (Maybe E)  -- ^ Substitution to carry out at term level as well as a list of in-scope variables
+    -> IdMap E       -- ^ Substitution to carry out at type level
+    -> (E -> E)           -- ^ The substitution function
 typeSubst termSubst typeSubst e | isEmpty termSubst && isEmpty typeSubst = e
 typeSubst termSubst typeSubst e  = f e (False,termSubst',typeSubst) where
     termSubst' = termSubst `union` fmap (const Nothing) typeSubst

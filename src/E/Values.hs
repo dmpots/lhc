@@ -30,11 +30,15 @@ instance Tuple E where
         ts = map getType es
 
 
+-- | Build a tuple expression
 eTuple :: [E] -> E
 eTuple = tuple
 
+-- | Build an unboxed tuple expression
+eTuple' :: [E] -> E
 eTuple' es = ELit $ unboxedTuple es
 
+unboxedTuple :: CanType a E => [a] -> Lit a E
 unboxedTuple es =  litCons { litName = unboxedNameTuple DataConstructor (length es), litArgs = es, litType = ltTuple' ts } where
     ts = map getType es
 
@@ -98,9 +102,15 @@ instance ToE a => ToE [a] where
 
 --eInt x = ELit $ LitInt x tInt
 
+-- | Build a cons (':') expression.
+eCons :: E -> E -> E
 eCons x xs = ELit $ litCons { litName = vCons, litArgs = [x,xs], litType = getType xs }
+
+-- | Build a nil ('[]') expression of the given type.
+eNil :: E -> E
 eNil t = ELit $ litCons { litName = vEmptyList, litArgs = [], litType = t }
 
+emptyCase :: E
 emptyCase = ECase {
     eCaseAllFV = mempty,
     eCaseDefault = Nothing,
@@ -111,6 +121,12 @@ emptyCase = ECase {
     }
 
 
+-- | Case over a tuple.
+eCaseTup ::
+    E        -- ^ Scrutinee
+    -> [TVr] -- ^ Variables to bind field values to
+    -> E     -- ^ Case body
+    -> E     -- ^ Case Expression
 eCaseTup e vs w = caseUpdate emptyCase { eCaseScrutinee = e
                                        , eCaseBind = (tVr emptyId (getType e))
                                        , eCaseType = getType w
@@ -118,6 +134,13 @@ eCaseTup e vs w = caseUpdate emptyCase { eCaseScrutinee = e
                                                                   , litArgs = vs
                                                                   , litType = getType e } w]
                                        }
+
+-- | Ditto for unboxed tuples.
+eCaseTup' ::
+    E        -- ^ Scrutinee
+    -> [TVr] -- ^ Variables to bind field values to
+    -> E     -- ^ Case body
+    -> E     -- ^ Case Expression
 eCaseTup' e vs w = caseUpdate emptyCase { eCaseScrutinee = e
                                         , eCaseBind = (tVr emptyId (getType e))
                                         , eCaseType = getType w
@@ -125,14 +148,28 @@ eCaseTup' e vs w = caseUpdate emptyCase { eCaseScrutinee = e
                                                                    , litArgs = vs
                                                                    , litType = getType e} w] }
 
+eJustIO :: E -> E -> E
 eJustIO w x = eTuple' [w,x] -- ELit litCons { litName = dc_JustIO, litArgs = [w,x], litType = ELit litCons { litName = tc_IOResult, litArgs = [getType x], litType = eStar } }
+
+-- | Build an IO type (takes @()@ to @IO ()@).
+tIO :: E -> E
 tIO t = ELit (litCons { litName = tc_IO, litArgs = [t], litType = eStar })
 
+-- | Build a case expression.
+eCase ::
+      E          -- ^ Scrutinee
+      -> [Alt E] -- ^ Alternatives
+      -> E       -- ^ Default case
+      -> E       -- ^ Case expression
 eCase e alts@(alt:_) Unknown = caseUpdate emptyCase { eCaseScrutinee = e, eCaseBind = (tVr emptyId (getType e)), eCaseType = getType alt,  eCaseAlts =  alts }
 eCase e alts els = caseUpdate emptyCase { eCaseScrutinee = e, eCaseBind = (tVr emptyId (getType e)), eCaseDefault = Just els, eCaseAlts =  alts, eCaseType = getType els }
 
 -- | This takes care of types right away, it simplifies various other things to do it this way.
-eLet :: TVr -> E -> E -> E
+eLet ::
+    TVr  -- ^ Variable to bind value to
+    -> E -- ^ Value
+    -> E -- ^ Body
+    -> E -- ^ Let expression
 eLet TVr { tvrIdent = i } _ e' | isEmptyId i = e'
 eLet t@(TVr { tvrType =  ty}) e e'
     | sortKindLike ty && isAtomic e = subst t e e'
@@ -141,7 +178,12 @@ eLet t@(TVr { tvrType =  ty}) e e'
     | isUnboxed ty  = eStrictLet t e e'
 eLet t e e' = ELetRec [(t,e)] e'
 
--- | strict version of let, evaluates argument before assigning it.
+-- | Strict version of let, evaluates argument before assigning it.
+eStrictLet ::
+    TVr  -- ^ Variable to bind value to
+    -> E -- ^ Value
+    -> E -- ^ Body
+    -> E -- ^ Let expression
 eStrictLet t@(TVr { tvrType =  ty }) v e | sortKindLike ty  = eLet t v e
 eStrictLet t v e = caseUpdate emptyCase { eCaseScrutinee = v, eCaseBind = t, eCaseDefault = Just e, eCaseType = getType e }
 
@@ -167,10 +209,13 @@ substLet' ds' e  = ans where
     hhh [] e = e
     hhh ((h,v):hh) e = eLet h v (hhh hh e)
 
+eLetRec :: [(TVr,E)] -> E -> E
 eLetRec = substLet'
 
 
 
+-- | Apply @seq@` primitive to these arguments.
+prim_seq :: E -> E -> E
 prim_seq a b | isWHNF a = b
 prim_seq a b = caseUpdate emptyCase { eCaseScrutinee = a
                                     , eCaseBind = (tVr emptyId (getType a))
@@ -178,15 +223,23 @@ prim_seq a b = caseUpdate emptyCase { eCaseScrutinee = a
                                     , eCaseType = getType b }
 
 
+prim_unsafeCoerce :: E -- ^ Value to coerce
+                  -> E -- ^ Type to coerce to
+                  -> E -- ^ Coerced value
 prim_unsafeCoerce e t = p e' where
     (_,e',p) = unsafeCoerceOpt $ EPrim p_unsafeCoerce [e] t
+
+from_unsafeCoerce :: Monad m => E -> m (E, E)
 from_unsafeCoerce (EPrim pp [e] t) | pp == p_unsafeCoerce = return (e,t)
 from_unsafeCoerce _ = fail "Not unsafeCoerce primitive"
 
+rawType :: ToName a => a -> E
 rawType s = ELit litCons { litName = toName RawType s, litType = eHash }
 
+tWorldzh :: E
 tWorldzh = ELit litCons { litName = tc_World__, litArgs = [], litType = eHash }
 
+unsafeCoerceOpt :: E -> (Int, E, E -> E)
 unsafeCoerceOpt (EPrim uc [e] t) | uc == p_unsafeCoerce = f (0::Int) e t where
     f n e t | Just (e',_) <- from_unsafeCoerce e = f (n + 1) e' t
     f n (ELetRec ds e) t = (n + 1, ELetRec ds (p e'),id) where
@@ -219,7 +272,7 @@ isFullyConst (EPrim (APrim p _) as _) = primIsConstant p && all isFullyConst as
 isFullyConst _ = False
 
 
--- | whether a value may be used as an argument to an application, literal, or primitive
+-- | Whether a value may be used as an argument to an application, literal, or primitive
 -- these may be duplicated with no code size or runtime penalty
 isAtomic :: E -> Bool
 isAtomic EVar {}  = True
@@ -227,7 +280,7 @@ isAtomic e | sortTypeLike e = True
 isAtomic (EPrim don [x,y] _) | don == p_dependingOn = isAtomic x
 isAtomic e = isFullyConst e
 
--- | whether a type is "obviously" atomic. fast and lazy, doesn't recurse
+-- | Whether a type is "obviously" atomic. fast and lazy, doesn't recurse
 -- True -> definitely atomic
 -- False -> maybe atomic
 isManifestAtomic :: E -> Bool
@@ -237,7 +290,8 @@ isManifestAtomic (ELit LitCons { litArgs = []})  = True
 isManifestAtomic _ = False
 
 
--- | whether an expression is small enough that it can be duplicated without code size growing too much. (work may be repeated)
+-- | Whether an expression is small enough that it can be duplicated without code size growing too much. (work may be repeated)
+isSmall :: E -> Bool
 isSmall e | isAtomic e = True
 isSmall ELit {} = True
 isSmall EPrim {} = True
@@ -245,7 +299,7 @@ isSmall EError {} = True
 isSmall e | (EVar _,xs) <- fromAp e = length xs <= 4
 isSmall _ = False
 
--- | whether an expression may be duplicated or pushed inside a lambda without duplicating too much work
+-- | Whether an expression may be duplicated or pushed inside a lambda without duplicating too much work
 
 isCheap :: E -> Bool
 isCheap EError {} = True
@@ -280,18 +334,22 @@ isUnboxed :: E -> Bool
 isUnboxed e@EPi {} = False
 isUnboxed e = getType e == eHash
 
+safeToDup :: E -> Bool
 safeToDup ec@ECase {}
     | EVar _ <- eCaseScrutinee ec = all safeToDup (caseBodies ec)
     | EPrim p _ _ <- eCaseScrutinee ec, aprimIsCheap p = all safeToDup (caseBodies ec)
 safeToDup (EPrim p _ _) = aprimIsCheap p
 safeToDup e = whnfOrBot e || isELam e || isEPi e
 
+tBoolzh :: E
 tBoolzh = ELit litCons { litName = tc_Boolzh, litType = eHash, litAliasFor = Just tEnumzh }
 
+lFalsezh, lTruezh :: Lit e E 
 lFalsezh = (LitInt 0 tBoolzh)
 lTruezh = (LitInt 1 tBoolzh)
 
 
+eToPat :: Monad m => E -> m (Lit TVr E)
 eToPat e = f e where
     f (ELit LitCons { litAliasFor = af,  litName = x, litArgs = ts, litType = t }) = do
         ts <- mapM cv ts
@@ -305,10 +363,9 @@ eToPat e = f e where
     cv (EVar v) = return v
     cv e = fail $ "E.Value.eToPat.cv: " ++ show e
 
+patToE :: Monad m => Lit TVr E -> m E
 patToE p = f p where
     f LitCons { litName = arr, litArgs = [a,b], litType = t} | t == eStar = return $ EPi tvr { tvrType = EVar a } (EVar b)
     f (LitCons { litAliasFor = af,  litName = x, litArgs = ts, litType = t }) = do
        return $  ELit litCons { litAliasFor = af, litName = x, litArgs = map EVar ts, litType = t }
     f (LitInt e t) = return $ ELit (LitInt e t)
-
-

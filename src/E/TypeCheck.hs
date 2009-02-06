@@ -1,4 +1,5 @@
 module E.TypeCheck(
+    -- $Internals
     canBeBox,
     eAp,
     inferType,
@@ -36,7 +37,7 @@ import qualified Util.Seq as Seq
 import {-# SOURCE #-} DataConstructors
 
 
-{-@Internals
+{- $Internals
 
 # Lhc Core Type System
 
@@ -112,16 +113,19 @@ ptsRulesMap = Map.fromList [ ((a,b),c) | (as,bs,c) <- ptsRules, a <- as, b <- bs
         ]
 
 
+canBeBox :: E -> Bool
 canBeBox x | getType (getType x) == ESort EStarStar = True
 canBeBox _ = False
 
+tBox :: E
 tBox = mktBox eStar
 
+monadicLookup :: (Monad m, Ord k) => k -> Map.Map k a -> m a
 monadicLookup key m = case Map.lookup key m of
     Just x  -> return x
     Nothing -> fail "Key not found"
 
--- Fast (and lazy, and perhaps unsafe) typeof
+-- | Fast (and lazy, and perhaps unsafe) typeof
 instance CanType E E where
     getType (ESort s) = ESort $ getType s
     getType (ELit l) = getType l
@@ -162,15 +166,19 @@ instance CanType e t => CanType (Alt e) t where
     getType (Alt _ e) = getType e
 
 
+sortSortLike :: E -> Bool
 sortSortLike (ESort s) = isEHashHash s || isEStarStar s
 sortSortLike _ = False
 
+sortKindLike :: E -> Bool
 sortKindLike (ESort s) =  not (isEHashHash s) && not (isEStarStar s)
 sortKindLike e = sortSortLike (getType e)
 
+sortTypeLike :: E -> Bool
 sortTypeLike ESort {} = False
 sortTypeLike e = sortKindLike (getType e)
 
+sortTermLike :: E -> Bool
 sortTermLike ESort {} = False
 sortTermLike e = sortTypeLike (getType e)
 
@@ -178,6 +186,7 @@ sortTermLike e = sortTypeLike (getType e)
 
 
 
+withContextDoc :: ContextMonad String m => Doc -> m a -> m a
 withContextDoc s a = withContext (render s) a
 
 -- Lemmih 08.11.25: Why use a list instead of map? This list is always null, btw.
