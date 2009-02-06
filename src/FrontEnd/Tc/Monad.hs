@@ -428,6 +428,7 @@ evalFullType t = f' t where
     f t = tickleM f' t
     f' t =  evalType t >>= f
 
+evalTAssoc :: Type -> Tc Type
 evalTAssoc ta@TAssoc { typeCon = Tycon { tyconName = n1 }, typeClassArgs = ~[carg], typeExtraArgs = eas }  = do
     carg' <- evalType carg
     case fromTAp carg' of
