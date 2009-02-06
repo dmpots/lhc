@@ -9,6 +9,7 @@ module E.FreeVars(
 import Data.Monoid
 
 import E.Type
+import Info.Info (Info)
 import GenUtil
 import Name.Id
 import Support.FreeVars
@@ -19,6 +20,7 @@ import Util.Graph
 -- finding free variables
 -------------------------
 
+getLitTyp :: Lit v e -> e
 getLitTyp (LitInt _ t) = t
 getLitTyp LitCons { litType = t } = t
 
@@ -46,13 +48,12 @@ instance FreeVars E (IdMap TVr) where
 instance FreeVars E (IdMap (Maybe E)) where
     freeVars e = fmap (const Nothing) $ freeIdMap e
 
--- | separate out recursive strongly connected components from a declaration list
-
+-- | Separate out recursive strongly connected components from a declaration list
 decomposeDs :: [(TVr, E)] -> [Either (TVr, E) [(TVr,E)]]
 decomposeDs bs = scc g where
     g = newGraph bs (tvrIdent . fst ) (toList . uncurry bindingFreeVars)
 
--- | pull apart an ELet and separate out recursive strongly connected components from an ELet.
+-- | Pull apart an ELet and separate out recursive strongly connected components from an ELet.
 decomposeLet :: E ->  ([Either (TVr, E) [(TVr,E)]],E)
 decomposeLet ELetRec { eDefs = ds, eBody = e } = (decomposeDs ds,e)
 decomposeLet e = ([],e)
@@ -62,7 +63,7 @@ caseUpdate ec@ECase {} = ec { eCaseAllFV = fv ec } where
     fv ~(ECase { eCaseScrutinee = e, eCaseBind = b, eCaseAlts = as, eCaseDefault = d, eCaseType = ty }) = mconcat (freeIds e:freeIds (tvrType  b):freeIds ty:(delete (tvrIdent b) $ mconcat (freeVars d:map freeVars as)  ):[])
 caseUpdate e = e
 
--- we export this to get a concrete type for free id sets.
+-- | We export this to get a concrete type for free id sets.
 freeIds ::  E -> IdSet
 freeIds =   fv where
     (<>) = mappend
@@ -84,7 +85,6 @@ freeIds =   fv where
     fvLit l = fv (getLitTyp l)
 
 
--- we export this to get a concrete type for free id sets.
 freeIdMap ::  E -> IdMap TVr
 freeIdMap =   fv where
     (<>) = mappend
@@ -104,14 +104,15 @@ freeIdMap =   fv where
     fvLit LitCons { litArgs = es, litType = e } = mconcat $ fv e:map fv es
     fvLit l = fv (getLitTyp l)
 
--- | determine free variables of a binding site
+-- | Determine free variables of a binding site
 instance FreeVars TVr IdSet where
     freeVars t = freeVars (tvrType t) `mappend` freeVarsInfo (tvrInfo t)
 
--- | this determines all free variables of a definition taking rules into account
+-- | This determines all free variables of a definition taking rules into account
 bindingFreeVars :: TVr -> E -> IdSet
 bindingFreeVars t e = freeVars t `mappend` freeVars e
 
+freeVarsInfo :: Info -> IdSet
 freeVarsInfo nfo = mempty
 --instance FreeVars TVr (IdMap TVr) where
 --    freeVars t = freeVars (tvrType t) `mappend` freeVars (Info.fetch (tvrInfo t) :: ARules)
@@ -119,14 +120,14 @@ freeVarsInfo nfo = mempty
 instance FreeVars ARules IdSet where
     freeVars a = aruleFreeVars a
 
--- note, we include references to this combinator in its free variables.
+-- | Note, we include references to this combinator in its free variables.
 instance FreeVars Comb IdSet where
     freeVars a = freeVars (tvrType $ combHead a) `union` freeVars (combBody a) `union` (freeVars $ combRules a)
 
 instance FreeVars Comb [Id] where
     freeVars a = toList $ (freeVars a :: IdSet)
 
--- | we delete the free variables of the heads of a rule from the rule's free
+-- | We delete the free variables of the heads of a rule from the rule's free
 -- variables. the reason for doing this is that the rule cannot fire if all its
 -- heads are in scope, and if it were not done then many functions seem
 -- recursive when they arn't actually.
@@ -137,5 +138,6 @@ instance FreeVars Rule IdSet where
 --    freeVars rule = freeVars (ruleBody rule) S.\\ fromList [ (tvrIdent t,t) | t <- ruleBinds rule]
 
 
+ruleHeadFV :: Rule -> IdSet
 ruleHeadFV r = (S.insert (tvrIdent $ ruleHead r) $ freeVars (ruleArgs r)) S.\\ fromList (map tvrIdent $ ruleBinds r)
 

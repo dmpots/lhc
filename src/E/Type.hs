@@ -22,7 +22,7 @@ import Cmm.Number
 import Info.Types
 import qualified Info.Info as Info
 
-{-@Internals
+{- $Internals
 
 # Lhc core normalized forms
 
@@ -55,10 +55,9 @@ normalized form larry
 normalized form mangled
 : All polymorphism has been replaced with subtyping
 
-
 -}
 
--- the type of a supercombinator
+-- | The type of a supercombinator
 data Comb = Comb {
     combHead :: TVr,
     combBody :: E,
@@ -68,8 +67,7 @@ data Comb = Comb {
 data RuleType = RuleSpecialization | RuleUser | RuleCatalyst
     deriving(Eq)
 
--- a rule in its user visible form
-
+-- | A rule in its user-visible form
 data Rule = Rule {
     ruleHead :: TVr,
     ruleBinds :: [TVr],
@@ -97,21 +95,23 @@ instance Show e => Show (Alt e) where
     showsPrec n (Alt l e) = showParen (n > 10) $ shows l . showString " -> " . shows e
 
 --------------------------------------
--- Lambda Cube (it's just fun to say.)
+-- $lcube
+-- Lambda Cube (it's just fun to say).
 -- We are now based on a PTS, which is
 -- a generalization of the lambda cube
--- see E.TypeCheck for a description
+-- see "E.TypeCheck" for a description
 -- of the type system.
 --------------------------------------
 
+-- |
 data ESort =
-    EStar         -- ^ the sort of boxed lazy types
-    | EBang       -- ^ the sort of boxed strict types
-    | EHash       -- ^ the sort of unboxed types
-    | ETuple      -- ^ the sort of unboxed tuples
-    | EHashHash   -- ^ the supersort of unboxed types
-    | EStarStar   -- ^ the supersort of boxed types
-    | ESortNamed Name -- ^ user defined sorts
+    EStar         -- ^ The sort of boxed lazy types
+    | EBang       -- ^ The sort of boxed strict types
+    | EHash       -- ^ The sort of unboxed types
+    | ETuple      -- ^ The sort of unboxed tuples
+    | EHashHash   -- ^ The supersort of unboxed types
+    | EStarStar   -- ^ The supersort of boxed types
+    | ESortNamed Name -- ^ User defined sorts
     deriving(Eq, Ord)
 
 
@@ -127,7 +127,7 @@ data E = EAp E E
     | EError String E
     | ECase {
        eCaseScrutinee :: E,
-       eCaseType :: E, -- due to GADTs and typecases, the final type of the expression might not be so obvious, so we include it here.
+       eCaseType :: E, -- ^ Due to GADTs and typecases, the final type of the expression might not be so obvious, so we include it here.
        eCaseBind :: TVr,
        eCaseAlts :: [Alt E],
        eCaseDefault :: (Maybe E),
@@ -191,7 +191,7 @@ instance HasProperties TVr where
 --    fmap f t = runIdentity (fmapM (return . f) t)
 
 
--- simple querying routines
+-- Simple querying routines
 altHead :: Alt E -> Lit () ()
 altHead (Alt l _) = litHead  l
 
@@ -199,43 +199,46 @@ litHead :: Lit a b -> Lit () ()
 litHead (LitInt x _) = LitInt x ()
 litHead LitCons { litName = s, litAliasFor = af } = litCons { litName = s, litType = (), litAliasFor = af }
 
+litBinds :: Lit a b -> [a]
 litBinds (LitCons { litArgs = xs } ) = xs
 litBinds _ = []
 
+patToLitEE :: Lit TVr E -> E
 patToLitEE LitCons { litName = n, litArgs = [a,b], litType = t } | t == eStar, n == tc_Arrow = EPi (tVr emptyId (EVar a)) (EVar b)
 patToLitEE LitCons { litName = n, litArgs = xs, litType = t, litAliasFor = af } = ELit $ LitCons { litName = n, litArgs = (map EVar xs), litType = t, litAliasFor = af }
 patToLitEE (LitInt x t) = ELit $ LitInt x t
 
 caseBodies :: E -> [E]
 caseBodies ec = [ b | Alt _ b <- eCaseAlts ec] ++ maybeToMonad (eCaseDefault ec)
+casePats :: E -> [Lit TVr E]
 casePats ec =  [ p | Alt p _ <- eCaseAlts ec]
+caseBinds :: E -> [TVr]
 caseBinds ec = eCaseBind ec : concat [ xs  | LitCons { litArgs = xs } <- casePats ec]
 
 
--- | extract out EAp nodes a value and the arguments it is applied to.
+-- | Extract from 'EAp' nodes a value and the arguments it is applied to.
 fromAp :: E -> (E,[E])
 fromAp e = f [] e where
     f as (EAp e a) = f (a:as) e
     f as e  =  (e,as)
 
--- | deconstruct EPi terms, getting function argument types.
-
+-- | Deconstruct 'EPi' terms, getting function argument types.
 fromPi :: E -> (E,[TVr])
 fromPi e = f [] e where
     f as (EPi v e) = f (v:as) e
     f as e  =  (e,reverse as)
 
--- | deconstruct ELam term.
-
+-- | Deconstruct 'ELam' term, getting body and argument variables.
 fromLam :: E -> (E,[TVr])
 fromLam e = f [] e where
     f as (ELam v e) = f (v:as) e
     f as e  =  (e,reverse as)
 
+litCons :: Lit e t
 litCons = LitCons { litName = error "litName: name not set", litArgs = [], litType = error "litCons: type not set", litAliasFor = Nothing }
 
 -----------------
--- E constructors
+-- * E constructors
 -----------------
 
 eStar :: E
@@ -244,25 +247,45 @@ eStar = ESort EStar
 eHash :: E
 eHash = ESort EHash
 
+tVr :: Id -> e -> TVr' e
 tVr x y = tvr { tvrIdent = x, tvrType = y }
+tvr :: TVr
 tvr = TVr { tvrIdent = emptyId, tvrType = Unknown, tvrInfo = Info.empty }
 
+combBody_u :: (E -> E) -> Comb -> Comb
 combBody_u f r@Comb{combBody  = x} = r{combBody = f x}
+combHead_u :: (TVr -> TVr) -> Comb -> Comb
 combHead_u f r@Comb{combHead  = x} = r{combHead = f x}
+
+-- | This is *not* derived using 'makeUpdate' because
+-- it needs to do some bookkeeping.
+combRules_u :: ([Rule] -> [Rule]) -> Comb -> Comb
 combRules_u f r@Comb{combRules  = x} = cp r{combRules = fx} where
     cp = if null fx then unsetProperty PROP_HASRULE else setProperty PROP_HASRULE
     fx = f x
 
+combBody_s :: E -> Comb -> Comb
 combBody_s v =  combBody_u  (const v)
+combHead_s :: TVr -> Comb -> Comb
 combHead_s v =  combHead_u  (const v)
+combRules_s :: [Rule] -> Comb -> Comb
 combRules_s v =  combRules_u  (const v)
+
+combArgs :: Comb -> [TVr]
 combArgs  = snd . fromLam . combBody
+combABody :: Comb -> E
 combABody = fst . fromLam . combBody
+emptyComb :: Comb
 emptyComb = Comb { combHead = tvr, combBody = Unknown, combRules = [] }
+combIdent :: Comb -> Id
 combIdent = tvrIdent . combHead
+combBind :: Comb -> (TVr, E)
 combBind b = (combHead b,combBody b)
+bindComb :: (TVr, E) -> Comb
 bindComb (t,e) = combHead_s t . combBody_s e $ emptyComb
+combTriple :: Comb -> (TVr, [TVr], E)
 combTriple comb = (combHead comb,combArgs comb,combABody comb)
+combTriple_s :: (TVr, [TVr], E) -> Comb -> Comb
 combTriple_s (t,as,e) comb = comb { combHead = t, combBody = Prelude.foldr ELam e as }
 
 instance HasProperties Comb where
@@ -270,6 +293,8 @@ instance HasProperties Comb where
     getProperties comb = getProperties $ combHead comb
     putProperties p comb = combHead_u (putProperties p) comb
 
+
+-- * Derived Stuff
 
 $(derive makeIs ''Lit)
 $(derive makeFunctor ''Lit)

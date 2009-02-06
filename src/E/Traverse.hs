@@ -43,11 +43,15 @@ runRename set e = renameE set mempty e
 emapE_ :: Monad m => (E -> m a) -> E -> m ()
 emapE_ f e = emapEG f' f' e >> return () where
     f' e = f e >> return e
+emapE :: Monad m => (E -> m E) -> E -> m E
 emapE f = emapEG f f
+emapE' :: Monad m => (E -> m E) -> E -> m E
 emapE' f = emapEG f return
 
+emapEG :: Monad m => (E -> m E) -> (E -> m E) -> E -> m E
 emapEG f g e = emapEGH f g g e
 
+emapEGH :: Monad m => (E -> m E) -> (E -> m E) -> (E -> m E) -> E -> m E
 emapEGH f g h e = z e where
     z (EAp aa ab) = do aa <- f aa;ab <- f ab; return $ EAp aa ab
     z (ELam aa ab) = do aa <- mapmTvr g aa; ab <- f ab; return $ ELam aa ab

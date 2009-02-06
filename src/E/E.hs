@@ -26,6 +26,7 @@ import Util.Gen
 
 
 
+isWHNF :: E -> Bool
 isWHNF ELit {} = True
 isWHNF ELam {} = True
 isWHNF EPi {} = True
@@ -65,12 +66,15 @@ instance ConNames (Lit E E) where
 
 
 
+-- | Build a function type.
+tFunc :: E -> E -> E
 tFunc a b = ePi (tVr emptyId a) b
 
 -- values
 
 
 
+tvrSilly :: TVr
 tvrSilly = tVr sillyId Unknown
 
 -----------------
@@ -79,13 +83,15 @@ tvrSilly = tVr sillyId Unknown
 
 
 
+ePi :: TVr -> E -> E
 ePi a b = EPi a b
 
+eLam :: TVr -> E -> E
 eLam v (EError s t) = EError s (ePi v t)
 eLam v t = ELam v t
 
 
--- | throw away first n EPi terms
+-- | Throw away first n EPi terms
 discardArgs :: Int -> E -> E
 discardArgs 0 e = e
 discardArgs n (EPi _ b) | n > 0 = discardArgs (n - 1) b
@@ -100,6 +106,7 @@ tvrShowName :: TVr -> String
 tvrShowName t = maybe ('x':(show $ tvrIdent t)) show (tvrName t)
 
 
+modAbsurd, modBox :: String
 modAbsurd = "Lhc@.Absurd"
 modBox    = "Lhc@.Box"
 
@@ -127,6 +134,7 @@ fromConjured mod n = maybeM ("fromConjured: " ++ show (mod,n)) $ do
 
 
 
+isBottom :: E -> Bool
 isBottom EError {} = True
 isBottom _ = False
 
@@ -144,6 +152,7 @@ eToList (ELit LitCons { litName = n, litArgs = [e,b] }) | vCons == n = eToList b
 eToList (ELit LitCons { litName = n, litArgs = [] }) | vEmptyList == n = return []
 eToList _ = fail "eToList: not list"
 
+toString :: Monad m => E -> m String
 toString (ELit LitCons { litName = n, litArgs = [], litType = t }) = if vEmptyList == n && t == tString then return "" else fail "not a string"
 toString x = eToList x >>= mapM fromChar where
     fromChar (ELit LitCons { litName = dc, litArgs = [ELit (LitInt ch t)] }) | dc == dc_Char && t == tCharzh = return (chr $ fromIntegral ch)
@@ -151,9 +160,14 @@ toString x = eToList x >>= mapM fromChar where
 
 
 
+-- | Build a boxed tuple type
+ltTuple :: [E] -> E
 ltTuple ts = ELit $ litCons { litName = nameTuple TypeConstructor (length ts), litArgs = ts, litType = eStar }
+-- | Build an unboxed tuple type
+ltTuple' :: [E] -> E
 ltTuple' ts = ELit $ litCons { litName = unboxedNameTuple TypeConstructor (length ts), litArgs = ts, litType = eHash }
 
+p_unsafeCoerce, p_dependingOn, p_toTag, p_fromTag :: APrim
 p_unsafeCoerce = primPrim "unsafeCoerce"
 p_dependingOn = primPrim "dependingOn"
 p_toTag = primPrim "toTag"
@@ -163,5 +177,6 @@ fromUnboxedTuple :: Monad m => E -> m [E]
 fromUnboxedTuple (ELit LitCons { litName = n, litArgs = as }) | Just _ <- fromUnboxedNameTuple n = return as
 fromUnboxedTuple _ = fail "fromUnboxedTuple: not a tuple"
 
+isUnboxedTuple :: E -> Bool
 isUnboxedTuple m = isJust (fromUnboxedTuple m)
 
