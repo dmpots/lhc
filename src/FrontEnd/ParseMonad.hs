@@ -56,21 +56,21 @@ indentOfParseState :: ParseState -> Int
 indentOfParseState ParseState { psLexContext = (Layout n:_) } = n
 indentOfParseState _            = 0
 
+emptyParseState :: ParseState
 emptyParseState = ParseState { psLexContext = [], psWarnings = [] }
 
 -- | Static parameters governing a parse.
 -- More to come later, e.g. literate mode, language extensions.
 
 data ParseMode = ParseMode {
-                -- | original name of the file being parsed
-		parseFilename      :: String,
-                parseFFI           :: Bool,
-                parseUnboxedValues :: Bool,
-                parseUnboxedTuples :: Bool
+		parseFilename      :: String, -- ^ Original name of the file being parsed
+                parseFFI           :: Bool,   -- ^ Allow foreign import/export
+                parseUnboxedValues :: Bool,   -- ^ Allow unboxed numeric and string literals
+                parseUnboxedTuples :: Bool    -- ^ Allow unboxed tuples
 		}
 
--- | Default parameters for a parse,
--- currently just a marker for an unknown filename.
+-- | Default parameters for a parse.
+-- Currently just a marker for an unknown filename.
 
 defaultParseMode :: ParseMode
 defaultParseMode = ParseMode {
@@ -80,6 +80,7 @@ defaultParseMode = ParseMode {
                 parseUnboxedTuples = False
 		}
 
+parseModeOptions :: Opt -> ParseMode
 parseModeOptions options = defaultParseMode {
     parseUnboxedTuples = FO.UnboxedTuples `Set.member` optFOptsSet options || FO.UnboxedValues `Set.member` optFOptsSet options,
     parseUnboxedValues = FO.UnboxedValues `Set.member` optFOptsSet options,
@@ -89,36 +90,35 @@ parseModeOptions options = defaultParseMode {
 -- | Monad for parsing
 
 
-newtype P a = P { runP ::
-		        String		-- input string
-		     -> Int		-- current column
-		     -> Int		-- current line
-		     -> SrcLoc		-- location of last token read
-		     -> ParseState	-- layout info.
-		     -> ParseMode	-- parse parameters
-		     -> ParseStatus a
-		}
+newtype P a = P { runP :: String          -- Input string
+                       -> Int             -- Current column
+                       -> Int             -- Current line
+                       -> SrcLoc          -- Location of last token read
+                       -> ParseState      -- Layout info.
+                       -> ParseMode       -- Parse parameters
+                       -> ParseStatus a
+                }
 
 runParserWithMode :: ParseMode -> P a -> String -> ParseResult a
 runParserWithMode mode (P m) s = case m s 0 1 start emptyParseState mode of
-	Ok s a -> ParseOk (psWarnings s) a
-	Failed loc msg -> ParseFailed loc msg
+        Ok s a -> ParseOk (psWarnings s) a
+        Failed loc msg -> ParseFailed loc msg
     where start = SrcLoc {
-		srcLocFileName = parseFilename mode,
-		srcLocLine = 1,
-		srcLocColumn = 1
-	}
+                srcLocFileName = parseFilename mode,
+                srcLocLine = 1,
+                srcLocColumn = 1
+        }
 
 runParser :: P a -> String -> ParseResult a
 runParser = runParserWithMode defaultParseMode
 
 instance Monad P where
-	return a = P $ \_i _x _y _l s _m -> Ok s a
-	P m >>= k = P $ \i x y l s mode ->
-		case m i x y l s mode of
-		    Failed loc msg -> Failed loc msg
-		    Ok s' a -> runP (k a) i x y l s' mode
-	fail s = P $ \_r _col _line loc _stk _m -> Failed loc s
+        return a = P $ \_i _x _y _l s _m -> Ok s a
+        P m >>= k = P $ \i x y l s mode ->
+                case m i x y l s mode of
+                    Failed loc msg -> Failed loc msg
+                    Ok s' a -> runP (k a) i x y l s' mode
+        fail s = P $ \_r _col _line loc _stk _m -> Failed loc s
 
 returnP :: a -> P a
 returnP = return
@@ -136,7 +136,7 @@ instance MonadSrcLoc P where
 instance MonadWarn P where
     addWarning w = P $ \_i _x _y _l s _m -> Ok s { psWarnings = w:psWarnings s } ()
 
--- Enter a new layout context.  If we are already in a layout context,
+-- | Enter a new layout context.  If we are already in a layout context,
 -- ensure that the new indent is greater than the indent of that context.
 -- (So if the source loc is not to the right of the current indent, an
 -- empty list {} will be inserted.)
@@ -162,7 +162,7 @@ popContext = P $ \_i _x _y _l stk _m ->
             Ok stk { psLexContext = s } ()
         []    -> error "Internal error: empty context in popContext"
 
--- Monad for lexical analysis:
+-- | Monad for lexical analysis:
 -- a continuation-passing version of the parsing monad
 
 newtype Lex r a = Lex { runL :: (a -> P r) -> P r }
@@ -211,14 +211,14 @@ tAB_LENGTH = 8
 lexParseMode :: Lex a ParseMode
 lexParseMode = Lex $ \cont -> P $ \r x y z s m -> runP (cont m) r x y z s m
 
--- Consume and return the largest string of characters satisfying p
+-- | Consume and return the largest string of characters satisfying the given predicate
 
 lexWhile :: (Char -> Bool) -> Lex a String
 lexWhile p = Lex $ \cont -> P $ \r x ->
 	let (cs,rest) = span p r in
 	runP (cont cs) rest (x + length cs)
 
--- An alternative scan, to which we can return if subsequent scanning
+-- | An alternative scan, to which we can return if subsequent scanning
 -- is unsuccessful.
 
 alternative :: Lex a v -> Lex a (Lex a v)
@@ -249,17 +249,20 @@ checkBOL = Lex $ \cont -> P $ \r x y loc ->
 setBOL :: Lex a ()
 setBOL = Lex $ \cont -> P $ \r _ -> runP (cont ()) r 0
 
--- Set the loc to the current position
+-- | Set the loc to the current position
 
 startToken :: Lex a ()
 startToken = Lex $ \cont -> P $ \s x y oloc stk mode ->
 	let loc = oloc { srcLocColumn = x } in
 	runP (cont ()) s x y loc stk mode
 
--- Current status with respect to the offside (layout) rule:
--- LT: we are to the left of the current indent (if any)
--- EQ: we are at the current indent (if any)
--- GT: we are to the right of the current indent, or not subject to layout
+-- | Current status with respect to the offside (layout) rule:
+--
+-- ['LT'] we are to the left of the current indent (if any)
+--
+-- ['EQ'] we are at the current indent (if any)
+--
+-- ['GT'] we are to the right of the current indent, or not subject to layout
 
 getOffside :: Lex a Ordering
 getOffside = Lex $ \cont -> P $ \r x y loc stk ->

@@ -650,10 +650,12 @@ parseInteger :: Integer -> String -> Integer
 parseInteger radix ds =
 	foldl1 (\n d -> n * radix + d) (map (toInteger . digitToInt) ds)
 
--- pragmas for which we just want the raw contents of
+-- pragmas which we just want the raw contents of
+pragmas_raw :: [[String]]
 pragmas_raw = [["OPTIONS", "LHC_OPTIONS", "OPTIONS_LHC" ]]
 
 -- pragmas which just have a simple string based start rule.
+pragmas_std :: [[String]]
 pragmas_std = [
     ["INLINE"],
     ["NOETA"],
@@ -664,6 +666,7 @@ pragmas_std = [
     ]
 
 -- pragmas with a special starting token
+pragmas_parsed :: [([String], Token)]
 pragmas_parsed = [
     (["RULES","RULE","RULES_LHC","RULE_LHC"],PragmaRules False),
     (["CATALYST","CATALYSTS"],PragmaRules True),
@@ -671,8 +674,10 @@ pragmas_parsed = [
     (["SUPERSPECIALIZE", "SUPERSPECIALISE"],PragmaSpecialize True)
     ]
 
+pragmas_all :: [([String], Token)]
 pragmas_all = pragmas_parsed ++ [ (xs,PragmaStart x) | xs@(~(x:_)) <- pragmas_std ]
 
+pragmas :: Map.Map String (Either String Token)
 pragmas = Map.fromList $ [ (y,Left x) | xs@(x:_)  <- pragmas_raw, y <- xs] ++  [ (y,Right w) | (xs@(~(x:_)),w)  <- pragmas_all , y <- xs]
 
 normPragma :: String -> Either String Token
