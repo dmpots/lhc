@@ -1,3 +1,4 @@
+arch_x86_64 :: [PrimType]
 arch_x86_64 = [
   PrimType {
     primTypeName = "uint32_t",

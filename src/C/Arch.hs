@@ -50,6 +50,7 @@ newtype ArchInfo = ArchInfo {
     archPrimMap :: Map.Map ExtType PrimType
 }
 
+cpu_alias :: String -> String
 cpu_alias s = maybe arch_error id $ lookup s' $ [
     ("unknown","generic"),
     ("amd64","x86_64"),
@@ -58,15 +59,18 @@ cpu_alias s = maybe arch_error id $ lookup s' $ [
     ("i586","i686")
     ] ++ [ (n,n) | n <- archs ] where s' = map toLower s
 
+archs :: [String]
 archs = ["generic","i686","x86_64"]
 
+arch_map :: [(String, Maybe Int, [PrimType], [String])]
 arch_map = [
     ("generic",Nothing,arch_generic,[]),
     ("i686",Nothing,arch_i686,[]),
     ("x86_64",Just 64,arch_x86_64,[]),
-    ("x86_64",Just (32::Int),arch_i686,["-m32"])
+    ("x86_64",Just 32,arch_i686,["-m32"])
     ]
 
+available_archs :: [String]
 available_archs = snub $ "ghc":"ghc-64":"ghc-32":[ n | (n,_,_,_) <- arch_map ]  ++ [ n ++ "-" ++ show b |  (n,Just b,_,_) <- arch_map]
 
 -- get information on a primitive type if it is available
@@ -81,7 +85,9 @@ primitiveInfo et = archGetPrimInfo archInfo et
 genericPrimitiveInfo :: Monad m => ExtType -> m PrimType
 genericPrimitiveInfo et = archGetPrimInfo genericArchInfo et
 
+genericArchInfo :: ArchInfo
 genericArchInfo = ArchInfo { archPrimMap = primMap }
+archInfo :: ArchInfo
 archInfo = ArchInfo { archPrimMap = genericPrimMap }
 
 primMap :: Map.Map ExtType PrimType
@@ -91,6 +97,7 @@ primMap = Map.fromList [ (primTypeName a,a) | a <- as ] where
 genericPrimMap :: Map.Map ExtType PrimType
 genericPrimMap = Map.fromList [ (primTypeName a,a) | a <- arch_generic ] where
 
+stringToOpTy :: ExtType -> Op.Ty
 stringToOpTy = archOpTy genericArchInfo
 
 archOpTy :: ArchInfo -> ExtType -> Op.Ty
@@ -119,6 +126,7 @@ archOpTy ai s = case Op.readTy s of
 
 
 
+determineArch :: IO (String, [PrimType], [String])
 determineArch = do
     let specs = maybe [] (split (== '-')) (optArch options)
         (cpu,bits) = case specs of
@@ -138,4 +146,5 @@ determineArch = do
 
     return (fn,mp,opt)
 
+arch_error :: b
 arch_error =  error $ "\nunknown architecture, supported architectures are:\n" ++ show available_archs
