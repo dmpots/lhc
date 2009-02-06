@@ -43,15 +43,22 @@ instance MonadWarn (Writer [Warning]) where
 instance MonadWarn Identity where
     addWarning w = fail $ show w
 
+addWarn :: (MonadWarn m, MonadSrcLoc m) => String -> String -> m ()
 addWarn t m = do
     sl <- getSrcLoc
     warn sl t m
 
+addDiag :: MonadWarn m => String -> m ()
 addDiag s = warn bogusASrcLoc "diagnostic" s
+warn :: MonadWarn m => SrcLoc -> String -> String -> m ()
 warn s t m = addWarning (Warning { warnSrcLoc = s, warnType = t, warnMessage = m })
+err :: MonadWarn m => String -> String -> m ()
 err t m = warn bogusASrcLoc t m
+warnF :: MonadWarn m => String -> String -> String -> m ()
 warnF fn t m  = warn bogusASrcLoc { srcLocFileName = fn } t m
 
+-- | Pad string to at least the given length by adding spaces on the right
+pad :: Int -> String -> String
 pad n s = case length s of
     x | x >= n -> s
     x -> s ++ replicate (n - x) ' '
@@ -84,6 +91,7 @@ processErrors' doDie ws = mapM_ s ws' >> when (die && doDie) exitFailure >> retu
         putErrLn (fn ++ ":" ++ pad 3 (show l) ++  " - "  ++ msg t m)
     die = (not $ null $ intersect (map warnType ws') fatal) && not (optKeepGoing options)
 
+fatal :: [String]
 fatal = [
     "undefined-name",
     "ambiguous-name",
@@ -96,15 +104,18 @@ fatal = [
     "invalid-assoc",
     "type-synonym-partialap" ]
 
+ignore :: [String]
 ignore = ["h98-emptydata"]
 
 instance Show Warning where
     show  Warning { warnSrcLoc = sl, warnType = t, warnMessage = m } | sl == bogusASrcLoc =  msg t m
     show  Warning { warnSrcLoc = SrcLoc { srcLocFileName = fn, srcLocLine = l }, warnType = t ,warnMessage = m } =
          (fn ++ ":" ++ pad 3 (show l) ++  " - "  ++ msg t m)
+msg :: String -> String -> String
 msg "diagnostic" m = "Diagnostic: " ++ m
 msg t m = (if t `elem` fatal then "Error: " else "Warning: ") ++ m
 
+_warnings :: [(String, String)]
 _warnings = [
     ("deprecations", "warn about uses of functions & types that are deprecated"),
     ("duplicate-exports", "warn when an entity is exported multiple times"),
