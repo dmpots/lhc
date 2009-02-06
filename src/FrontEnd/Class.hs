@@ -71,6 +71,7 @@ instance PPrint a (Qual Pred) => PPrint a Inst where
                    | (n,_,ts,sigma) <- as]
 
 
+emptyInstance :: Inst
 emptyInstance = Inst { instDerived = False,
                        instSrcLoc = bogusASrcLoc,
                        instHead = error "emptyInstance",
@@ -92,6 +93,7 @@ data ClassRecord = ClassRecord      { className :: Class,
 $(derive makeBinary ''ClassRecord)
 $(derive makeIs ''ClassRecord)
 
+newClassRecord :: Class -> ClassRecord
 newClassRecord c = ClassRecord {
     className = c,
     classSrcLoc = bogusASrcLoc,
@@ -104,6 +106,7 @@ newClassRecord c = ClassRecord {
     }
 
 -- SamB 2009-01-17: Why all the snubbing? Most of these fields should be blank on one side shouldn't they?
+combineClassRecords :: ClassRecord -> ClassRecord -> ClassRecord
 combineClassRecords cra@(ClassRecord {}) crb@(ClassRecord {})
     | className cra == className crb = ClassRecord {
     className = className cra,
@@ -125,6 +128,7 @@ makeInstanceEnv (ClassHierarchy ch) = InstanceEnv $ Map.fromList (concatMap f (M
         ans = [ ((tyconName tc,getTypeHead tt),(is,rs,e)) | (tc,is,rs,e) <- as]
     g cr x = error $  "makeInstanceEnv: " ++ show (className cr,x)
 
+getTypeHead :: Type -> Name
 getTypeHead th = case fromTAp th of
     (TArrow {},_) -> tc_Arrow
     (TCon c,_) -> tyconName c
@@ -144,10 +148,12 @@ instance Monoid ClassHierarchy where
 classRecords :: ClassHierarchy -> [ClassRecord]
 classRecords (ClassHierarchy ch) = Map.elems ch
 
+findClassRecord :: ClassHierarchy -> Class -> ClassRecord
 findClassRecord (ClassHierarchy ch) cn = case Map.lookup cn ch of
     Nothing -> error $ "findClassRecord: " ++ show cn
     Just n -> n
 
+asksClassRecord :: ClassHierarchy -> Class -> (ClassRecord -> a) -> a
 asksClassRecord (ClassHierarchy ch) cn f = case Map.lookup cn ch of
     Nothing -> error $ "asksClassRecord: " ++ show cn
     Just n -> f n
@@ -292,6 +298,7 @@ toType x = error $ "toType: " ++ show x
 -}
 
 
+vtrace :: String -> a -> a
 vtrace s v | verbose = trace s v
 vtrace s v | otherwise = v
 
@@ -305,6 +312,7 @@ qtToClassHead kt qt@(HsQualType cntx (HsTyApp (HsTyCon className) ty)) =
     in vtrace ("=" <+> show res) res
 
 
+createClassAssocs :: KindEnv -> [HsDecl] -> [(Tycon, [Tyvar], Maybe Type)]
 createClassAssocs kt decls = 
     [ (ctc n,map ct as,ctype t) | HsTypeDecl { hsDeclName = n, hsDeclTArgs = as, hsDeclType = t } <- decls ]
     where
@@ -313,6 +321,7 @@ createClassAssocs kt decls =
     ctype HsTyAssoc = Nothing
     ctype t = Just $ runIdentity $ hsTypeToType kt t
 
+createInstAssocs :: KindEnv -> [HsDecl] -> [(Tycon, [Tyvar], [Tyvar], Maybe Type)]
 createInstAssocs kt decls =
     [ (ctc n,map ct (czas ca),map ct as,ctype t)
       | HsTypeDecl { hsDeclName = n, hsDeclTArgs = (ca:as), hsDeclType = t } <- decls ] 
@@ -323,6 +332,7 @@ createInstAssocs kt decls =
     ctype HsTyAssoc = Nothing
     ctype t = Just $ runIdentity $ hsTypeToType kt t
 
+fromHsTypeApp :: HsType -> (HsType, [HsType])
 fromHsTypeApp t = f t [] where
     f (HsTyApp a b) rs = f a (b:rs)
     f t rs = (t,rs)
@@ -362,9 +372,11 @@ instanceToTopDecls kt ch@(ClassHierarchy classHierarchy) (HsClassDecl _ qualType
 instanceToTopDecls _ _ _ = mempty
 
 
-
-
+-- | FIXME: we really shouldn't be exporting this!
+instanceName :: (Show a, Show b) => a -> b -> Name
 instanceName n t = toName Val $ Qual (Module "Instance@") $ HsIdent ('i':show n ++ "." ++ show t)
+-- | FIXME: we really shouldn't be exporting this, either!
+defaultInstanceName :: Show a => a -> Name
 defaultInstanceName n = toName Val $ Qual (Module "Instance@") $ HsIdent ('i':show n ++ ".default")
 
 
@@ -463,8 +475,10 @@ classMethodAssumps hierarchy = concatMap classAssumps $ classRecords hierarchy
 
 --------------------------------------------------------------------------------
 
+failSl :: Monad m => SrcLoc -> String -> m a
 failSl sl m = fail $ show sl ++ ": " ++ m
 
+classHierarchyFromRecords :: [ClassRecord] -> ClassHierarchy
 classHierarchyFromRecords rs
    = ClassHierarchy $ Map.fromListWith combineClassRecords [  (className x,x)| x <- rs ]
 
