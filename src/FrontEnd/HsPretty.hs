@@ -60,6 +60,7 @@ data PPHsMode = PPHsMode {
 			 comments :: Bool -- to come later
 			 }
 
+defaultMode :: PPHsMode
 defaultMode = PPHsMode{
 		      classIndent = 8,
 		      doIndent = 3,
@@ -87,8 +88,11 @@ instance Monad (DocM s) where
 {-# INLINE retDocM #-}
 {-# INLINE unDocM #-}
 {-# INLINE getPPEnv #-}
+thenDocM :: DocM s a -> (a -> DocM s b) -> DocM s b
 thenDocM m k = DocM $ (\s -> case unDocM m $ s of a -> unDocM (k a) $ s)
+then_DocM :: DocM s a -> DocM s b -> DocM s b
 then_DocM m k = DocM $ (\s ->case unDocM m $ s of a ->  unDocM k $ s)
+retDocM :: a -> DocM s a
 retDocM a = DocM (\s -> a)
 unDocM :: DocM s a -> (s -> a)
 unDocM (DocM f) = f
@@ -107,6 +111,7 @@ type Doc = DocM PPHsMode P.Doc
 nest :: Int -> Doc -> Doc
 nest i m = m >>= return . P.nest i
 
+dropAs :: HsExp -> HsExp
 dropAs (HsAsPat _ e) = e
 dropAs e = e
 
@@ -133,7 +138,7 @@ double = return . P.double
 
 -- Simple Combining Forms
 
-parens, brackets, braces :: Doc -> Doc
+parens, parenszh, brackets, braces :: Doc -> Doc
 parens d = d >>= return . P.parens
 parenszh d = d >>= \d' -> return $ P.text "(# " P.<> d' P.<> P.text " #)"
 
@@ -209,6 +214,7 @@ ppHsExportSpec (HsEThingWith name nameList)      = ppHsQName name <>
                                                    (parenList . map ppHsQNameParen $ nameList)
 ppHsExportSpec (HsEModuleContents (Module name)) = text "module" <+> text name
 
+ppHsImportDecl :: HsImportDecl -> Doc
 ppHsImportDecl (HsImportDecl pos (Module mod) bool mbName mbSpecs) =
 	   mySep [text "import",
 		 if bool then text "qualified" else empty,
@@ -226,10 +232,12 @@ ppHsImportSpec (HsIAbs name)                     = ppHsName name
 ppHsImportSpec (HsIThingAll name)                = ppHsName name <> text"(..)"
 ppHsImportSpec (HsIThingWith name nameList)      = ppHsName name <>
                                                    (parenList . map ppHsNameParen $ nameList)
+ppHsTName :: (HsName, Maybe HsType) -> Doc
 ppHsTName (n,Nothing) = ppHsName n
 ppHsTName (n,Just t) = parens (ppHsName n <+> text "::" <+> ppHsType t)
 
 -------------------------  Declarations ------------------------------
+ppHsRule :: HsRule -> Doc
 ppHsRule prules@HsRule {} = text (show (hsRuleString prules)) <+> text "forall" <+> vars <+> text "." $$ nest 4 rest  where
     vars = hsep (map ppHsTName $ hsRuleFreeVars prules)
     rest = ppHsExp (hsRuleLeftExpr prules) <+> text "=" <+> ppHsExp (hsRuleRightExpr prules)
@@ -332,10 +340,12 @@ ppHsDecl (HsInfixDecl pos assoc prec nameList) =
 	    ppAssoc HsAssocRight = text "infixr"
 ppHsDecl (HsPragmaProps _ w ns) = text "{-# " <> text w <+> mySep (punctuate comma . map ppHsNameParen $ ns) <+> text "#-}"
 
+ppMatch :: HsMatch -> Doc
 ppMatch (HsMatch pos f ps rhs whereDecls)
    =   myFsep (ppHsQNameParen f : map ppHsPat ps ++ [ppHsRhs rhs])
    $$$ ppWhere whereDecls
 
+ppWhere :: [HsDecl] -> Doc
 ppWhere [] = empty
 ppWhere l = nest 2 (text "where" $$$ body whereIndent (map ppHsDecl l))
 
@@ -551,6 +561,7 @@ ppHsPat	(HsPAsPat name pat) = hcat[ppHsName name,char '@',ppHsPat pat]
 ppHsPat	HsPWildCard = char '_'
 ppHsPat	(HsPIrrPat (Located _ pat)) = char '~' <> ppHsPat pat
 
+ppHsPatField :: HsPatField -> Doc
 ppHsPatField (HsPFieldPat name pat) = myFsep[ppHsQName name, equals, ppHsPat pat]
 
 ------------------------- Case bodies  -------------------------
@@ -562,6 +573,7 @@ ppGAlts :: HsRhs -> Doc
 ppGAlts (HsUnGuardedRhs exp) = text "->" <+> ppHsExp exp
 ppGAlts (HsGuardedRhss altList) = myVcat . map ppGAlt $ altList
 
+ppGAlt :: HsGuardedRhs -> Doc
 ppGAlt (HsGuardedRhs pos exp body) =
 	 myFsep [char '|', ppHsExp exp, text "->", ppHsExp body]
 
@@ -584,6 +596,7 @@ ppHsQName (UnQual name)			= ppHsIdentifier name
 ppHsQName z@(Qual m@(Module mod) name)
 	 | otherwise = text mod <> char '.' <> ppHsIdentifier name
 
+ppHsName :: HsName -> Doc
 ppHsName = ppHsQName
 
 ppHsQNameParen :: HsName -> Doc
@@ -689,6 +702,9 @@ myFsep = layoutChoice fsep' hsep
 			let n = onsideIndent e
 			nest n (fsep (nest (-n) d:ds))
 
+layoutChoice :: (a -> DocM PPHsMode b)
+             -> (a -> DocM PPHsMode b)
+             -> (a -> DocM PPHsMode b)
 layoutChoice a b dl = do e <- getPPEnv
                          if layout e == PPOffsideRule ||
                             layout e == PPSemiColon
