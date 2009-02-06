@@ -17,7 +17,6 @@ import Data.Monoid
 import Data.Maybe
 import qualified Data.Traversable as T
 
-import StringTable.Atom
 import E.E
 import E.FreeVars(caseUpdate)
 import E.Type
