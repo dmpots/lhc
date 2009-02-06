@@ -9,9 +9,12 @@ import Data.List
 
 import GenUtil hiding(replicateM)
 
+mconcatMap :: Monoid b => (a -> b) -> [a] -> b
 mconcatMap f xs = mconcat (map f xs)
+mintercalate :: Monoid a => a -> [a] -> a
 mintercalate x xs = mconcat (intersperse x xs)
 
+mconcatMapM :: (Monoid b, Monad m) => (a -> m b) -> [a] -> m b
 mconcatMapM f xs = mapM f xs >>= return . mconcat
 
 
@@ -23,5 +26,7 @@ travCollect :: Monoid w => ((a -> Writer w a) -> a -> Writer w a) -> (a -> w) ->
 travCollect fn col x = execWriter (f x) where
     f x = tell (col x) >> fn f x
 
+forMn_ :: Monad m => [a] -> ((a, Int) -> m b) -> m ()
 forMn_ xs = forM_ (zip xs [0 :: Int .. ])
+forMn :: Monad m => [a] -> ((a, Int) -> m b) -> m [b]
 forMn xs = forM (zip xs [0 :: Int .. ])

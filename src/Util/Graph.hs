@@ -20,6 +20,7 @@ newGraph ns fn fd = Graph ans lv' kv fn where
     (ans,lv,kv) = graphFromEdges [ (n,fn n,snub $ fd n) | n <- ns ]
     lv' x | (n,_,_) <- lv x = n
 
+fromScc :: Either a [a] -> [a]
 fromScc (Left n) = [n]
 fromScc (Right n) = n
 
