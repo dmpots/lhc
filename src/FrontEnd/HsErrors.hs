@@ -29,6 +29,7 @@ hsType x@HsTyExists {} = do
     hsQualType (hsTypeType x)
 hsType x = traverseHsType (\x -> hsType x >> return x) x >> return ()
 
+hsQualType :: MonadWarn m => HsQualType -> m ()
 hsQualType x  = hsType (hsQualTypeType x)
 
 
@@ -80,10 +81,12 @@ hsDecl cntx decl = f cntx decl where
 
     f _ _ = return ()
 
+fetchQtArgs :: MonadWarn m => SrcLoc -> HsQualType -> m [HsType]
 fetchQtArgs sl HsQualType { hsQualTypeType = t } | (HsTyCon {},args@(_:_)) <- fromHsTypeApp t = return args
 fetchQtArgs sl _ = warn sl "invalid-decl" "invalid head in class or instance decl" >> return []
 
 
+checkDeriving :: MonadWarn m => SrcLoc -> Bool -> [Name] -> m ()
 checkDeriving _ _ xs | all (`elem` derivableClasses) xs = return ()
 checkDeriving sl True _ = warn sl "h98-newtypederiv" "arbitrary newtype derivations are a non-haskell98 feature"
 checkDeriving sl False xs
@@ -91,6 +94,8 @@ checkDeriving sl False xs
     in warn sl "unknown-deriving" ("attempt to derive from a non-derivable class: " ++ unwords (map show nonDerivable))
 
 
+-- FIXME this probably shouldn't be here!
+fromHsTypeApp :: HsType -> (HsType, [HsType])
 fromHsTypeApp t = f t [] where
     f (HsTyApp a b) rs = f a (b:rs)
     f t rs = (t,rs)

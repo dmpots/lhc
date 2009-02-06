@@ -70,6 +70,7 @@ getGuardedRhsDeps (HsGuardedRhs _sloc guardExp rhsExp)
 getExpDeps :: HsExp -> [HsName]
 getExpDeps e = execWriter (expDeps e)
 
+expDeps :: HsExp -> Writer [HsName] ()
 expDeps (HsVar name) = tell [name]
 expDeps (HsLet decls e) = do
     expDeps e
