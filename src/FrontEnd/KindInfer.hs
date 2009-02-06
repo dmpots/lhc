@@ -84,7 +84,7 @@ instance DocLike d =>  PPrint d KindEnv where
 --------------------------------------------------------------------------------
 
 
--- The kind inference monad
+-- | The kind inference monad
 
 data KiWhere = InClass | InInstance | Other
     deriving(Eq)
@@ -174,6 +174,7 @@ zonkConstraint nk mv = do
         let nmv = mv { kvarConstraint = fk, kvarRef = nref }
         liftIO $ modifyIORef (kvarRef mv) (\Nothing -> Just $ KVar nmv)
 
+constrain :: KindConstraint -> Kind -> Ki ()
 constrain KindAny k = return ()
 constrain KindStar        (KBase Star) = return ()
 constrain KindQuest       k@KBase {}  = kindCombine kindFunRet k >> return ()
@@ -257,6 +258,7 @@ kiDecls inputEnv classAndDataDecls = ans where
         mapM_ kiDecl classAndDataDecls
         getEnv >>= postProcess
 
+postProcess :: KindEnv -> Ki KindEnv
 postProcess ke = do
     kindEnv <- T.mapM flattenKind (kindEnv ke)
     kindEnvClasses <- T.mapM (mapM flattenKind) (kindEnvClasses ke)
@@ -312,6 +314,7 @@ kiType k HsTyExists { hsTypeVars = vs, hsTypeType = HsQualType con t } = do
     mapM_ kiPred con
     kiType' k t
 
+initTyVarBind :: HsTyVarBind -> Ki ()
 initTyVarBind HsTyVarBind { hsTyVarBindName = name, hsTyVarBindKind = kk } = do
     nk <- lookupKind KindSimple (toName TypeVal name)
     case kk of
@@ -320,6 +323,7 @@ initTyVarBind HsTyVarBind { hsTyVarBindName = name, hsTyVarBindKind = kk } = do
 
 
 
+hsKindToKind :: HsKind -> Kind
 hsKindToKind (HsKindFn a b) = hsKindToKind a `Kfun` hsKindToKind b
 hsKindToKind a | a == hsKindStar       = kindStar
                | a == hsKindHash       = kindHash
@@ -418,6 +422,7 @@ kiDecl (HsClassDecl _sloc qualType sigsAndDefaults) = ans where
     typeFromSig (HsTypeSig _sloc _names qualType) = qualType
 kiDecl _ = return ()
 
+kiData :: HsContext -> HsName -> [HsName] -> [HsConDecl] -> Ki ()
 kiData context tyconName args condecls = do
     args <- mapM (lookupKind KindSimple . toName TypeVal) args
     kc <- lookupKind KindSimple (toName TypeConstructor tyconName)
@@ -453,6 +458,7 @@ kindOfClass name KindEnv { kindEnvClasses = cs } = case Map.lookup name cs of
 -- Conversion of Types
 ----------------------
 
+fromTyApp :: HsType -> (HsType, [HsType])
 fromTyApp t = f t [] where
     f (HsTyApp a b) rs = f a (b:rs)
     f t rs = (t,rs)
@@ -490,6 +496,7 @@ aHsTypeToType kt (HsTyExists vs qt) = TExists (map (toTyvar kt . hsTyVarBindName
 
 aHsTypeToType _ t = error $ "aHsTypeToType: " ++ show t
 
+toTyvar :: KindEnv -> HsName -> Tyvar
 toTyvar kt name =  tyvar  nn (kindOf nn kt) where
     nn = toName TypeVal name
 
@@ -505,7 +512,7 @@ hsAsstToPred kt (HsAsst className [varName])
 hsAsstToPred kt (HsAsstEq t1 t2) = IsEq (runIdentity $ hsTypeToType' kt t1) (runIdentity $ hsTypeToType' kt t2)
 
 
-
+hsQualTypeToSigma :: Monad m => KindEnv -> HsQualType -> m Sigma
 hsQualTypeToSigma kt qualType = hsQualTypeToType kt (Just []) qualType
 
 hsTypeToType :: Monad m => KindEnv -> HsType -> m Type
