@@ -158,6 +158,7 @@ renameHsDecl prules@HsPragmaSpecialize { hsDeclSrcLoc = srcLoc, hsDeclName = n, 
 renameHsDecl otherHsDecl _ = return otherHsDecl
 
 
+renameHsRule :: HsRule -> SubTable -> State ScopeState HsRule
 renameHsRule prules@HsRule { hsRuleSrcLoc = srcLoc, hsRuleFreeVars = fvs, hsRuleLeftExpr = e1, hsRuleRightExpr = e2 } subTable = withSrcLoc srcLoc $ do
     fvs' <- sequence [ T.mapM (`renameHsType` subTable) t  >>= return . (,) n | (n,t) <- fvs]
     e1' <- renameHsExp e1 subTable
@@ -209,8 +210,10 @@ renameHsBangType (HsUnBangedTy hsType) subTable = do
     hsType' <- renameHsType hsType subTable
     return (HsUnBangedTy hsType')
 
+renameHsType :: HsType -> SubTable -> State ScopeState HsType
 renameHsType = renameHsType' True
 
+renameHsType' :: Bool -> HsType -> SubTable -> State ScopeState HsType
 renameHsType' dovar t st = pp (rt t st) where
     rt :: HsType -> SubTable -> ScopeSM (HsType)
     rt (HsTyFun hsType1 hsType2) subTable = do
@@ -408,6 +411,7 @@ renameHsName hsName _ = return hsName
 
 
 
+renameTypeHsName :: HsName -> SubTable -> ScopeSM (HsName)
 renameTypeHsName hsName subTable  =  return hsName
 
 ---------------------------------------

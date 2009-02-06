@@ -233,6 +233,7 @@ newBox k = newMetaVar Sigma k
 
 
 
+unificationError :: Type -> Type -> Tc a
 unificationError t1 t2 = do
     t1 <- evalFullType t1
     t2 <- evalFullType t2
@@ -405,6 +406,7 @@ fixKind (KBase KQuest) = KBase Star
 fixKind (a `Kfun` b) = fixKind a `Kfun` fixKind b
 fixKind x = x
 
+groundKind :: MetaVar -> Tc MetaVar
 groundKind mv = zonkKind (fixKind $ metaKind mv) mv
 
 -- this removes all boxes, replacing them with tau vars
@@ -419,7 +421,9 @@ unBox tv = ft' tv where
     ft t = tickleM ft' t
     ft' t = evalType t >>= ft
 
+evalType :: Type -> Tc Type
 evalType t = findType t >>= evalTAssoc >>= evalArrowApp
+evalFullType :: Type -> Tc Type
 evalFullType t = f' t where
     f t = tickleM f' t
     f' t =  evalType t >>= f
@@ -436,6 +440,7 @@ evalTAssoc ta@TAssoc { typeCon = Tycon { tyconName = n1 }, typeClassArgs = ~[car
 evalTAssoc t = return t
 
 
+evalArrowApp :: Type -> Tc Type
 evalArrowApp (TAp (TAp (TCon tcon) ta) tb) 
     | tyconName tcon == tc_Arrow = return (TArrow ta tb) 
 
@@ -533,6 +538,7 @@ instance UniqueProducer Tc where
             return n
         return n
 
+tcInfoEmpty :: TcInfo
 tcInfoEmpty = TcInfo {
     tcInfoEnv = mempty,
     tcInfoModName = "(unknown)",
