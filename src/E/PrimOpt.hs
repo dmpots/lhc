@@ -49,6 +49,7 @@ unbox dataTable e vn wtd = eCase e  [Alt (litCons { litName = cna, litArgs = [tv
 
 
 
+cextra :: Prim -> [E] -> [Char]
 cextra Op {} [] = ""
 cextra Op {} xs = '.':map f xs where
     f ELit {} = 'c'
@@ -56,8 +57,10 @@ cextra Op {} xs = '.':map f xs where
     f _ = 'e'
 cextra _ _ = ""
 
+primConv :: Op.ConvOp -> Op.Ty -> Op.Ty -> E -> E -> E
 primConv cop t1 t2 e rt = EPrim (APrim (Op (Op.ConvOp cop t1) t2) mempty) [e] rt
 
+primOpt' :: MonadStats m => a -> E -> m E
 primOpt' dataTable  e@(EPrim (APrim s _) xs t) = do
     let primopt (Op (Op.BinOp bop t1 t2) tr) [e1,e2] rt = binOp bop t1 t2 tr e1 e2 rt
         primopt (Op (Op.ConvOp cop t1) t2) [ELit (LitInt n t)] rt = return $ ELit (LitInt (convNumber cop t1 t2 n) rt)
