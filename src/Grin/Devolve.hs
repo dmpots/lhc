@@ -5,7 +5,6 @@ import Data.IORef
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
-import Util.Gen
 import Support.Transform
 import Grin.Grin
 import Grin.Noodle

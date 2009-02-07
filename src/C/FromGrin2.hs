@@ -29,7 +29,6 @@ import Grin.HashConst
 import Grin.Noodle
 import Grin.Show()
 import Grin.Val
-import Options
 import PackedString
 import RawFiles
 import StringTable.Atom
@@ -38,7 +37,6 @@ import Support.FreeVars
 import Util.Gen
 import Util.UniqueMonad
 import qualified Cmm.Op as Op
-import qualified FlagOpts as FO
 
 ---------------
 -- C Monad
