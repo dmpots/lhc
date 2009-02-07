@@ -29,6 +29,7 @@ instance Monad (Ms b) where
 instance Functor (Ms b) where
     fmap = liftM
 
+unMs' :: Ms a b -> Env a -> IO b
 unMs' (Ms' x) = x
 
 {-# INLINE getVal #-}
