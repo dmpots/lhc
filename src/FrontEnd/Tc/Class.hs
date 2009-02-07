@@ -129,6 +129,7 @@ instsOf ch c = asksClassRecord ch c classInsts
 
 match :: Monad m => Type -> Type -> m [(Tyvar,Type)]
 match x y = do match' x y
+match' :: Monad m => Type -> Type -> m [(Tyvar,Type)]
 match' (TAp l r) (TAp l' r') = do
     sl <- match l l'
     sr <- match r r'

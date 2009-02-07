@@ -370,8 +370,9 @@ fixupHsDecls (d@(HsFunBind matches):ds) =  (HsFunBind newMatches) : fixupHsDecls
 fixupHsDecls (d:ds) =  d : fixupHsDecls ds
 fixupHsDecls [] = []
 -- get the variable name bound by a match
-matchName (HsMatch _sloc name _pats _rhs _whereDecls) = name
 
+matchName :: HsMatch -> HsName
+matchName (HsMatch _sloc name _pats _rhs _whereDecls) = name
 
 -- True if the decl is a HsFunBind and binds the same name as the
 -- first argument, False otherwise
@@ -430,6 +431,7 @@ parseImport (Just cn) hn =
       ("static":xs) -> parseIS [] [] xs
       xs            -> parseIS [] [] xs
 
+parseIS :: Monad m => [String] -> [String] -> [String] -> m FfiType
 parseIS a b ['&':n] | isCName n = return $ ImportAddr n $ Requires a b
 parseIS a b [n]     | isCName n = return $ Import     n $ Requires a b
 parseIS a b ["&",n] | isCName n = return $ ImportAddr n $ Requires a b
@@ -437,6 +439,7 @@ parseIS a b (('-':'l':l):r)     = parseIS a (l:b) r
 parseIS a b (i:r)               = parseIS (i:a) b r
 parseIS _ _ x                   = fail ("Syntax error parsing foreign import: "++show x)
 
+isCName :: String -> Bool
 isCName []     = False
 isCName (c:cs) = p1 c && all p2 cs
     where p1 c = isAlpha c    || any (c==) oa
