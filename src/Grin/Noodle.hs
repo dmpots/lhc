@@ -1,6 +1,6 @@
-module Grin.Noodle where
+-- | Various routines for manipulating and exploring grin code.
 
--- various routines for manipulating and exploring grin code.
+module Grin.Noodle where
 
 import Control.Monad.Writer
 import Data.Monoid
@@ -10,7 +10,6 @@ import Support.FreeVars
 import StringTable.Atom(Atom())
 import Options(flint)
 import C.Prims
-import Util.Gen
 import Grin.Grin
 import Support.CanType
 import Debug.Trace
@@ -34,6 +33,7 @@ modifyTail lam@(_ :-> lb) te = f mempty te where
     g lf (p :-> e) = p :-> f lf e
 
 
+mapBodyM :: Monad m => (Exp -> m Exp) -> Lam -> m Lam
 mapBodyM f (x :-> y) = f y >>= return . (x :->)
 
 mapExpVal :: Monad m => (Val -> m Val) -> Exp -> m Exp
@@ -53,6 +53,7 @@ mapExpVal g x = f x where
         return (Case v as)
     f e = return e
 
+mapValVal :: Monad m => (Val -> m Val) -> Val -> m Val
 mapValVal fn x = f x where
     f (NodeC t vs) = return (NodeC t) `ap` mapM fn vs
     f (Index a b) = return Index `ap` fn a `ap` fn b
@@ -60,6 +61,7 @@ mapValVal fn x = f x where
     f (ValPrim p vs ty) = return (ValPrim p) `ap` mapM fn vs `ap` return ty
     f x = return x
 
+mapValVal_ :: Monad m => (Val -> m b) -> Val -> m ()
 mapValVal_ fn x = f x where
     f (NodeC t vs) = mapM_ fn vs
     f (Index a b) = fn a >> fn b >> return ()
@@ -67,6 +69,7 @@ mapValVal_ fn x = f x where
     f (ValPrim p vs ty) =  mapM_ fn vs >> return ()
     f _ = return ()
 
+mapExpLam :: Monad m => (Lam -> m Lam) -> Exp -> m Exp
 mapExpLam fn e = f e where
     f (a :>>= b) = return (a :>>=) `ap` fn b
     f (Case e as) = return (Case e) `ap` mapM fn as
@@ -86,6 +89,7 @@ mapExpLam fn e = f e where
 
 
 
+mapExpExp :: Monad m => (Exp -> m Exp) -> Exp -> m Exp
 mapExpExp fn e = f e where
     f (a :>>= b) = return (:>>=) `ap` fn a `ap` g b
 {-    f l@Let { expBody = b, expDefs = defs } = do
@@ -94,20 +98,23 @@ mapExpExp fn e = f e where
     f e = mapExpLam g e
     g (l :-> e) = return (l :->) `ap` fn e
 
+mapFBodies :: Monad m => (Exp -> m Exp) -> [FuncDef] -> m [FuncDef]
 mapFBodies f xs = mapM f' xs where
     f' fd@FuncDef { funcDefBody = l :-> r } = do
         r' <- f r
         return $  updateFuncDefProps fd { funcDefBody = l :-> r' }
 
+funcDefBody_uM :: Monad m => (Lam -> m Lam) -> FuncDef -> m FuncDef
 funcDefBody_uM f fd@FuncDef { funcDefBody = b } = do
     b' <- f b
     return $  updateFuncDefProps fd { funcDefBody = b' }
 
+grinFunctions_s :: [FuncDef] -> Grin -> Grin
 grinFunctions_s nf grin = grin { grinFunctions = nf }
 
 
 --------------------------
--- examining and reporting
+-- * Examining and reporting
 --------------------------
 
 isManifestNode :: Monad m => Exp -> m [Atom]
@@ -142,7 +149,7 @@ valIsConstant _ = False
 
 
 
-
+isOmittable :: Exp -> Bool
 isOmittable (Fetch {}) = True
 isOmittable (Return {}) = True
 isOmittable (Store x) | getType x /= TyNode = False
@@ -153,6 +160,7 @@ isOmittable (Case x ds) = all isOmittable [ e | _ :-> e <- ds ]
 isOmittable (e1 :>>= _ :-> e2) = isOmittable e1 && isOmittable e2
 isOmittable _ = False
 
+isErrOmittable :: Exp -> Bool
 isErrOmittable Update {} = True
 isErrOmittable (e1 :>>= _ :-> e2) = isErrOmittable e1 && isErrOmittable e2
 isErrOmittable (Case x ds) = all isErrOmittable [ e | _ :-> e <- ds ]
@@ -192,6 +200,8 @@ collectFuncs exp = runWriter (cfunc exp) where
             return (a `mappend` b)-}
         cfunc x = error "Grin.Noodle.collectFuncs: unknown"
 
+-- | This actually just returns an error at the moment
+grinLet :: a -> b -> c
 grinLet defs body = error "grinLet not defined"{-updateLetProps Let {
     expDefs = defs,
     expBody = body,

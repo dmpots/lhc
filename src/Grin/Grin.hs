@@ -1,5 +1,11 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
+-- | Extremely simple first order monadic code with basic type system.  similar
+-- to GRIN except for the explicit typing on variables. Note, that certain
+-- haskell types become Grin values, however, nothing may be done with types other
+-- than examining them. (types may not be constructed at run-time) ( do we need
+-- this for polymorphic recursion? )
+
 module Grin.Grin(
     Callable(..),
     Exp(..),
@@ -75,12 +81,6 @@ import qualified Info.Info as Info
 import qualified Cmm.Op as Op
 import qualified Stats
 
--- Extremely simple first order monadic code with basic type system.  similar
--- to GRIN except for the explicit typing on variables. Note, that certain
--- haskell types become Grin values, however, nothing may be done with types other
--- than examining them. (types may not be constructed at run-time) ( do we need
--- this for polymorphic recursion? )
-
 data TyThunk =
     TyNotThunk                 -- ^ not the thunk
     | TyPApp (Maybe Ty) Atom   -- ^ can be applied to (possibly) an argument, and what results
@@ -94,12 +94,14 @@ data TyTy = TyTy {
     tySiblings :: Maybe [Atom]
 }
 
+tyTy :: TyTy
 tyTy = TyTy { tySlots = [], tyReturn = [], tySiblings = Nothing, tyThunk = TyNotThunk }
 
 newtype TyEnv = TyEnv (Map.Map Atom TyTy)
     deriving(Monoid)
 
 
+tagHole, funcApply, funcEval :: Atom
 tagHole = toAtom "@hole"
 funcApply = toAtom "@apply"
 funcEval = toAtom "@eval"
@@ -107,9 +109,11 @@ funcEval = toAtom "@eval"
 gEval :: Val -> Exp
 gEval x = App funcEval [x] [TyNode]
 
--- lazy node sptr_t
+-- | lazy node @sptr_t@
+tyINode :: Ty
 tyINode = TyPtr TyNode
--- strict node wptr_t
+-- | strict node @wptr_t@
+tyDNode :: Ty
 tyDNode = TyNode
 
 
@@ -211,18 +215,23 @@ data FuncDef = FuncDef {
     funcDefProps :: FuncProps
     } deriving(Eq,Ord,Show)
 
+createFuncDef :: Bool -> Atom -> Lam -> FuncDef
 createFuncDef local name body@(args :-> rest)  = updateFuncDefProps FuncDef { funcDefName = name, funcDefBody = body, funcDefCall = call, funcDefProps = funcProps } where
     call = Item name (TyCall (if local then LocalFunction else Function) (map getType args) (getType rest))
 
 
+updateFuncDefProps :: FuncDef -> FuncDef
 updateFuncDefProps fd@FuncDef { funcDefBody = body@(args :-> rest) } =  fd { funcDefProps = props } where
     props = (funcDefProps fd) { funcFreeVars = freeVars body, funcTags = freeVars body, funcType = (map getType args,getType rest) }
 
+grinFuncs :: Grin -> [(Atom, Lam)]
 grinFuncs grin = map (\x -> (funcDefName x, funcDefBody x)) (grinFunctions grin)
+setGrinFunctions :: [(Atom, Lam)] -> Grin -> Grin
 setGrinFunctions xs _grin | flint && hasRepeatUnder fst xs = error $ "setGrinFunctions: grin has redundent defeninitions" ++ show (fsts xs)
 setGrinFunctions xs grin = grin { grinFunctions = map (uncurry (createFuncDef False)) xs }
 
 
+extendTyEnv :: [FuncDef] -> TyEnv -> TyEnv
 extendTyEnv ds (TyEnv env) = TyEnv (Map.fromList xs `mappend` env) where
     xs = [ (funcDefName d,tyTy { tySlots = ss, tyReturn = r }) |  d <- ds, let (ss,r) = funcType $ funcDefProps d]
 
@@ -240,6 +249,7 @@ data FuncProps = FuncProps {
     }
     deriving(Eq,Ord,Show)
 
+funcProps :: FuncProps
 funcProps = FuncProps {
     funcInfo = mempty,
     funcFreeVars = mempty,
@@ -294,6 +304,7 @@ instance Show Val where
 data Phase = PhaseInit | PostInlineEval | PostAeOptimize | PostDevolve
     deriving(Show,Eq,Ord,Enum)
 
+phaseEvalInlined :: Phase -> Bool
 phaseEvalInlined e = e >= PostInlineEval
 
 
@@ -310,6 +321,7 @@ data Grin = Grin {
                  }
 
 
+emptyGrin :: Grin
 emptyGrin = Grin {
     grinEntryPoints = mempty,
     grinPhase = PhaseInit,
@@ -322,6 +334,7 @@ emptyGrin = Grin {
     grinUnique = 1
                  }
 
+grinEntryPointNames :: Grin -> [Atom]
 grinEntryPointNames = Map.keys . grinEntryPoints
 
 
@@ -346,6 +359,7 @@ tagUnfunction _ = fail "Tag does not represent function"
 
 
 
+tagFlipFunction :: Atom -> Atom
 tagFlipFunction t
     | 'F':xs <- t' = toAtom $ 'f':xs
     | 'B':xs <- t' = toAtom $ 'b':xs
@@ -354,12 +368,14 @@ tagFlipFunction t
     | otherwise = error "Cannot FLIP non function."
     where t' = fromAtom t
 
+tagIsSuspFunction :: Atom -> Bool
 tagIsSuspFunction t
     | 'F':_ <- t' = True
     | 'B':_ <- t' = True
     | otherwise = False
     where t' = fromAtom t
 
+tagToFunction :: Monad m => Atom -> m Atom
 tagToFunction t
     | 'F':xs <- t' = return $ toAtom $ 'f':xs
     | 'B':xs <- t' = return $ toAtom $ 'b':xs
@@ -369,17 +385,20 @@ tagToFunction t
     | otherwise = fail $ "Not Function: " ++ t'
     where t' = fromAtom t
 
+tagIsFunction :: Atom -> Bool
 tagIsFunction t
     | 'f':_ <- t' = True
     | 'b':_ <- t' = True
     | otherwise = False
     where t' = fromAtom t
 
+tagIsPartialAp :: Atom -> Bool
 tagIsPartialAp t
     | 'P':_ <- t' = True
     | otherwise = False
     where t' = fromAtom t
 
+tagIsTag :: Atom -> Bool
 tagIsTag t
     | 'P':_ <- t' = True
     | 'T':_ <- t' = True
@@ -390,6 +409,7 @@ tagIsTag t
     | otherwise = False
     where t' = fromAtom t
 
+tagIsWHNF :: Atom -> Bool
 tagIsWHNF t
     | 'P':_ <- t' = True
     | 'T':_ <- t' = True
@@ -398,18 +418,22 @@ tagIsWHNF t
     | otherwise = False
     where t' = fromAtom t
 
+valIsNF :: Val -> Bool
 valIsNF (NodeC t vs) = tagIsWHNF t && all valIsNF vs
 valIsNF Const {} = True
 valIsNF Lit {} = True
 valIsNF _ = False
 
+properHole :: Ty -> Val
 properHole x = case x of
     TyPtr TyNode -> Const (properHole TyNode)
     ty@(TyPrim _) -> (Lit 0 ty)
     ~TyNode -> (NodeC tagHole [])
 
+isHole :: Val -> Bool
 isHole x = x `elem` map properHole [TyPtr TyNode, TyNode]
 
+isValUnknown :: Val -> Bool
 isValUnknown ValUnknown {} = True
 isValUnknown _ = False
 
@@ -418,6 +442,7 @@ isValUnknown _ = False
 -- Look up stuff in the typing environment.
 ---------
 
+findTyTy :: Monad m => TyEnv -> Atom -> m TyTy
 findTyTy (TyEnv m) a | Just tyty <-  Map.lookup a m = return tyty
 findTyTy (TyEnv m) a | ('Y':rs) <- fromAtom a, (ns,'_':rs) <- span isDigit rs  = case Map.lookup (toAtom ('T':rs)) m of
     Just TyTy { tySlots = ts, tyReturn = n } -> return tyTy { tySlots = take (length ts - read ns) ts, tyReturn = n }
@@ -425,22 +450,27 @@ findTyTy (TyEnv m) a | ('Y':rs) <- fromAtom a, (ns,'_':rs) <- span isDigit rs  =
 findTyTy _ a | "@hole" `isPrefixOf` fromAtom a  = return tyTy { tySlots = [], tyReturn = [TyNode] }
 findTyTy _ a =  fail $ "findArgsType: " ++ show a
 
+findArgsType :: Monad m => TyEnv -> Atom -> m ([Ty], [Ty])
 findArgsType m a = liftM (\tyty -> (tySlots tyty,tyReturn tyty)) (findTyTy m a)
 
+findArgs :: Monad m => TyEnv -> Atom -> m [Ty]
 findArgs m a = case findArgsType m a of
     Nothing -> fail $ "findArgs: " ++ show a
     Just (as,_) -> return as
 
+v0, v1, v2, v3 :: Var
 v0 = V 0
 v1 = V 1
 v2 = V 2
 v3 = V 3
 
+n0, n1, n2, n3 :: Val
 n0 = Var v0 TyNode
 n1 = Var v1 TyNode
 n2 = Var v2 TyNode
 n3 = Var v3 TyNode
 
+p0, p1, p2, p3 :: Val
 p0 = Var v0 (TyPtr TyNode)
 p1 = Var v1 (TyPtr TyNode)
 p2 = Var v2 (TyPtr TyNode)
@@ -587,9 +617,12 @@ instance FreeVars Exp (Set.Set Tag) where
 --    freeVars MkCont { expCont = v, expLam = as} = freeVars (v,as)
 
 
+lamExp :: Lam -> Exp
 lamExp (_ :-> e) = e
+lamBind :: Lam -> [Val]
 lamBind (b :-> _) = b
 
+isVar :: Val -> Bool
 isVar Var {} = True
 isVar _ = False
 

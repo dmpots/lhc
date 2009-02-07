@@ -16,6 +16,7 @@ data HcNode = HcNode {-# UNPACK #-} !Atom [Either Val Int]
 data HcHash = HcHash !Int (Map.Map HcNode Int)
     deriving(Show)
 
+emptyHcHash :: HcHash
 emptyHcHash = HcHash 1 Map.empty
 
 newConst :: MonadState HcHash m => Set.Set Atom -> Val -> m (Bool,Int)
