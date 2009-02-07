@@ -81,6 +81,7 @@ import qualified Cmm.Op as Op
 import qualified Util.Graph as G
 import qualified Util.Seq as Seq
 
+tipe' :: Monad m => Type -> VarNameT () Tyvar Id m E
 tipe' (TAp t1 t2) = liftM2 eAp (tipe' t1) (tipe' t2)
 tipe' (TArrow t1 t2) =  do
     t1' <- tipe' t1
@@ -109,6 +110,7 @@ tipe' ~(TExists xs (_ :=> t)) = do
 
 
 
+kind :: Kind -> E
 kind (KBase KUTuple) = eHash
 kind (KBase KHash) = eHash
 kind (KBase Star) = eStar
@@ -120,27 +122,28 @@ kind _ = error "DataConstructors.kind"
 data AliasType = NotAlias | ErasedAlias | RecursiveAlias
     deriving(Eq,Ord,Show)
 
--- these apply to types
+-- | These apply to types
 data DataFamily =
-    DataAbstract        -- abstract internal type, has children of representation unknown and irrelevant.
-    | DataNone          -- children don't apply. data constructor for instance
-    | DataPrimitive     -- primitive type, children are all numbers.
-    | DataEnum !Int     -- bounded integral type, argument is maximum number
-    | DataNormal [Name] -- child constructors
+    DataAbstract        -- ^ Abstract internal type, has children of representation unknown and irrelevant.
+    | DataNone          -- ^ Children don't apply. data constructor for instance
+    | DataPrimitive     -- ^ Primitive type, children are all numbers.
+    | DataEnum !Int     -- ^ Bounded integral type, argument is maximum number
+    | DataNormal [Name] -- ^ Child constructors
     deriving(Eq,Ord,Show)
 
 -- | Record describing a data type.
--- * is also a data type containing the type constructors, which are unlifted, yet boxed.
+--
+--  * is also a data type containing the type constructors, which are unlifted, yet boxed.
 
 data Constructor = Constructor {
-    conName      :: Name,         -- name of constructor
-    conType      :: E,            -- type of constructor
-    conExpr      :: E,            -- expression which constructs this value
-    conOrigSlots :: [Slot],       -- original slots
-    conDeriving  :: [Name],       -- classes this type derives
-    conAlias     :: AliasType,    -- whether this is a simple alias and has no tag of its own.
-    conInhabits  :: Name,         -- what constructor it inhabits, similar to conType, but not quite.
-    conVirtual   :: Maybe [Name], -- whether this is a virtual constructor that translates into an enum and its siblings
+    conName      :: Name,         -- ^ Name of constructor
+    conType      :: E,            -- ^ Type of constructor
+    conExpr      :: E,            -- ^ Expression which constructs this value
+    conOrigSlots :: [Slot],       -- ^ Original slots
+    conDeriving  :: [Name],       -- ^ Classes this type derives
+    conAlias     :: AliasType,    -- ^ Whether this is a simple alias and has no tag of its own
+    conInhabits  :: Name,         -- ^ What constructor it inhabits, similar to conType, but not quite
+    conVirtual   :: Maybe [Name], -- ^ Whether this is a virtual constructor that translates into an enum and its siblings
     conChildren  :: DataFamily
     } deriving(Show)
 
@@ -150,17 +153,21 @@ data Slot =
     | SlotExistential TVr
     deriving(Eq,Ord,Show)
 
+mapESlot :: (E -> E) -> Slot -> Slot
 mapESlot f (SlotExistential t) = SlotExistential t { tvrType = f (tvrType t) }
 mapESlot f (SlotNormal e) = SlotNormal $ f e
 mapESlot f (SlotUnpacked e n es) = SlotUnpacked (f e) n (map f es)
 
+conSlots :: Constructor -> [E]
 conSlots s = getSlots $ conOrigSlots s
 
+getSlots :: [Slot] -> [E]
 getSlots ss = concatMap f ss where
     f (SlotNormal e) = [e]
     f (SlotUnpacked _ _ es) = es
     f (SlotExistential e) = [tvrType e]
 
+getHsSlots :: [Slot] -> [E]
 getHsSlots ss = map f ss where
     f (SlotNormal e) = e
     f (SlotUnpacked e _ es) = e
@@ -175,6 +182,7 @@ instance Binary DataTable where
     put (DataTable dt) = put dt
     get = fmap DataTable get
 
+emptyConstructor :: Constructor
 emptyConstructor = Constructor {
                 conName = error "emptyConstructor.conName",
                 conType = Unknown,
@@ -200,7 +208,7 @@ getConstructor n (DataTable map) = case Map.lookup n map of
     Just x -> return x
     Nothing -> fail $ "getConstructor: " ++ show (nameType n,n)
 
--- | return the single constructor of product types
+-- | Return the single constructor of product types
 
 getProduct :: Monad m => DataTable -> E -> m Constructor
 getProduct dataTable e | (ELit LitCons { litName = cn }) <- followAliases dataTable e, Just c <- getConstructor cn dataTable = f c where
@@ -236,7 +244,7 @@ tunboxedtuple n = (typeCons,dataCons) where
         dtipe = foldr EPi (foldr EPi ftipe [ v { tvrIdent = emptyId } | v <- vars]) typeVars
 
 
--- | conjured data types, these data types are created as needed and can be of any type, their
+-- | Conjured data types, these data types are created as needed and can be of any type, their
 -- actual type is encoded in their names.
 --
 -- Absurd - this is a type that it used to default otherwise unconstrained
@@ -248,14 +256,16 @@ tunboxedtuple n = (typeCons,dataCons) where
 -- the final stages of compilation before core mangling so that optimizations
 -- that were previously blocked by type variables can be carried out.
 
-
+tAbsurd :: E -> E
 tAbsurd k = ELit (litCons { litName = nameConjured modAbsurd k, litArgs = [], litType = k })
+mktBox :: E -> E
 mktBox k = ELit (litCons { litName = nameConjured modBox k, litArgs = [], litType = k, litAliasFor = af }) where
     af = case k of
         EPi TVr { tvrType = t1 } t2 -> Just (ELam tvr { tvrType = t1 } (mktBox t2))
         _ -> Nothing
 
 
+tarrow :: Constructor
 tarrow = emptyConstructor {
             conName = tc_Arrow,
             conType = EPi (tVr emptyId eStar) (EPi (tVr emptyId eStar) eStar),
@@ -265,6 +275,7 @@ tarrow = emptyConstructor {
             conChildren = DataAbstract
         }
 
+primitiveConstructor :: Name -> Constructor
 primitiveConstructor name = emptyConstructor {
     conName = name,
     conType = eHash,
@@ -274,6 +285,7 @@ primitiveConstructor name = emptyConstructor {
     }
 
 
+primitiveTable :: [Constructor]
 primitiveTable = concatMap f allCTypes  where
     f (dc,tc,rt,y,z) | z /= "void" = [typeCons,dataCons] where
         dataCons = emptyConstructor {
@@ -296,7 +308,8 @@ primitiveTable = concatMap f allCTypes  where
 
 
 
-typesCompatable :: forall m . Monad m => E -> E -> m ()
+-- Why do we need this forall???
+typesCompatable :: forall m. Monad m => E -> E -> m ()
 typesCompatable a b = f etherialIds a b where
         f :: [Id] -> E -> E -> m ()
         f _ (ESort a) (ESort b) = when (a /= b) $ fail $ "Sorts don't match: " ++ pprint (ESort a,ESort b)
@@ -349,8 +362,8 @@ extractPrimitive dataTable e = case followAliases dataTable (getType e) of
 boxPrimitive ::
     Monad m
     => DataTable
-    -> E         -- primitive to box
-    -> E         -- what type we want it to have
+    -> E         -- ^ Primitive to box
+    -> E         -- ^ What type we want it to have
     -> m (E,(ExtType,E))
 boxPrimitive dataTable e et = case followAliases dataTable et of
     st@(ELit LitCons { litName = c, litArgs = [], litType = t })
@@ -367,11 +380,12 @@ boxPrimitive dataTable e et = case followAliases dataTable et of
     e' -> fail $ "extractPrimitive: " ++ show (e,e')
 
 
--- which C types these convert to in FFI specifications for
--- figuring out calling conventions. not necessarily related
+-- | Which C types these convert to in FFI specifications for
+-- figuring out calling conventions. Not necessarily related
 -- to the representation.
--- ideally, these could be set via a pragma
+-- Ideally, these could be set via a pragma. 
 
+typeTable :: Map.Map Name String
 typeTable = Map.fromList [
     (tc_Char,"wchar_t"),
     (tc_Int, "int"),
@@ -414,7 +428,7 @@ typeTable = Map.fromList [
     ]
 
 -- | Returns a string naming the C type that the given type is
--- converted to/from in foreign imports/exports
+-- converted to\/from in foreign imports\/exports
 lookupCType :: Monad m => E -> m String
 lookupCType e = f e where
     f (ELit LitCons { litName = c })
@@ -437,6 +451,7 @@ extractIO' e = case extractIO e of
 -- | Finds the internal constructor, E field type, and C field type
 -- for an FFI-able single-field, single-constructor datatype like
 -- 'Int' (or a newtype thereof)
+lookupCType' :: Monad m => DataTable -> E -> m (Name, E, String)
 lookupCType' dataTable e = case followAliases (mappend dataTablePrims dataTable) e of
     ELit LitCons { litName = c, litArgs = [] }
         | Just Constructor { conChildren = DataNormal [cn] }  <- getConstructor c dataTable,
@@ -455,6 +470,7 @@ followAliases _dataTable e = f e where
     f (ELit LitCons { litAliasFor = Just af, litArgs = as }) = f (foldl eAp af as)
     f e = e
 
+dataTablePrims :: DataTable
 dataTablePrims = DataTable $ Map.fromList ([ (conName x,x) | x <- tarrow:primitiveTable ])
 
 deriveClasses :: IdMap Comb -> DataTable -> [(TVr,E)]
@@ -671,6 +687,7 @@ toDataTable km cm ds currentDataTable = newDataTable  where
             conChildren = undefined
             }
 
+isHsBangedTy :: HsBangType -> Bool
 isHsBangedTy HsBangedTy {} = True
 isHsBangedTy _ = False
 
@@ -680,10 +697,10 @@ getConstructorArities (DataTable dt) = [ (n,length $ conSlots c) | (n,c) <- Map.
 
 
 constructionExpression ::
-    DataTable -- ^ table of data constructors
-    -> Name   -- ^ name of said constructor
-    -> E      -- ^ type of eventual constructor
-    -> E      -- ^ saturated lambda calculus term
+    DataTable -- ^ Table of data constructors
+    -> Name   -- ^ Name of constructor
+    -> E      -- ^ Type of eventual constructor
+    -> E      -- ^ Saturated lambda calculus term
 constructionExpression dataTable n typ@(ELit LitCons { litName = pn, litArgs = xs })
     | ErasedAlias <- conAlias mc = ELam var (EVar var)
     | RecursiveAlias <- conAlias mc = let var' = var { tvrType = st } in ELam var' (prim_unsafeCoerce (EVar var') typ)
@@ -699,12 +716,12 @@ constructionExpression _ n e = error $ "constructionExpression: error in " ++ sh
 
 deconstructionExpression ::
     UniqueProducer m
-    => DataTable -- ^ table of data constructors
-    -> Name   -- ^ name of said constructor
-    -> E      -- ^ type of pattern
-    -> [TVr]  -- ^ variables to be bound
-    -> E      -- ^ body of alt
-    -> m (Alt E)  -- ^ resulting alternative
+    => DataTable -- ^ Table of data constructors
+    -> Name   -- ^ Name of constructor
+    -> E      -- ^ Type of pattern
+    -> [TVr]  -- ^ Variables to be bound
+    -> E      -- ^ Body of alt
+    -> m (Alt E)  -- ^ Resulting alternative
 deconstructionExpression dataTable name typ@(ELit LitCons { litName = pn, litArgs = xs }) vs  e | pn == conName pc = ans where
     Just mc = getConstructor name dataTable
     Just pc = getConstructor (conInhabits mc) dataTable
@@ -732,10 +749,10 @@ deconstructionExpression wdt n ty vs e | Just fa <- followAlias wdt ty  = decons
 deconstructionExpression _ n e _ _ = error $ "deconstructionExpression: error in " ++ show n ++ ": " ++ show e
 
 slotTypes ::
-    DataTable -- ^ table of data constructors
-    -> Name   -- ^ name of constructor
-    -> E      -- ^ type of value
-    -> [E]    -- ^ type of each slot
+    DataTable -- ^ Table of data constructors
+    -> Name   -- ^ Name of constructor
+    -> E      -- ^ Type of value
+    -> [E]    -- ^ Type of each slot
 slotTypes wdt n (ELit LitCons { litName = pn, litArgs = xs, litType = _ })
     | pn == conName pc = [sub x | x <- conSlots mc ]
     where
@@ -749,10 +766,10 @@ slotTypes wdt n e | Just fa <- followAlias wdt e  = slotTypes wdt n fa
 slotTypes _ n e = error $ "slotTypes: error in " ++ show n ++ ": " ++ show e
 
 slotTypesHs ::
-    DataTable -- ^ table of data constructors
-    -> Name   -- ^ name of constructor
-    -> E      -- ^ type of value
-    -> [E]    -- ^ type of each slot
+    DataTable -- ^ Table of data constructors
+    -> Name   -- ^ Name of constructor
+    -> E      -- ^ Type of value
+    -> [E]    -- ^ Type of each slot
 slotTypesHs wdt n (ELit LitCons { litName = pn, litArgs = xs, litType = _ })
     | pn == conName pc = [sub x | x <- getHsSlots $ conOrigSlots mc ]
     where
@@ -765,6 +782,7 @@ slotTypesHs wdt n kind
 slotTypesHs wdt n e | Just fa <- followAlias wdt e  = slotTypes wdt n fa
 slotTypesHs _ n e = error $ "slotTypes: error in " ++ show n ++ ": " ++ show e
 
+showDataTable :: DataTable -> Doc
 showDataTable (DataTable mp) = vcat xs where
     c  const = vcat [t,e,cs,al,vt,ih,ch] where
         t  = text "::" <+> ePretty conType
@@ -800,7 +818,7 @@ numberSiblings dt n
         _ -> Nothing
     | otherwise =  Nothing
 
--- whether the type has a single slot
+-- | Whether the type has a single slot
 onlyChild :: DataTable -> Name -> Bool
 onlyChild dt n = isJust ans where
     ans = do
@@ -855,6 +873,7 @@ class Monad m => DataTableMonad m where
 
 instance DataTableMonad Identity
 
+primitiveAliases :: [(Name, Name)]
 primitiveAliases = [
     (tc_Bits1, rt_bool),
     (tc_Bits8, rt_bits8),
