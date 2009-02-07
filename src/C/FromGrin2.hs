@@ -217,17 +217,20 @@ convertVal v = cvc v where
 
     cv x = return $ err ("convertVal: " ++ show x)
 
+convertTypes :: Monad m => [Ty] -> m Type
 convertTypes [] = return voidType
 convertTypes [t] = convertType t
 convertTypes xs = do
     xs <- mapM convertType xs
     return (anonStructType xs)
 
+convertType :: Monad m => Ty -> m Type
 convertType TyNode = return wptr_t
 convertType (TyPtr TyNode) = return sptr_t
 convertType (TyPtr (TyPtr TyNode)) = return $ ptrType sptr_t
 convertType ~(TyPrim opty) = return (opTyToC opty)
 
+tyToC :: Op.TyHint -> Op.Ty -> String
 tyToC _ Op.TyBool = "bool"
 tyToC dh (Op.TyBits (Op.BitsExt s) _) = s
 tyToC dh (Op.TyBits b h) = f b h where
@@ -250,15 +253,20 @@ tyToC dh (Op.TyBits b h) = f b h where
     f _ _ = error "tyToC: unknown"
 
 
+opTyToCh :: Op.TyHint -> Op.Ty -> Type
 opTyToCh hint opty = basicType (tyToC hint opty)
+opTyToC :: Op.Ty -> Type
 opTyToC opty = basicType (tyToC Op.HintUnsigned opty)
+opTyToC' :: Op.Ty -> String
 opTyToC' opty = tyToC Op.HintUnsigned opty
 
+localScope :: MonadReader Env m => [Val] -> (Statement -> m b) -> m b
 localScope xs action = do
     let fvs = freeVars xs
     aas <- mapM (\ (v,t) -> do t <- convertType t ; return . toStatement $ localVariable t (varName v)) (filter ((v0 /=) . fst) $ Set.toList fvs)
     local (rInscope_u $ Set.union (Set.map varName (freeVars xs))) (action . statementOOB $ mconcat aas)
 
+iDeclare :: MonadReader Env m => m a -> m a
 iDeclare action = local (\e -> e { rDeclare = True }) action
 
 convertBody :: Exp -> C Statement
@@ -463,6 +471,7 @@ convertBody e = do
     return (ss & r)
 
 
+simpleRet :: MonadReader Env m => Expression -> m Statement
 simpleRet er = do
     x <- asks rTodo
     case x of
@@ -495,6 +504,7 @@ nodeAssign v t as e' = cna where
         ss' <- convertBody e'
         return $ mconcat ass & ss'
 
+isCompound :: Exp -> Bool
 isCompound Fetch {} = False
 isCompound Return {} = False
 isCompound Store {} = False
@@ -557,6 +567,7 @@ ccaf (v,val) = text "/* " <> text (show v) <> text " = " <> (text $ show (pprint
      text "#define " <> tshow (varName v) <+>  text "(EVALTAGC(&_" <> tshow (varName v) <> text "))\n";
 
 
+buildConstants :: Grin -> HcHash -> P.Doc
 buildConstants grin fh = P.vcat (map cc (Grin.HashConst.toList fh)) where
     tyenv = grinTypeEnv grin
     comm nn = text "/* " <> tshow (nn) <> text " */"
@@ -605,6 +616,7 @@ convertConst v = return (f v) where
     f x = fail "f"
 
 
+convertPrim :: APrim -> [Val] -> [Ty] -> C Expression
 --convertPrim p vs = return (mempty,err $ show p)
 convertPrim p vs ty
     | APrim (CConst s _) _ <- p = do
@@ -633,6 +645,7 @@ convertPrim p vs ty
         return . cast rt $ expressionRaw ('&':unpackPS t)
     | otherwise = return $ err ("prim: " ++ show (p,vs))
 
+signedOps :: [(Op.BinOp, String)]
 signedOps = [
     (Op.Div,"/"),  -- TODO round to -Infinity
     (Op.Mod,"%"),  -- TODO round to -Infinity
@@ -645,6 +658,7 @@ signedOps = [
     (Op.Lte,"<=")
     ]
 
+floatOps :: [(Op.BinOp, String)]
 floatOps = [
     (Op.FDiv,"/"),
     (Op.FAdd,"+"),
@@ -662,8 +676,10 @@ floatOps = [
 binopSigned :: Op.BinOp -> Maybe String
 binopSigned b = lookup b signedOps
 
+castSigned :: Monad m => Op.Ty -> Expression -> m Expression
 castSigned ty v = return $ cast (basicType $ tyToC Op.HintSigned ty) v
 
+primBinOp :: (Monad m, Show a) => Op.BinOp -> Op.Ty -> Op.Ty -> a -> Expression -> Expression -> m Expression
 primBinOp n ta tb r a b
     | Just fn <- Op.binopFunc ta tb n = return $ functionCall (toName fn) [a,b]
     | Just (t,_) <- Op.binopInfix n = return $ operator t a b
@@ -674,6 +690,7 @@ primBinOp n ta tb r a b
     | Just t <- lookup n floatOps = return $ operator t a b
     | otherwise = return $ err ("primBinOp: " ++ show ((n,ta,tb,r),a,b))
 
+primUnOp :: (Monad m, Show a) => Op.UnOp -> Op.Ty -> a -> Expression -> m Expression
 primUnOp Op.Neg ta r a = do
     a <- castSigned ta a
     return $ uoperator "-" a
@@ -715,6 +732,7 @@ tellTags t = do
 
 
 
+newNode :: Type -> Val -> C (Statement, Expression)
 newNode ty ~(NodeC t as) = do
     let sf = tagIsSuspFunction t
     bn <- basicNode t as
@@ -742,6 +760,7 @@ newNode ty ~(NodeC t as) = do
 -- declaring stuff
 ------------------
 
+declareStruct :: Atom -> C ()
 declareStruct n = do
     grin <- asks rGrin
     let TyTy { tySlots = ts, tySiblings = ss } = runIdentity $ findTyTy (grinTypeEnv grin) n
@@ -784,6 +803,7 @@ instance Op.ToCmmTy Ty where
     toCmmTy (TyPrim p) = Just p
     toCmmTy _ = Nothing
 
+declareEvalFunc :: Atom -> C Name
 declareEvalFunc n = do
     fn <- tagToFunction n
     grin <- asks rGrin
@@ -823,31 +843,54 @@ castFunc _ _ tb e = cast (opTyToC tb) e
 -- c constants and utilities
 ----------------------------
 
+lhc_malloc    :: Expression -> Expression
 lhc_malloc sz = functionCall (name "lhc_malloc") [sz]
+f_assert      :: Expression -> Expression
 f_assert e    = functionCall (name "assert") [e]
+f_DETAG       :: Expression -> Expression
 f_DETAG e     = functionCall (name "DETAG") [e]
+f_NODEP       :: Expression -> Expression
 f_NODEP e     = functionCall (name "NODEP") [e]
+f_VALUE       :: Expression -> Expression
 f_VALUE e     = functionCall (name "VALUE") [e]
+f_GETVALUE    :: Expression -> Expression
 f_GETVALUE e  = functionCall (name "GETVALUE") [e]
+f_EVALTAG     :: Expression -> Expression
 f_EVALTAG e   = functionCall (name "EVALTAG") [e]
+f_EVALFUNC    :: Expression -> Expression
 f_EVALFUNC e  = functionCall (name "EVALFUNC") [e]
+f_eval        :: Expression -> Expression
 f_eval e      = functionCall (name "eval") [e]
+f_promote     :: Expression -> Expression
 f_promote e   = functionCall (name "promote") [e]
+f_PROMOTE     :: Expression -> Expression
 f_PROMOTE e   = functionCall (name "PROMOTE") [e]
+f_GETWHAT     :: Expression -> Expression
 f_GETWHAT e   = functionCall (name "GETWHAT") [e]
+f_SETWHAT     :: Expression -> Expression -> Expression
 f_SETWHAT e v = functionCall (name "SETWHAT") [e,v]
+f_RAWWHAT     :: Expression -> Expression
 f_RAWWHAT e   = functionCall (name "RAWWHAT") [e]
+f_demote      :: Expression -> Expression
 f_demote e    = functionCall (name "demote") [e]
+f_follow      :: Expression -> Expression
 f_follow e    = functionCall (name "follow") [e]
+f_update      :: Expression -> Expression -> Expression
 f_update x y  = functionCall (name "update") [x,y]
+lhc_malloc_atomic    :: Expression -> Expression
 lhc_malloc_atomic sz = functionCall (name "lhc_malloc_atomic") [sz]
+profile_update_inc   :: Statement
 profile_update_inc   = toStatement $ functionCall (name "lhc_update_inc") []
+profile_case_inc     :: Statement
 profile_case_inc     = toStatement $ functionCall (name "lhc_case_inc") []
+profile_function_inc :: Statement
 profile_function_inc = toStatement $ functionCall (name "lhc_function_inc") []
 
+arg :: Int -> Name
 arg i = name $ 'a':show i
 
 
+varName :: Var -> Name
 varName (V n) | n < 0 = name $ 'g':show (- n)
 varName (V n) = name $ 'v':show n
 
@@ -856,13 +899,15 @@ nodeTagName a = toName (fromAtom a)
 nodeFuncName :: Atom -> Name
 nodeFuncName a = toName (fromAtom a)
 
+sptr_t, fptr_t, wptr_t :: Type
 sptr_t    = basicGCType "sptr_t"
 fptr_t    = basicGCType "fptr_t"
 wptr_t    = basicGCType "wptr_t"
 
-a_STD = Attribute "A_STD"
+a_STD, a_FALIGNED, a_MALLOC :: FunctionOpts
+a_STD      = Attribute "A_STD"
 a_FALIGNED = Attribute "A_FALIGNED"
-a_MALLOC = Attribute "A_MALLOC"
+a_MALLOC   = Attribute "A_MALLOC"
 
 concrete :: Atom -> Expression -> Expression
 concrete t e = cast (ptrType $ structType (nodeStructName t)) e
@@ -871,7 +916,9 @@ concrete t e = cast (ptrType $ structType (nodeStructName t)) e
 getHead :: Expression -> Expression
 getHead e = project' (name "head") e
 
+nodeTypePtr :: Monad m => Atom -> m Type
 nodeTypePtr a = liftM ptrType (nodeType a)
+nodeType :: Monad m => Atom -> m Type
 nodeType a = return $ structType (nodeStructName a)
 nodeStructName :: Atom -> Name
 nodeStructName a = toName ('s':fromAtom a)
