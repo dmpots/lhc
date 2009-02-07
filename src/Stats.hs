@@ -32,7 +32,6 @@ module Stats(
     ) where
 
 
-import Char
 import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.Writer
@@ -49,8 +48,6 @@ import CharIO
 import GenUtil
 import qualified Doc.Chars as C
 import qualified Util.IntBag as IB
-import Options (dump)
-import qualified FlagDump as FD
 
 
 

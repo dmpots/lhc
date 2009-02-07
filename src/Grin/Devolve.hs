@@ -1,6 +1,5 @@
 module Grin.Devolve(twiddleGrin,devolveTransform,devolveGrin) where
 
-import Control.Monad.Identity
 import Control.Monad.RWS
 import Data.IORef
 import qualified Data.Map as Map
