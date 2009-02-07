@@ -12,6 +12,7 @@ import Grin.Noodle
 import Support.FreeVars
 import Options (verbose)
 
+devolveTransform :: TransformParms Grin
 devolveTransform = transformParms {
     transformDumpProgress = verbose,
     transformCategory = "Devolve",
@@ -19,8 +20,8 @@ devolveTransform = transformParms {
     transformOperation = devolveGrin
     }
 
--- devolve grin into a form in which it can be readily converted into C code
--- This lifts any local functions which are ever called in a non-tail-calllike form
+-- | Devolve grin into a form in which it can be readily converted into C code.
+-- This lifts any local functions which are ever called in a non-tail-call-like form
 -- to the top level.
 
 devolveGrin :: Grin -> IO Grin
@@ -57,6 +58,7 @@ data Env = Env {
 newtype R a = R (RWS Env (Set.Set Var) () a)
     deriving(Monad,Functor,MonadReader Env,MonadWriter (Set.Set Var))
 
+runR :: R a -> a
 runR (R x) = fst $ evalRWS x Env { envMap = mempty, envVar = v1 } ()
 
 
@@ -73,6 +75,7 @@ instance Twiddle Val where
 instance Twiddle a => Twiddle [a] where
     twiddle xs = mapM twiddle xs
 
+twiddleExp :: Exp -> R Exp
 twiddleExp e = f e where
     f (x :>>= lam) = return (:>>=) `ap` twiddle x `ap` twiddle lam
     {-f l@Let {} = do
@@ -100,12 +103,14 @@ instance Twiddle Lam where
 --        return (vs :-> y)
 
 
+twiddleGrin :: Grin -> Grin
 twiddleGrin grin = grinFunctions_s fs' grin where
     fs' = runR . twiddle  $ grinFunctions grin
 
 instance Twiddle FuncDef where
     twiddle = funcDefBody_uM twiddle
 
+twiddleVal :: Val -> R Val
 twiddleVal x = f x where
     f var@(Var v ty) = do
         em <- asks envMap

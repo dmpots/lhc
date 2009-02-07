@@ -43,25 +43,31 @@ instance PPrint Doc Val   where
 instance PPrint Doc Exp   where
     pprint v = prettyExp empty v
 
+pVar :: [Val] -> Doc
 pVar [] = empty
 pVar v  = prettyVals v <+> operator "<- "
 
+pVar' :: [Val] -> Doc
 pVar' v  = prettyVals v <+> operator "<- "
 
+prettyVals :: [Val] -> Doc
 prettyVals [] = prettyVal Unit
 prettyVals [x] = prettyVal x
 prettyVals xs = tupled (map prettyVal xs)
 
+attr :: Attr
 attr = if dump FD.Html then html else ansi
 
 bold :: Doc -> Doc
 bold = attrBold attr
+color :: String -> Doc -> Doc
 color n x = attrColor attr n x
 
 --color :: Int -> Doc -> Doc
 --color 1 doc = oob (attr [1]) <> doc <> oob (attr [0])
 --color c doc = oob (attr [c]) <> doc <> oob (attr [39])
 
+operator, keyword, tag, func, prim :: String -> Doc
 operator = bold . text
 keyword = bold . text
 tag = color "blue" . text
@@ -71,9 +77,11 @@ prim = color "red" . text
 --tag = color 92 . text
 
 
+isComplex :: Exp -> Bool
 isComplex (_ :>>= _) = True
 isComplex _ = False
 
+isOneLine :: Exp -> Bool
 isOneLine (_ :>>= _) = False
 isOneLine Case {} = False
 --isOneLine Let {} = False
@@ -81,6 +89,7 @@ isOneLine Case {} = False
 isOneLine _ = True
 
 {-# NOINLINE prettyExp #-}
+prettyExp :: Doc -> Exp -> Doc
 prettyExp vl (e1 :>>= v :-> e2) | isComplex e1 = align $ ((pVar' v) <> (prettyExp empty e1)) <$> prettyExp vl e2
 prettyExp vl (e1 :>>= v :-> e2) = align (prettyExp (pVar v) e1 <$> prettyExp vl e2)
 prettyExp vl (Return []) = vl <> keyword "return" <+> text "()"
@@ -184,7 +193,9 @@ graphGrin grin = graphviz' gr [] fnode fedge  where
     fedge TailCall = []
     fedge StandardCall = [("style","dotted")]
 
+hasError :: Exp -> Bool
 hasError x = isNothing (hasError' x)
+hasError' :: Exp -> Maybe Exp
 hasError' Error {} = Nothing
 hasError' e = mapExpExp hasError' e
 
