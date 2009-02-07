@@ -24,11 +24,15 @@ import qualified FlagDump as FD
 
 
 
+pretty :: (DocLike d) => Type -> d
 pretty vv = prettyPrintType vv
+ppretty :: (DocLike d) => Type -> d
 ppretty vv = parens (pretty vv)
 
 -- | this ensures the first argument is at least as polymorphic as the second
+--
 -- actual/offered <= expected
+--
 -- actual/offered `subsumes` expected
 
 subsumes :: Sigma' -> Sigma' -> Tc CoerceTerm
@@ -106,8 +110,9 @@ subsumes s1 s2 = do
 
     sub a b = fail $ "subsumes failure: " <> ppretty a <+> ppretty b
 
--- might as well return flattened type
+-- | Might as well return flattened type
 -- we can skip the occurs check for boxy types
+occursCheck :: MetaVar -> Type -> Tc Type
 occursCheck u@MetaVar { metaType = Tau } t = do
     tt <- evalFullType t
     when (u `Set.member` freeMetaVars tt) $ unificationError (TMetaVar u) tt -- occurs check
@@ -296,6 +301,7 @@ unify t1 t2 = do
     printRule $ "unify: " <> ppretty t1' <+> ppretty t2'
     mgu t1' t2'
 
+mgu :: Type -> Type -> Tc ()
 mgu (TAp l r) (TAp l' r')
    = do s1 <- unify l l'
         s2 <- unify r r'

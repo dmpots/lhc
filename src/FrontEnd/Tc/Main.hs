@@ -34,6 +34,7 @@ import qualified FlagDump as FD
 import qualified FlagOpts as FO
 
 
+listenPreds :: Tc a -> Tc (a, [Pred])
 listenPreds = listenSolvePreds
 
 type Expl = (Sigma, HsDecl)
@@ -43,6 +44,7 @@ type Expl = (Sigma, HsDecl)
 type BindGroup = ([Expl], [Either HsDecl [HsDecl]])
 
 
+tcKnownApp :: HsExp -> Bool -> Name -> [HsExp] -> Type -> Tc (HsExp, [HsExp])
 tcKnownApp e coerce vname as typ = do
     sc <- lookupName vname
     let (_,_,rt) = fromType sc
@@ -62,6 +64,7 @@ tcKnownApp e coerce vname as typ = do
     (nas,CTId) <- f rt as
     return (e',nas)
 
+tcApps :: HsExp -> [HsExp] -> Type -> Tc (HsExp, [HsExp])
 tcApps e@(HsVar v) as typ = do
     let vname = toName Val v
     --let nname = toName Val n
@@ -81,6 +84,7 @@ tcApps e@(HsAsPat n (HsCon v)) as typ = do
 tcApps e as typ = tcApps' e as typ
 
 -- the fall through case
+tcApps' :: HsExp -> [HsExp] -> Type -> Tc (HsExp, [HsExp])
 tcApps' e as typ = do
     bs <- sequence [ newBox kindArg | _ <- as ]
     e' <- tcExpr e (foldr fn typ bs)
@@ -89,6 +93,7 @@ tcApps' e as typ = do
 
 
 
+tcApp :: HsExp -> HsExp -> Type -> Tc (HsExp, HsExp)
 tcApp e1 e2 typ = do
     (e1,[e2]) <- tcApps e1 [e2] typ
     return (e1,e2)
@@ -117,6 +122,7 @@ wrapInAsPat e = do
     n <- newHsVar "As"
     return (HsAsPat (nameName n) e, n)
 
+newHsVar :: UniqueProducer m => String -> m Name
 newHsVar ns = do
     nn <- newUniq
     return $ toName Val (ns ++ "@",show nn)
@@ -369,12 +375,14 @@ tcAlt scrutinee typ alt@(HsAlt sloc pat gAlts wheres)  = withContext (locMsg slo
             gas <- mapM (tcGuardedAlt typ) as
             return (HsAlt sloc pat' (HsGuardedRhss gas) wheres')
 
+tcGuardedAlt :: Type -> HsGuardedRhs -> Tc HsGuardedRhs
 tcGuardedAlt typ gAlt@(HsGuardedRhs sloc eGuard e) = withContext (locMsg sloc "in the guarded alternative" $ render $ ppGAlt gAlt) $ do
     typ <- evalType typ
     g' <- tcExpr eGuard tBool
     e' <- tcExpr e typ
     return  (HsGuardedRhs sloc g' e')
 
+tcGuardedRhs :: Type -> HsGuardedRhs -> Tc HsGuardedRhs
 tcGuardedRhs typ gAlt@(HsGuardedRhs sloc eGuard e) = withContext (locMsg sloc "in the guarded alternative" $ render $ ppHsGuardedRhs gAlt) $ do
     typ <- evalType typ
     g' <- tcExpr eGuard tBool
@@ -512,6 +520,7 @@ tiPat (HsPTypeSig _ pat qt)  typ = do
 
 tiPat p _ = error $ "tiPat: " ++ show p
 
+delistPats :: [HsPat] -> HsPat
 delistPats ps = pl ps where
     pl [] = HsPApp (nameName $ dc_EmptyList) []
     pl (p:xs) = HsPApp (nameName $ dc_Cons) [p, pl xs]
@@ -603,6 +612,7 @@ tcRhs rhs typ = case rhs of
         gas <- mapM (tcGuardedRhs typ) as
         return (HsGuardedRhss gas)
 
+tcPragmaDecl :: HsDecl -> Tc [HsDecl]
 tcPragmaDecl spec@HsPragmaSpecialize { hsDeclSrcLoc = sloc, hsDeclName = n, hsDeclType = t } = do
     withContext (locMsg sloc "in the SPECIALIZE pragma" $ show n) ans where
     ans = do
@@ -634,6 +644,7 @@ tcPragmaDecl fd@(HsForeignExport _ e n qt) = do
 
 tcPragmaDecl _ = return []
 
+tcRule :: HsRule -> Tc HsRule
 tcRule prule@HsRule { hsRuleFreeVars = vs, hsRuleLeftExpr = e1, hsRuleRightExpr = e2, hsRuleSrcLoc = sloc } =
     withContext (locMsg sloc "in the RULES pragma" $ hsRuleString prule) ans where
         ans = do
@@ -809,6 +820,7 @@ tiStmt env stmt@(HsLetStmt decls)
 
 -}
 
+getBindGroupName :: ([(a, HsDecl)], [Either HsDecl [HsDecl]]) -> [Name]
 getBindGroupName (expl,impls) =  map getDeclName (snds expl ++ concat (rights impls) ++ lefts impls)
 
 
@@ -908,6 +920,7 @@ makeBindGroup sigEnv decls = (exps, f impls) where
     g (AcyclicSCC x) = Left x
     g (CyclicSCC xs) = Right xs
 
+makeBindGroup' :: Map.Map Name a -> [HsDecl] -> ([(a, HsDecl)], [HsDecl])
 makeBindGroup' _ [] = ([], [])
 makeBindGroup' sigEnv (d:ds) = case Map.lookup funName sigEnv of
         Nothing -> (restExpls, d:restImpls)
