@@ -168,8 +168,10 @@ fizz sub te tf inState start = res where
         return (p :-> z)
 
 
+applySubstE :: Monad m => Map.Map Var Val -> Exp -> m Exp
 applySubstE env x = mapExpVal (applySubst env) x
 
+applySubst :: Monad m => Map.Map Var Val -> Val -> m Val
 applySubst env x = f x where
     f var@(Var v _)
         | Just n <- Map.lookup v env =  return n

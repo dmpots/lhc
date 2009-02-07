@@ -19,6 +19,7 @@ import Name.Names
 import Name.Name
 import Cmm.Number
 
+nil, cons, cChar, cWord, cInt, tn_2Tup, tn_Boolzh, tn_unit :: Atom
 nil      = convertName dc_EmptyList
 cons     = convertName dc_Cons
 cChar    = convertName dc_Char
@@ -28,9 +29,11 @@ tn_2Tup  = convertName $ nameTuple DataConstructor 2
 tn_Boolzh = convertName dc_Boolzh
 tn_unit  = convertName dc_Unit
 
--- This allocates data on the heap.
+-- | This allocates data on the heap.
+region_heap  :: Val
 region_heap  = Item (toAtom "heap") TyRegion
--- This allocates data in the innermost enclosing region, including implicit regions.
+-- | This allocates data in the innermost enclosing region, including implicit regions.
+region_block :: Val
 region_block = Item (toAtom "block") TyRegion
 
 instance ConNames Val where
@@ -100,12 +103,14 @@ instance FromVal Bool  where
 instance FromVal Val where
     fromVal n = return n
 
+valToList :: Monad m => Val -> m [Val]
 valToList (NodeC n []) | n == nil = return []
 valToList (NodeC n [a,Const b]) | n == cons = do
         xs <- valToList b
         return (a:xs)
 valToList n = fail $ "Val is not [a]: " ++ show n
 
+convertName :: Name -> Atom
 convertName n = toAtom (t':s) where
     (t,s) = fromName n
     t' | t == TypeConstructor = 'T'
