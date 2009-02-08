@@ -19,13 +19,11 @@ import Stats hiding(combine)
 import Support.CanType
 import Support.FreeVars
 import Util.Graph
-import Util.HasSize
 import Util.Inst()
 import Util.UniqueMonad
 import Util.SetLike
 import qualified Util.Seq as Seq
 import qualified Util.Histogram as Hist
-import Options (verbose)
 
 -- perform a number of simple simplifications.
 -- inline very small and builtin-wrapper functions
