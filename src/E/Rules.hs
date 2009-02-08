@@ -21,7 +21,7 @@ import qualified Data.Traversable as T
 import List
 import Maybe
 
-import StringTable.Atom(toAtom)
+import StringTable.Atom(Atom,toAtom)
 import Data.Binary
 import Doc.DocLike
 import Doc.PPrint
@@ -94,11 +94,13 @@ instance FreeVars Rule [Id] where
     freeVars rule = idSetToList $ freeVars rule
 
 {-# NOINLINE printRules #-}
+printRules :: RuleType -> Rules -> IO ()
 printRules ty (Rules rules) = mapM_ (\r -> printRule r >> putChar '\n') [ r | r <- concat $ melems rules, ruleType r == ty ]
 
 putDocMLn' :: Monad m => (String -> m ()) -> Doc -> m ()
 putDocMLn' putStr d = displayM putStr (renderPretty 0.80 (optColumns options) d) >> putStr "\n"
 
+printRule :: Rule -> IO ()
 printRule Rule {ruleName = n, ruleBinds = vs, ruleBody = e2, ruleHead = head, ruleArgs = args } = do
     let e1 = foldl EAp (EVar head) args
     let p v = parens $ pprint v <> text "::" <> pprint (getType v)
@@ -109,6 +111,7 @@ printRule Rule {ruleName = n, ruleBinds = vs, ruleBody = e2, ruleHead = head, ru
     putDocMLn' CharIO.putStr $ text " ==>" <+> pprint e2
     putDocMLn' CharIO.putStr (indent 2 (text "::" <+> ty2))
 
+combineRules :: [Rule] -> [Rule] -> [Rule]
 combineRules as bs = map head $ sortGroupUnder ruleUniq (as ++ bs)
 
 instance Monoid Rules where
@@ -158,6 +161,7 @@ dropArguments os  rs  = catMaybes $  map f rs where
 instance Show ARules where
     showsPrec n a = showsPrec n (aruleRules a)
 
+arules :: [Rule] -> ARules
 arules xs = ARules { aruleFreeVars = freeVars rs, aruleRules = rs } where
     rs = sortUnder ruleNArgs (map f xs)
     f rule = rule {
@@ -173,6 +177,7 @@ instance Monoid ARules where
     mempty = ARules { aruleFreeVars = mempty, aruleRules = [] }
     mappend = joinARules
 
+ruleUpdate :: Rule -> Rule
 ruleUpdate rule = rule {
         ruleNArgs = length  (ruleArgs rule),
         ruleBinds = bs,
@@ -182,6 +187,7 @@ ruleUpdate rule = rule {
         bs = map (setProperty prop_RULEBINDER) (ruleBinds rule)
         g e = substMap (fromList [ (tvrIdent t, EVar t) | t <- bs ]) e
 
+joinARules :: ARules -> ARules -> ARules
 joinARules ar@(ARules fvsa a) br@(ARules fvsb b)
     | [] <- rs = ARules mempty []
     | all (== r) rs = ARules (fvsa `mappend` fvsb) (sortUnder (\r -> (ruleNArgs r,ruleUniq r)) (snubUnder ruleUniq $ a ++ b))
@@ -203,9 +209,12 @@ applyRules lup (ARules _ rs) xs = f rs where
             return $ Just (b,drop (ruleNArgs r) xs)
         Nothing -> do f rs
 
+preludeError :: Id 
 preludeError = toId v_error
+ruleError :: Atom
 ruleError = toAtom "Rule.error/EError"
 
+builtinRule :: MonadStats m => TVr' e -> [E] -> m (Maybe (E, [E]))
 builtinRule TVr { tvrIdent = n } (ty:s:rs)
     | n == preludeError, Just s' <- toString s  = do
         mtick ruleError
