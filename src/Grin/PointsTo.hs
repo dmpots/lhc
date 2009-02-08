@@ -185,6 +185,7 @@ processVal (Lit _ ty) = return [Base]
 processVal (Const val) = processVal val
 processVal Index{} = return []
 processVal (ValPrim _ args _) = liftM concat $ mapM processVal args
+processVal ValUnknown{} = return []
 processVal val = error $ "unsuported val: " ++ show val
 
 store prim
