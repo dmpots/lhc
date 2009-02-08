@@ -9,16 +9,13 @@ module Grin.PointsTo
 
 import Grin.Grin
 --import Name.Id
-import Doc.PPrint
 import StringTable.Atom
 
-import Data.List (nub,sort,isInfixOf)
+import Data.List (isInfixOf)
 import qualified Data.Map as Map
 import Data.Map (Map, (!))
-import qualified Data.Set as Set
 import Control.Monad
 import Text.Printf
-import Data.Monoid
 
 import Debug.Trace
 
