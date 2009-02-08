@@ -91,8 +91,18 @@ deadCode stats roots grin = do
         grinSuspFunctions = suspFuncs
         }
 
+combineArgs :: a -> [b] -> [((a, Int), b)]
 combineArgs fn as = [ ((fn,n),a) | (n,a) <- zip [0 :: Int ..] as]
 
+go :: Fixer 
+   -> Value (Set.Set Tag)
+   -> Value (Set.Set Tag)
+   -> Supply Tag Bool
+   -> Supply (Tag, Int) Bool
+   -> Supply Var Bool
+   -> Bool
+   -> (Tag, Lam)
+   -> IO Lam
 go fixer pappFuncs suspFuncs usedFuncs usedArgs usedCafs postInline (fn,as :-> body) = ans where
     goAgain = go fixer pappFuncs suspFuncs usedFuncs usedArgs usedCafs postInline
     ans = do

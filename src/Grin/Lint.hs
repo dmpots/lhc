@@ -24,8 +24,10 @@ import qualified FlagDump as FD
 import qualified Stats
 
 
+lintCheckGrin :: Grin -> IO ()
 lintCheckGrin grin = when flint $ typecheckGrin grin
 
+lintCheckGrin' :: IO a -> Grin -> IO ()
 lintCheckGrin' onerr grin | flint = do
     let env = TcEnv { envTyEnv = grinTypeEnv grin, envInScope = fromList (fsts $ grinCafs grin) }
     let errs = [  (err ++ "\n" ++ render (prettyFun a) ) | (a,Left err) <-  [ (a,runTc env (tcLam Nothing c))  | a@(_,c) <-  grinFuncs grin ]]
@@ -36,12 +38,14 @@ lintCheckGrin' onerr grin | flint = do
     unless (null errs || optKeepGoing options) $ fail "There were type errors!"
 lintCheckGrin' _ _ = return ()
 
+typecheckGrin :: Grin -> IO ()
 typecheckGrin grin = do
     let env = TcEnv { envTyEnv = grinTypeEnv grin, envInScope = fromList (fsts $ grinCafs grin) }
     let errs = [  (err ++ "\n" ++ render (prettyFun a) ) | (a,Left err) <-  [ (a,runTc env (tcLam Nothing c))  | a@(_,c) <-  grinFuncs grin ]]
     mapM_ putErrLn  errs
     unless (null errs || optKeepGoing options) $ fail "There were type errors!"
 
+dumpGrin :: String -> Grin -> IO ()
 dumpGrin pname grin = do
     let fn = optOutName options ++ "_" ++ pname ++ ".grin"
     putErrLn $ "Writing: " ++ fn
@@ -97,6 +101,7 @@ transformGrin tp prog = do
 --        return prog' { progStats = istat `mappend` estat, progPasses = name:progPasses prog' }
 
 
+maybeDie :: IO ()
 maybeDie = case optKeepGoing options of
     True -> return ()
     False -> putErrDie "Internal Error"
@@ -116,6 +121,7 @@ newtype Tc a = Tc (ReaderT TcEnv (Either String) a)
 runTc :: TcEnv -> Tc a -> Either String a
 runTc env (Tc r) = runReaderT r env
 
+same :: (Monad m, Eq a, Show a) => String -> a -> a -> m a
 same _ t1 t2 | t1 == t2 = return t1
 same msg t1 t2 = fail $ "Types not the same:" <+> parens msg <+> parens (tshow t1) <+> parens (tshow t2)
 

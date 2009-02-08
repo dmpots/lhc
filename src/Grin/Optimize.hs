@@ -176,6 +176,7 @@ grinSpeculate grin = do
     return grin'
 
 
+performSpeculate :: MonadStats m => [Atom] -> Grin -> m Grin
 performSpeculate specs grin = do
     let sset = Set.fromList (map tagFlipFunction specs)
     let f (a,l) = mapBodyM h l  >>= \l' -> return (a,l')
