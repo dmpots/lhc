@@ -172,9 +172,14 @@ inlineEvalApply grin
        let fs = flip map (grinFuncs grin) $ \(name, def) ->
                (name, f def)
            f (ls :-> exp) = ls :-> g exp
-           g (App fn [Var v vty] ty) | fn == funcEval
-             = Fetch (Var v vty) :>>= [Var (V 2) TyNode] :-> Case (Var (V 2) TyNode)
-                 (varToCaseStmts pointsTo grin v)
+           g (App fn [Var v vty] [ty]) | fn == funcEval
+             = let fetchVal = Fetch (Var v vty)
+                   fetched  = Var (V 2) TyNode
+                   result   = Var (V 4) ty
+               in fetchVal :>>= [fetched] :->
+                  Case fetched (varToCaseStmts pointsTo grin v) :>>= [result] :->
+                  --Update (Var v vty) result :>>= [] :->
+                  Return [result]
            g (App fn [v1@(Var v _)] ty) | fn == funcApply
              = Case v1 (genApplyStmts pointsTo grin v (Var (V 0) TyUnit) ty)
            g (App fn [v1@(Var v _), v2] ty) | fn == funcApply
