@@ -40,6 +40,7 @@ type Equations = Map.Map EqPointer [Equation]
 
 data PointsTo = PointsTo Equations
 
+eqUnion :: [Equation] -> [Equation] -> [Equation]
 eqUnion [] lst = lst
 eqUnion lst [] = lst
 eqUnion (Tag tag1 args1:xs) (Tag tag2 args2:ys)
@@ -57,6 +58,7 @@ eqUnion (y:ys) (x:xs)
         GT -> x:eqUnion (y:ys) xs
         EQ -> x:eqUnion ys xs
 
+eqUnions :: [[Equation]] -> [Equation]
 eqUnions = foldr eqUnion []
 
 varToCaseStmts :: PointsTo -> Grin -> Var -> [Lam]
@@ -82,6 +84,7 @@ genApplyStmts (PointsTo eqs) grin var val ty
         Just vals -> [ appToCaseStmt grin t val ty | Tag t _ <- vals ] ++
                     [ [Var (V 0) TyNode] :-> Error "app fell off" ty]
 
+appToCaseStmt :: Grin -> Atom -> Val -> [Ty] -> Lam
 appToCaseStmt grin tag val retTy
     = case tagUnfunction tag of
         Just (0,fn) -> error "fully applied function"
@@ -95,8 +98,10 @@ appToCaseStmt grin tag val retTy
                             Var v TyUnit -> []
                             _ -> [val]
 
+applications :: Var
 applications = V (fromAtom $ toAtom "APPLICATIONS")
 
+pointsTo :: Grin -> IO PointsTo
 pointsTo grin
   = do let loop [] = return ()
            loop ((name,args :-> body):fs)
@@ -123,6 +128,7 @@ instance Monad GenEnv where
   return a = GenEnv $ \_fns eqs n -> (a, eqs, n)
 
 --setupEnv :: Exp -> GenEnv ()
+setupEnv :: Exp -> GenEnv [Equation]
 setupEnv (Store val)
   = do heapPointer <- store =<< processVal val
        return [Heap heapPointer]
@@ -174,6 +180,7 @@ setupEnv Error{} = return []
 setupEnv (Fetch val) = processVal val
 setupEnv body = error $ "setupEnv: Unhandled case: " ++ show body
 
+processVal :: Val -> GenEnv [Equation]
 processVal (NodeC tag args) = do args' <- mapM processVal args
                                  funcArgs <- lookupFuncArgs (tagFlipFunction tag)
                                  when (tagIsSuspFunction tag) $
@@ -188,10 +195,12 @@ processVal (ValPrim _ args _) = liftM concat $ mapM processVal args
 processVal ValUnknown{} = return []
 processVal val = error $ "unsuported val: " ++ show val
 
+store :: [Equation] -> GenEnv Int
 store prim
   = GenEnv $ \_fns eqs n ->
     (n, Map.insertWith eqUnion (HeapPointer n) prim eqs , n+1)
 
+(=:) :: Var -> [Equation] -> GenEnv ()
 (V 0) =: p = return ()
 var =: p
   = GenEnv $ \_fns eqs n ->
@@ -208,6 +217,7 @@ lookupFuncArgs func
                 Just args -> args
     in (ret, eqs,  n)
 
+atomToVar :: Atom -> String -> Var
 atomToVar atom suffix
   = V $ fromAtom $ toAtom $ fromAtom atom ++ suffix
 
@@ -234,6 +244,7 @@ instance Monad Simplify where
               (a, eqs') -> runSimplify (g a) eqs'
   return a = Simplify $ \eqs -> (a, eqs)
 
+inspect :: [a]
 inspect = [] -- [ Equation (V n) | n <- [906,101960,1151883282,101824,267838397211878910,-145367593]]
 
 solve :: Equations -> Equations
@@ -250,7 +261,9 @@ solve eqs
                                          else loop absEqs
       in loop Map.empty
 
+reduceEqs :: [Equation] -> Simplify [Equation]
 reduceEqs = liftM eqUnions . mapM reduceEq
+reduceEq :: Equation -> Simplify [Equation]
 reduceEq Base      = return [Base]
 reduceEq (Heap hp) = lookupEq (HeapPointer hp) -- return [Heap hp]
 reduceEq (Ident i) = lookupEq (Equation i)
