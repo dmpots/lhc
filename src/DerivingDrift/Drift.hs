@@ -69,6 +69,7 @@ toData name args cons derives = ans where
     ans = D { statement = DataStmt, vars = map show args, constraints = [], name = show name,  derives = map show derives, body = map f cons }
 
 
+derive :: Bool -> Data -> HsName -> String
 derive True d wh | Just fns <- lookup wh enumDontDerive = inst fns where
     dummy = "{- This is a dummy instance, it will be rewritten internally -}\n"
     inst fns = dummy ++ "instance " ++ show wh ++ " " ++ name d ++ " where\n" ++ concat (intersperse "\n" (map f fns))
