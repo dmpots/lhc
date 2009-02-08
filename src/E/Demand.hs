@@ -33,11 +33,11 @@ import Util.HasSize
 import Util.SetLike
 
 data Demand =
-    Bottom             -- always diverges
-    | L SubDemand      -- lazy
-    | S SubDemand      -- strict
-    | Error SubDemand  -- diverges, might use arguments
-    | Absent           -- Not used
+    Bottom             -- ^ Always diverges
+    | L SubDemand      -- ^ Lazy
+    | S SubDemand      -- ^ Strict
+    | Error SubDemand  -- ^ Diverges, might use arguments
+    | Absent           -- ^ Not used
     deriving(Eq,Ord,Typeable)
 
 instance Show Demand where
@@ -88,13 +88,17 @@ instance Show DemandEnv where
 instance Show DemandSignature where
     showsPrec _ (DemandSignature n dt) = showString "<" . shows n . showString "," . shows dt . showString ">"
 
+idGlb :: Demand
 idGlb = Absent
 
+absType :: DemandType
 absType = (DemandEnv mempty idGlb) :=> []
+botType :: DemandType
 botType = (DemandEnv mempty Bottom) :=> []
 
 --lazyType = (DemandEnv mempty lazy) :=> []
 --lazySig = DemandSignature 0 lazyType
+absSig :: DemandSignature
 absSig = DemandSignature 0 absType
 
 class Lattice a where
@@ -106,19 +110,24 @@ class Lattice a where
 -- Sp [L .. L] = S
 -- Sp [.. _|_ ..] = _|_
 
+sp :: [Demand] -> Demand
 sp [] = S None
 sp xs = S (allLazy xs) -- None
 
+l :: SubDemand -> Demand
 l None = L None
 l (Product xs) = lp xs
 
+s :: SubDemand -> Demand
 s None = S None
 s (Product xs) = sp xs
 
 
+allLazy :: [Demand] -> SubDemand
 allLazy xs | all (== lazy) xs = None
 allLazy xs = Product xs
 
+lp :: [Demand] -> Demand
 lp [] = L None
 lp xs = L (allLazy (map f xs)) where
     f (S None) = lazy
@@ -144,10 +153,14 @@ instance Lattice DemandType where
     glb (env :=> ts) (env' :=> ts') | length ts < length ts' = (env `glb` env') :=> zipWith glb (ts ++ repeat lazy) ts'
                                     | otherwise = (env `glb` env') :=> zipWith glb ts (ts' ++ repeat lazy)
 
+lazy :: Demand
 lazy = L None
+strict :: Demand
 strict = S None
+err :: Demand
 err = Error None
 
+comb :: (Demand -> Demand -> Demand) -> SubDemand -> SubDemand -> SubDemand
 comb _ None None = None
 comb f None (Product xs) = Product $ zipWith f (repeat lazy) xs
 comb f (Product xs) None = Product $ zipWith f xs (repeat lazy)
@@ -201,6 +214,7 @@ instance Lattice Demand where
 
 
 
+lenv :: Id -> DemandEnv -> Demand
 lenv e (DemandEnv m r) = case mlookup e m of
     Nothing -> r
     Just x -> x
@@ -227,11 +241,16 @@ type Env = IdMap (Either DemandSignature E)
 getEnv :: IM Env
 getEnv = asks fst
 
+
+extEnv :: TVr' e -> DemandSignature -> IM a -> IM a
 extEnv TVr { tvrIdent = i } _ | isEmptyId i = id
 extEnv t e = local (\ (env,dt) -> (minsert (tvrIdent t) (Left e) env,dt))
 
+extEnvE :: TVr' e -> E -> IM a -> IM a
 extEnvE TVr { tvrIdent = i } _ | isEmptyId i = id
 extEnvE t e = local (\ (env,dt) -> (minsert (tvrIdent t) (Right e) env,dt))
+
+extEnvs :: [(TVr' e, DemandSignature)] -> IM a -> IM a
 extEnvs ts = local  (\ (env,dt) -> (mappend (fromList [ (tvrIdent t,Left s) |  (t,s) <- ts, not (isEmptyId (tvrIdent t))]) env,dt))
 
 
@@ -241,7 +260,7 @@ instance DataTableMonad IM where
 runIM :: IM a -> DataTable -> a
 runIM (IM im) dt = runReader im (mempty,dt)
 
--- returns the demand type and whether it was found in the local environment or guessed
+-- | Returns the demand type and whether it was found in the local environment or guessed
 determineDemandType :: TVr -> Demand -> IM (Either DemandType E)
 determineDemandType tvr demand = do
     let g (DemandSignature n dt@(DemandEnv phi _ :=> _)) = f n demand where
@@ -256,8 +275,10 @@ determineDemandType tvr demand = do
             Nothing -> return (Left absType)
             Just ds -> return (Left $ g ds)
 
+extendSig :: DemandSignature -> DemandSignature -> DemandSignature
 extendSig (DemandSignature n1 t1) (DemandSignature n2 t2)  = DemandSignature (max n1 n2) (glb t1 t2)
 
+splitSigma :: [Demand] -> (Demand, [Demand])
 splitSigma [] = (lazy,[])
 splitSigma (x:xs) = (x,xs)
 
@@ -344,9 +365,11 @@ analyze es@ESort {} _ = return (es,absType)
 analyze es@(ELit LitInt {}) _ = return (es,absType)
 analyze e x = fail $ "analyze: " ++ show (e,x)
 
+from_dependingOn :: Monad m => E -> m (E, E, E)
 from_dependingOn (EPrim don [t1,t2] pt) | don == p_dependingOn = return (t1,t2,pt)
 from_dependingOn _ = fail "not dependingOn"
 
+lazify :: DemandEnv -> DemandEnv
 lazify (DemandEnv x r) = DemandEnv (fmap f x) Absent where
     f (S xs) = l xs
     f Absent = Absent
@@ -354,6 +377,7 @@ lazify (DemandEnv x r) = DemandEnv (fmap f x) Absent where
     f Bottom = Absent
     f (Error xs) = l xs
 
+analyzeCase :: E -> Demand -> IM (E, DemandType)
 analyzeCase ec s = do
     (ec',dts) <- extEnvE (eCaseBind ec) (eCaseScrutinee ec) $ runWriterT $ flip caseBodiesMapM ec $ \e -> do
         (ne,dt) <- lift $ analyze e s
@@ -364,6 +388,7 @@ analyzeCase ec s = do
     let nenv = foldr denvDelete (glb enva env) (caseBinds ec')
     return (caseUpdate $ ec' {eCaseScrutinee = ecs},nenv :=> siga)
 
+denvDelete :: TVr' e -> DemandEnv -> DemandEnv
 denvDelete x (DemandEnv m r) = DemandEnv (mdelete (tvrIdent x) m) r
 
 
@@ -376,14 +401,17 @@ topAnalyze _tvr e = clam e strict 0 where
         (e,dt) <- analyze e s
         return (e,DemandSignature n dt)
 
+fixupDemandSignature :: DemandSignature -> DemandSignature
 fixupDemandSignature (DemandSignature n (DemandEnv _ r :=> dt)) = DemandSignature n (DemandEnv mempty r :=> dt)
 
 
 {-# NOINLINE solveDs #-}
+solveDs :: DataTable -> [(TVr, E)] -> [(TVr, E)]
 solveDs dataTable ds =
     runIM (solveDs' Nothing ds fixupDemandSignature return) dataTable
 
 
+shouldBind :: E -> Bool
 shouldBind ELit {} = True
 shouldBind EVar {} = True
 shouldBind EPi {} = True
@@ -413,6 +441,7 @@ solveDs' (Just True) ds fixup wdone = do
     g True [] ds'
 
 {-# NOINLINE analyzeProgram #-}
+analyzeProgram :: Program -> Program
 analyzeProgram prog =
     let dsOut = solveDs (progDataTable prog) (programDs prog)
     in programSetDs' dsOut prog
