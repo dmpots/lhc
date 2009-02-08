@@ -68,8 +68,11 @@ data Va =
     | Fr !Atom !Int
     deriving(Eq,Ord)
 
+vr :: Var -> Ty -> V
 vr v t = V (Vr v) t
+fa :: Atom -> Int -> Ty -> V
 fa n i t = V (Fa n i) t
+fr :: Atom -> Int -> Ty -> V
 fr n i t = V (Fr n i) t
 
 class NodeLike a where
@@ -273,11 +276,14 @@ doFunc (name,arg :-> body) = ans where
     convertVal ValUnknown {} = return $ Left VIgnore
     convertVal v = error $ "convertVal " ++ show v
 
+bottom :: N
 bottom = N WHNF (Only (Set.empty))
+top :: N
 top = N Lazy Top
 
 
 
+fixupFunc :: (Functor m, Monad m) => Map.Map V (Result N a) -> (b, Lam) -> m (b, Lam)
 fixupFunc cmap (name,l :-> body) = fmap (\b -> (name, l :-> b)) (f body) where
     lupVar (Var v t) =  case Map.lookup (vr v t) cmap of
         _ | v < v0 -> fail "nocafyet"

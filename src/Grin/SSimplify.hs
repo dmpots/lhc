@@ -53,6 +53,7 @@ instance Stats.MonadStats S where
     mticks' n a = S (tell mempty { colStats = Stats.singleStat n a })
 
 
+tellFV :: FreeVars a (Set.Set Var) => a -> S ()
 tellFV v = tell mempty { colFreeVars = freeVars v }
 
 
@@ -195,6 +196,7 @@ simpExp e = f e [] where
 applySubstE :: Exp -> S Exp
 applySubstE x = mapExpVal applySubst x
 
+applySubst :: Val -> S Val
 applySubst x = f x where
     f var@(Var (V v) _) = do
         env <- asks envSubst
@@ -203,6 +205,7 @@ applySubst x = f x where
             Nothing -> tellFV var >> return var
     f x = mapValVal f x
 
+zeroVars :: (Var -> Bool) -> Val -> S Val
 zeroVars fn x = f x where
     f (Var v ty) | fn v || v == v0 = return (Var v ty)
                  | otherwise = do mtick $ "Simplify.ZeroVar.{" ++ show (Var v ty); return (Var v0 ty)
@@ -231,5 +234,6 @@ newVarName (V sv) = do
 
 
 
+isHoly :: Val -> Bool
 isHoly (NodeC _ as) | any isValUnknown as = True
 isHoly n = False

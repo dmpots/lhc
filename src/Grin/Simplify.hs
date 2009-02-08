@@ -34,20 +34,35 @@ import Options (verbose)
 -- dispose of code unreachable via Error
 
 
+at_OptSimplifyInline :: Atom
 at_OptSimplifyInline  = toAtom "Optimize.simplify.inline"
+at_OptSimplifyCopyProp :: Atom
 at_OptSimplifyCopyProp  = toAtom "Optimize.simplify.copy-propagate"
+at_OptSimplifyCopyPropConst :: Atom
 at_OptSimplifyCopyPropConst  = toAtom "Optimize.simplify.copy-propagate-const"
+at_OptSimplifyNodeReduction :: Atom
 at_OptSimplifyNodeReduction  = toAtom "Optimize.simplify.node-reduction"
+at_OptSimplifyDeadVar :: Atom
 at_OptSimplifyDeadVar  = toAtom "Optimize.simplify.dead-var"
+at_OptSimplifyConstApply :: Atom
 at_OptSimplifyConstApply  = toAtom "Optimize.simplify.const-apply"
+at_OptSimplifyConstFetch :: Atom
 at_OptSimplifyConstFetch  = toAtom "Optimize.simplify.const-fetch"
+at_OptSimplifyConstEval :: Atom
 at_OptSimplifyConstEval  = toAtom "Optimize.simplify.const-eval"
+at_OptSimplifyTrivialCase :: Atom
 at_OptSimplifyTrivialCase  = toAtom "Optimize.simplify.trivial-case"
+at_OptSimplifyBadAssignment :: Atom
 at_OptSimplifyBadAssignment  = toAtom "Optimize.simplify.bad-assignment"
+at_OptSimplifyHoleAssignment :: Atom
 at_OptSimplifyHoleAssignment  = toAtom "Optimize.simplify.hole-assignment"
+at_OptSimplifyConstStore :: Atom
 at_OptSimplifyConstStore  = toAtom "Optimize.simplify.const-store"
+at_OptSimplifyCastLit :: Atom
 at_OptSimplifyCastLit  = toAtom "Optimize.simplify.cast-lit"
+at_OptSimplifyConstUpdate :: Atom
 at_OptSimplifyConstUpdate  = toAtom "Optimize.simplify.const-update"
+at_OptSimplifyEnumAssignment :: Atom
 at_OptSimplifyEnumAssignment  = toAtom "Optimize.simplify.enum-assignment"
 
 -- contains functions that should be inlined
@@ -167,17 +182,20 @@ simplify1 stats env (n,l) = do
     isHoly n = isHole n
 
 
+cseStat :: Exp -> Atom
 cseStat n = toAtom $ "Optimize.simplify.cse." ++ g n where
     g App { expFunction = n } = fromAtom n
     g Fetch {} = "Fetch"
     g Store {} = "Store"
     g _ = "Misc"
 
+doApply :: (Val -> Exp) -> Bool -> Val -> [Val] -> [Ty] -> Exp
 doApply ret strict (NodeC t xs) ys typ | Just (n,v) <- tagUnfunction t = case n of
     1 | strict -> (App v (xs ++ ys) typ)
     _ -> ret (NodeC (partialTag v (n - 1)) (xs ++ ys))
 doApply _ _ n y typ = error $ show ("doApply", n,y,typ)
 
+doEval :: Val -> [Ty] -> Exp
 doEval n@(NodeC t xs) typ
     | tagIsWHNF t = Return [n]
     | tagIsSuspFunction t = App (tagFlipFunction t) xs typ
@@ -219,6 +237,7 @@ isSimple (fn,x) = f (2::Int) x where
     f _ _ = True
 
 
+manifestNodes :: Monad m => [Lam] -> [m [Atom]]
 manifestNodes as = Prelude.map (isManifestNode . lamExp) as
 
 data UnboxingResult = UnboxTup (Atom,[Ty]) | UnboxConst Val
@@ -252,6 +271,7 @@ isCombinable postEval e = ans where
 
 
 --combineLam postEval nty (p :-> e) = p :-> combine postEval nty e where
+combine :: (Show a, Monad m) => a -> [Ty] -> Exp -> m Exp
 combine postEval nty exp = editTail nty f exp where
     f (Return v) | all valIsConstant v  = return $ Return []
     f (Return [NodeC t xs]) = return $ Return xs
@@ -279,13 +299,17 @@ editTail nty mt te = f (mempty :: Set.Set Atom) te where
     g lf (p :-> e) = do e <- f lf e; return $ p :-> e
 
 
+isKnown :: Val -> Bool
 isKnown NodeC {} = True
 isKnown Lit {} = True
 isKnown _ = False
 
+mapExp :: (Exp -> Exp) -> Lam -> Lam
 mapExp f (b :-> e) = b :-> f e
 
+sizeLam :: Num a => Lam -> a
 sizeLam (b :-> exp) = sizeExp exp
+sizeExp :: Num a => Exp -> a
 sizeExp (x :>>= y) = sizeExp x + sizeLam y
 sizeExp (Case e as) = 1 + sum (map sizeLam as)
 --sizeExp Let { expDefs = defs, expBody = body } = sizeExp body + sum (map (sizeLam . funcDefBody) defs)
@@ -542,6 +566,7 @@ optimize1 grin postEval (n,l) = execUniqT 1 (g l) where
 --            -- f r
 --        return $ Case x as''
 
+isEnum :: Val -> Bool
 isEnum (NodeC t []) = True
 isEnum (Var t TyNode) = True
 isEnum _ = False
@@ -639,6 +664,7 @@ simplify stats grin = do
     return $ setGrinFunctions nf grin
 
 
+noInline :: [Atom]
 noInline = [toAtom "fData.IORef.readIORef", toAtom "fData.IORef.writeIORef"]
 
 
