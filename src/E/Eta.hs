@@ -45,14 +45,17 @@ instance Show ArityType where
     showsPrec _ (AFun False r) = ('\\':) . shows r
     showsPrec _ (AFun True r) = ("\\o" ++) . shows r
 
+arity :: Num t => ArityType -> (ArityType, t)
 arity at = f at 0 where
     f (AFun _ a) n = f a $! (1 + n)
     f x n | n `seq` x `seq` True = (x,n)
 
+getArityInfo :: Num t => TVr' e -> (ArityType, t)
 getArityInfo tvr
     | Just at <- Info.lookup (tvrInfo tvr) = arity at
     | otherwise = (ATop,0)
 
+isOneShot :: HasProperties a => a -> Bool
 isOneShot x = getProperty prop_ONESHOT x
 
 arityType :: E -> ArityType
@@ -74,19 +77,24 @@ arityType e = f e where
     f _ = ATop
 
 
+andArityType :: ArityType -> ArityType -> ArityType
 andArityType ABottom	    at2		  = at2
 andArityType ATop	    at2		  = ATop
 andArityType (AFun t1 at1)  (AFun t2 at2) = AFun (t1 && t2) (andArityType at1 at2)
 andArityType at1	    at2		  = andArityType at2 at1
 
+lamann :: Monad m => a -> b -> m b
 lamann _ nfo = return nfo
 
+annotateArity :: E -> Info.Info -> Info.Info
 annotateArity e nfo = annotateArity' (arityType e) nfo
 
+annotateArity' :: ArityType -> Info.Info -> Info.Info
 annotateArity' at nfo = Info.insert (Arity n (b == ABottom)) $ Info.insert at nfo where
     (b,n) = arity at
 
--- delety any arity information
+-- | Delete any arity information
+deleteArity :: Info.Info -> Info.Info
 deleteArity nfo = Info.delete  (undefined :: Arity) $ Info.delete (undefined :: Arity) nfo
 
 
@@ -103,13 +111,13 @@ fromPi' dataTable e = f [] (followAliases dataTable e) where
 
 
 
--- this annotates, but only expands top-level definitions
+-- | This annotates, but only expands top-level definitions
 etaExpandProgram :: Stats.MonadStats m => Program -> m Program
 --etaExpandProgram prog = runNameMT (programMapDs f (etaAnnotateProgram prog)) where
 etaExpandProgram prog = runNameMT (programMapDs f prog) where
     f (t,e) = do etaExpandDef' (progDataTable prog) 0 t e
 
--- this annotates a program with its arity information, iterating until a fixpoint is reached.
+-- | This annotates a program with its arity information, iterating until a fixpoint is reached.
 etaAnnotateProgram :: Program -> Program
 etaAnnotateProgram prog = runIdentity $ programMapRecGroups mempty pass iletann pass f prog where
     pass _ = return
@@ -127,13 +135,13 @@ etaAnnotateProgram prog = runIdentity $ programMapRecGroups mempty pass iletann 
 
 
 
--- | eta reduce as much as possible
+-- | Eta reduce as much as possible
 etaReduce :: E -> E
 etaReduce e = f e where
         f (ELam t (EAp x (EVar t'))) | t == t' && (tvrIdent t `notMember` (freeVars x :: IdSet)) = f x
         f e = e
 
--- | only reduce if all lambdas can be discarded. otherwise leave them in place
+-- | Only reduce if all lambdas can be discarded. otherwise leave them in place
 etaReduce' :: E -> (E,Int)
 etaReduce' e = case f e 0 of
         (ELam {},_) -> (e,0)
@@ -143,16 +151,22 @@ etaReduce' e = case f e 0 of
         f e n = (e,n)
 
 
+etaExpandDef' :: (NameMonad Id m,Stats.MonadStats m)
+    => DataTable
+    -> Int
+    -> TVr
+    -> E
+    -> m (TVr, E)
 etaExpandDef' dataTable n t e = etaExpandDef dataTable n t e >>= \x -> case x of
     Nothing -> return (tvrInfo_u (annotateArity e) t,e)
     Just x -> return x
 
 collectIds :: E -> IdSet
 collectIds e = execWriter $ annotate mempty (\id nfo -> tell (singleton id) >> return nfo) (\_ -> return) (\_ -> return) e
--- | eta expand a definition
+-- | Eta expand a definition
 etaExpandDef :: (NameMonad Id m,Stats.MonadStats m)
     => DataTable
-    -> Int        -- ^ eta expand at least this far, independent of calculated amount
+    -> Int        -- ^ Eta expand at least this far, independent of calculated amount
     -> TVr
     -> E
     -> m (Maybe (TVr,E))
@@ -196,7 +210,7 @@ etaExpandDef dataTable min t e  = ans where
 
 
 
--- | eta expand a use of a value
+-- | Eta expand a use of a value
 etaExpandAp :: (NameMonad Id m,Stats.MonadStats m) => DataTable -> TVr -> [E] -> m (Maybe E)
 etaExpandAp dataTable tvr xs = do
     r <- etaExpandDef dataTable 0 tvr { tvrIdent = emptyId} (foldl EAp (EVar tvr) xs)
