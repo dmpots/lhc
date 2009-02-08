@@ -35,6 +35,7 @@ data Val =
     deriving(Eq,Ord,Typeable)
 $(derive makeBinary ''Val)
 
+toVal :: Constructor -> Val
 toVal c = case conSlots c of
     [] -> Tag [conName c]
     ss -> Tup (conName c) [ Top | _ <- ss]

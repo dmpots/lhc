@@ -22,8 +22,10 @@ u = u
 
 createTyp :: Typeable a => a -> Word32
 createTyp x = hash32 $ (show (typeOf x))
+newEntry :: (Show a, Typeable a) => a -> Entry
 newEntry x = Entry { entryThing = toDyn x, entryString = show x, entryType = typeOf x }
 
+cb :: (Show a, Binary a, Typeable a) => a -> (Word32, Binable)
 cb x = (createTyp x, Binable x)
 
 binTable :: Map.Map Word32 Binable
@@ -45,6 +47,7 @@ putDyn (ps,d,Binable (_::a)) = do
 --    Nothing -> return ()
 
 
+getDyn :: Get Entry
 getDyn = do
     (ps::Word32) <- get
     case Map.lookup ps binTable of
