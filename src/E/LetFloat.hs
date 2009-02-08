@@ -42,7 +42,7 @@ import qualified Util.Graph as G
 
 
 atomizeApps ::
-    Bool          -- ^ whether to atomize type arguments
+    Bool          -- ^ Whether to atomize type arguments
     -> Program
     -> Program
 atomizeApps atomizeTypes prog = ans where
@@ -88,10 +88,12 @@ atomizeAp inscope atomizeTypes dataTable e = runReader (f e) inscope where
 
 
 
+fvBind :: Either (Comb, FVarSet) [(Comb, FVarSet)] -> FVarSet
 fvBind (Left (_,fv)) = fv
 fvBind (Right xs) = unions (snds xs)
 
 
+canFloatPast :: TVr -> Bool
 canFloatPast t | sortKindLike . getType $ t = True
 canFloatPast t | getType t == tWorldzh = True
 canFloatPast t | getProperty prop_ONESHOT t = True
@@ -124,8 +126,8 @@ programFloatInward prog =
 --    f [] = []
 
 floatInward ::
-    E  -- ^ input term
-    -> E  -- ^ output term
+    E  -- ^ Input term
+    -> E  -- ^ Output term
 floatInward e = floatInwardE e [] where
 
 floatInwardE :: E -> Binds -> E
@@ -156,6 +158,7 @@ floatInwardE e fvs = f e fvs where
         f (Left (te,_):rs) = eLetRec [combBind te] $ f rs
         f (Right ds:rs) = eLetRec (map (combBind . fst) ds) $ f rs
 
+floatInwardE' :: E -> Binds -> E
 floatInwardE' e@ELam {} xs  = (foldr ELam (floatInwardE b xs) ls) where
     (b,ls) = fromLam e
 floatInwardE' e xs = floatInwardE e xs
@@ -163,6 +166,7 @@ floatInwardE' e xs = floatInwardE e xs
 type FVarSet = IdSet
 type Binds = [Either (Comb,FVarSet) [(Comb,FVarSet)]]
 
+dsBinds :: Binds -> [Comb]
 dsBinds bs = foldr ($) [] (map f bs) where
     f (Left (x,_)) = (x:)
     f (Right ds) = (map fst ds ++)
@@ -175,12 +179,12 @@ sepDupableBinds fvs xs = partition ind xs where
     ind x = any ( (`elem` uso) . combIdent . fst ) (G.fromScc x)
 
 
--- | seperate bindings based on whether they can be floated inward
+-- | Seperate bindings based on whether they can be floated inward
 
 sepByDropPoint ::
-    [FVarSet]           -- ^ list of possible drop points
-    -> Binds            -- ^ list of bindings and their free variables
-    -> (Binds,[Binds])  -- ^ bindings seperated into those which must be dropped outside of all drop points, and those which can be floated inward into each branch
+    [FVarSet]           -- ^ List of possible drop points
+    -> Binds            -- ^ List of bindings and their free variables
+    -> (Binds,[Binds])  -- ^ Bindings seperated into those which must be dropped outside of all drop points, and those which can be floated inward into each branch
 sepByDropPoint ds [] = ([], [ [] | _ <- ds ])
 --sepByDropPoint ds fs' | sameShape1 xs ds && sum (length r:map length xs) <= length fs' = (r,xs) where
 sepByDropPoint ds fs' = (r,xs) where
@@ -208,9 +212,11 @@ newtype Level = Level Int
 newtype CLevel = CLevel Level
     deriving(Eq,Ord,Enum,Show,Typeable)
 
+top_level :: Level
 top_level = Level 0
 
 --notFloatOut e = isAtomic e || whnfOrBot e
+notFloatOut :: E -> Bool
 notFloatOut e = False
 
 -- This function uses IO to generate new unique names.
@@ -295,21 +301,24 @@ floatOutward prog = do
     return nprog { progStats = progStats nprog `mappend` stats }
 
 
+maybeShowName :: TVr -> String
 maybeShowName t = if '@' `elem` n then "(epheremal)" else n where
     n = tvrShowName t
 
+lfName :: Int -> Module -> NameType -> Id -> Name
 lfName u modName ns x = case fromId x of
     Just y  -> toName ns (show modName, "fl@"++show y ++ "$" ++ show u)
     Nothing -> toName ns (show modName, "fl@"++show x ++ "$" ++ show u)
 
 
+mapMSnd :: Monad m => (b -> m c) -> [(a, b)] -> m [(a, c)]
 mapMSnd f xs = sequence [ (,) x `liftM` f y | (x,y) <- xs]
 
 -- This function uses IO to generate new unique names.
 letBindAll ::
-    DataTable  -- ^ the data table for expanding newtypes
-    -> Module     -- ^ current module name
-    -> E          -- ^ input term
+    DataTable  -- ^ The data table for expanding newtypes
+    -> Module     -- ^ Current module name
+    -> E          -- ^ Input term
     -> IO E
 letBindAll  dataTable modName e = f e  where
     f :: E -> IO E
@@ -340,6 +349,7 @@ letBindAll  dataTable modName e = f e  where
 
 
 
+letRec :: [(TVr, E)] -> E -> E
 letRec [] e = e
 letRec ds _ | flint && hasRepeatUnder fst ds = error "letRec: repeated variables!"
 letRec ds e | flint && any (isUnboxed .tvrType . fst) ds = error "letRec: binding unboxed!"

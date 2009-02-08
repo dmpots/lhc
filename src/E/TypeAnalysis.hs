@@ -85,8 +85,10 @@ sillyEntry :: Env -> TVr -> IO ()
 sillyEntry env t = mapM_ (addRule . (`isSuperSetOf` value (vmapPlaceholder ()))) args where
     args = lookupArgs t env
 
+lookupArgs :: TVr' e -> Env -> [Value Typ]
 lookupArgs t Env { envEnv = tm }  = maybe [] id (mlookup (tvrIdent t) tm)
 
+toLit :: Monad m => E -> m (Name, [E])
 toLit (EPi TVr { tvrType = a } b) = return (tc_Arrow,[a,b])
 toLit (ELit LitCons { litName = n, litArgs = ts }) = return (n,ts)
 toLit _ = fail "not convertable to literal"
@@ -164,6 +166,7 @@ calcDs env@Env { envRuleSupply = ur, envValSupply = uv } ds = do
     forM_ ds $ \ (v,e) -> do calcDef env (v,e)
 
 -- TODO - make default case conditional
+calcAlt :: Env -> Value Typ -> Alt E -> IO () 
 calcAlt env v (Alt LitCons { litName = n, litArgs = xs } e) = do
     addRule $ conditionalRule (n `vmapMember`) v $ ioToRule $ do
         calcE env e
@@ -202,11 +205,13 @@ calcE env e@EAp {} = tagE env e
 calcE env e@EPi {} = tagE env e
 calcE _ e = fail $ "odd calcE: " ++ show e
 
+tagE :: Env -> E -> IO ()
 tagE Env { envValSupply = uv }  (EVar v) | not $ getProperty prop_RULEBINDER v = do
     v <- supplyValue uv v
     addRule $ assert v
 tagE env e  = emapE_ (tagE env) e
 
+getValue :: Monad m => E -> m (Value Typ)
 getValue (EVar v)
     | Just x <- Info.lookup (tvrInfo v) = return x
     | otherwise = return $ value (vmapPlaceholder ())
@@ -261,6 +266,7 @@ specializeProgram doSpecialize unusedRules unusedValues prog = do
     return $ progCombinators_s nds prog
 
 
+repi :: E -> E
 repi (ELit LitCons { litName = n, litArgs = [a,b] }) | n == tc_Arrow = EPi tvr { tvrIdent = emptyId, tvrType = repi a } (repi b)
 repi e = runIdentity $ emapE (return . repi ) e
 
@@ -269,6 +275,9 @@ specializeComb doSpecialize env comb = do
     ((t,e),nds) <- specializeDef doSpecialize env (combHead comb,combBody comb)
     return (combHead_s t . combBody_s e $ comb,nds)
 -}
+
+specializeComb :: (Monoid a, BuildSet (TVr, [Int]) a, Stats.MonadStats m)
+                  => Bool -> SpecEnv -> Comb -> m (Comb, a)
 
 specializeComb _ env  comb | isUnused env (combHead comb) = let tvr = combHead comb in
     return (combRules_s [] . combBody_s (EError ("Unused Def: " ++ tvrShowName tvr) (tvrType tvr)) $ comb , mempty)
@@ -347,6 +356,7 @@ specAlt env@SpecEnv { senvDataTable = dataTable } (Alt lc@LitCons { litArgs = ts
         ws <- f ts
         return (Alt lc (ws e))
 
+isUnused :: SpecEnv -> TVr -> Bool
 isUnused SpecEnv { senvUnusedVars = unusedVars } v = v `member` unusedVars && isJust (Info.lookup $ tvrInfo v :: Maybe Typ)
 
 specBody :: Stats.MonadStats m => Bool -> SpecEnv -> E -> m E
@@ -366,7 +376,7 @@ specBody doSpecialize env (ELetRec ds e) = do
     return $ ELetRec nds e
 specBody doSpecialize env e = emapE' (specBody doSpecialize env) e
 
---specializeDs :: MonadStats m => DataTable -> Map.Map TVr [Int] -> [(TVr,E)] -> m ([(TVr,E)]
+specializeDs :: Stats.MonadStats m => Bool -> SpecEnv -> [(TVr,E)] -> m ([(TVr,E)],SpecEnv)
 specializeDs doSpecialize env@SpecEnv { senvUnusedRules = unusedRules, senvDataTable = dataTable }  ds = do
     (ds,nenv) <- mapAndUnzipM (specializeComb doSpecialize env) (map bindComb ds)
     ds <- return $ map combBind ds
@@ -378,7 +388,7 @@ specializeDs doSpecialize env@SpecEnv { senvUnusedRules = unusedRules, senvDataT
     ds <- mapM f ds
     return (ds,tenv)
 
---specializeDs :: MonadStats m => DataTable -> Map.Map TVr [Int] -> [(TVr,E)] -> m ([(TVr,E)]
+specializeCombs :: Stats.MonadStats m => Bool -> SpecEnv -> [Comb] -> m ([Comb], SpecEnv)
 specializeCombs doSpecialize env@SpecEnv { senvUnusedRules = unusedRules, senvDataTable = dataTable }  ds = do
     (ds,nenv) <- mapAndUnzipM (specializeComb doSpecialize env) ds
     let tenv = env { senvArgs = unions nenv `union` senvArgs env }
