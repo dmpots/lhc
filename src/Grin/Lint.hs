@@ -20,7 +20,6 @@ import Support.FreeVars
 import Support.Transform
 import Util.Gen
 import Util.SetLike
-import qualified FlagDump as FD
 import qualified Stats
 
 

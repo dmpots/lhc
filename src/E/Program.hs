@@ -7,7 +7,6 @@ import List
 import Maybe
 import qualified Data.Map as Map
 
-import StringTable.Atom
 import DataConstructors
 import Doc.DocLike
 import Doc.PPrint

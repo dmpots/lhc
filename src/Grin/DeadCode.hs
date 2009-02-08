@@ -10,7 +10,6 @@ import StringTable.Atom
 import Fixer.Fixer
 import Fixer.Supply
 import Grin.Grin
-import Grin.Noodle
 import Grin.Whiz
 import Stats hiding(print)
 import Support.CanType
