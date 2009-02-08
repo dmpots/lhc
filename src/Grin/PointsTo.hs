@@ -24,8 +24,8 @@ import Debug.Trace
 
 data Equation = Extract [Equation] Tag Int
               | Eval Var
-              | Apply Var Var
-              | PartialApply Var Var
+              | Apply Var [Equation]
+              | PartialApply Var [Equation]
               | Ident Var
               | Base
               | Heap HeapPointer
@@ -82,7 +82,7 @@ genApplyStmts (PointsTo eqs) grin var val ty
         Just vals -> [ appToCaseStmt grin t val ty | Tag t _ <- vals ] ++
                     [ [Var (V 0) TyNode] :-> Error "app fell off" ty]
 
-appToCaseStmt grin tag (Var v ty) retTy
+appToCaseStmt grin tag val retTy
     = case tagUnfunction tag of
         Just (0,fn) -> error "fully applied function"
         Just (1,fn) -> [NodeC tag vars] :-> App fn newVars retTy
@@ -91,7 +91,9 @@ appToCaseStmt grin tag (Var v ty) retTy
   where Just tyty = findTyTy (grinTypeEnv grin) tag
         vars = flip map (zip [1000000,1000002..] (tySlots tyty)) $ \(n,ty) ->
                  Var (V n) ty
-        newVars = vars ++ if ty == TyUnit then [] else [Var v ty]
+        newVars = vars ++ case val of
+                            Var v TyUnit -> []
+                            _ -> [val]
 
 applications = V (fromAtom $ toAtom "APPLICATIONS")
 
@@ -126,12 +128,13 @@ setupEnv (Store val)
        return [Heap heapPointer]
 setupEnv (App func [Var arg _] _) | func == funcEval
   = do return [Eval arg]
-setupEnv (App func [Var arg1 _, Var arg2 _] _) | func == funcApply
-  = do applications =: [PartialApply arg1 arg2]
-       return [Apply arg1 arg2]
+setupEnv (App func [Var arg1 _, arg2] _) | func == funcApply
+  = do arg2' <- processVal arg2
+       applications =: [PartialApply arg1 arg2']
+       return [Apply arg1 arg2']
 -- Handle special case for IO functions.
 setupEnv (App func [Var arg1 _] _) | func == funcApply
-  = do let arg2 = V 0
+  = do let arg2 = [Ident (V 0)]
        applications =: [PartialApply arg1 arg2]
        return [Apply arg1 arg2]
 setupEnv (App func args _)
@@ -277,7 +280,7 @@ reduceEq (Apply a b)
          let f (Tag tag args) = case tagUnfunction tag of
                                   Just (0,func) -> error $ "Apply to fully applied function. " ++ show (a,b,vals)
                                   Just (1,func) -> reduceEq (Ident (atomToVar func "_result"))
-                                  Just (n,func) -> return [Tag (partialTag func (n-1)) (args ++ [[Ident b]])]
+                                  Just (n,func) -> return [Tag (partialTag func (n-1)) (args ++ [b])]
                                   Nothing       -> error "Apply to data constructor"
              f t = error $ "reduceEq: apply: " ++ show t
          liftM eqUnions $ mapM f vals
@@ -285,7 +288,7 @@ reduceEq (PartialApply a b)
     = do vals <- lookupEq (Equation a)
          let f (Tag tag args) = case tagUnfunction tag of
                                   Just (0,func) -> error $ "Apply to fully applied function. " ++ show (a,b,vals)
-                                  Just (n,func) -> return [Tag (partialTag func (n-1)) (args ++ [[Ident b]])]
+                                  Just (n,func) -> return [Tag (partialTag func (n-1)) (args ++ [b])]
                                   Nothing       -> error "Apply to data constructor"
              f t = error $ "reduceEq: apply: " ++ show t
          liftM eqUnions $ mapM f vals
