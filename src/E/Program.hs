@@ -48,6 +48,7 @@ data Program = Program {
     }
 
 
+program :: Program 
 program = Program {
     progExternalNames  = mempty,
     progClassHierarchy = mempty,
@@ -66,7 +67,9 @@ program = Program {
     }
 
 
+progEntryPoints :: Program -> [TVr]
 progEntryPoints prog = map combHead $ concatMap (progComb prog) (toList $ progEntry prog)
+progMainEntry :: Program -> TVr
 progMainEntry prog = combHead . runIdentity $ progComb prog (progMain prog)
 
 progComb :: Monad m => Program -> Id -> m Comb
@@ -77,7 +80,9 @@ progComb prog x = case x `mlookup`  progCombMap prog of
 programDs :: Program -> [(TVr,E)]
 programDs prog = [ (t,e)  | Comb { combHead = t, combBody = e }  <- progCombinators prog]
 
+progCombinators_u :: ([Comb] -> [Comb]) -> Program -> Program
 progCombinators_u f prog = programUpdate prog { progCombinators = f $ progCombinators prog }
+progCombinators_s :: [Comb] -> Program -> Program
 progCombinators_s cs prog = programUpdate prog { progCombinators = cs }
 
 programUpdate ::  Program -> Program
@@ -124,6 +129,7 @@ programMapDs f prog = do
 programMapDs_ :: Monad m => ((TVr,E) -> m ()) -> Program -> m ()
 programMapDs_ f prog = mapM_ f (programDs prog)
 
+hPrintProgram :: IO.Handle -> Program -> IO ()
 hPrintProgram fh prog@Program {progCombinators = cs, progDataTable = dataTable } = do
     sequence_ $ intersperse (hPutStrLn fh "") $ map (hPrintComb fh dataTable) cs
     when (not (isEmptyId (progMain prog))) $
@@ -131,6 +137,7 @@ hPrintProgram fh prog@Program {progCombinators = cs, progDataTable = dataTable }
     when (progEntry prog /= singleton (progMain prog)) $
         hPutStrLn fh $ "EntryPoints: " ++ hsep (map pprint (progEntryPoints prog))
 
+printProgram :: Program -> IO ()
 printProgram prog = hPrintProgram IO.stderr prog
 
 
@@ -140,6 +147,7 @@ hPrintComb fh dataTable (Comb { combHead = v, combBody = e, combRules = r }) = d
      hPrintCheckName fh dataTable v e
 
 
+printCheckName'' :: DataTable -> TVr -> E -> IO ()
 printCheckName'' = hPrintCheckName IO.stderr
 
 hPrintCheckName :: IO.Handle -> DataTable -> TVr -> E -> IO ()

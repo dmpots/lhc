@@ -161,6 +161,7 @@ annotate imap idann letann lamann e = runReaderT (f e) imap where
             True -> return (nvr,minsert i (Just $ EVar nvr))
             False -> return (nvr,minsert i (Just $ EVar nvr) . minsert i' Nothing)
 
+mnv :: MapLike Id v m => [Id] -> Id -> m -> Id
 mnv xs i ss
     | isInvalidId i || i `mmember` ss  = newId (size ss) isOkay
     | otherwise = i
