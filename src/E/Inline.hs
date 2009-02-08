@@ -32,7 +32,8 @@ import qualified Info.Info as Info
 
 
 
--- | higher numbers mean we want to inline it more
+-- | Higher numbers mean we want to inline it more
+baseInlinability :: (HasProperties a, Num b) => a -> E -> b
 baseInlinability t e
     | forceNoinline t = -15
     | forceSuperInline t = 10
@@ -59,9 +60,11 @@ forceSuperInline x
 forceNoinline :: HasProperties a => a -> Bool
 forceNoinline x  = fromList [prop_HASRULE,prop_NOINLINE,prop_PLACEHOLDER] `intersects` getProperties x
 
+app :: MonadStats m => (E, [E]) -> m E
 app (e,[]) = return e
 app (e,xs) = app' e xs
 
+app' :: MonadStats m => E -> [E] -> m E
 app' (ELit lc@LitCons { litName = n, litArgs = xs, litType = EPi ta tt }) (a:as)  = do
     mtick (toAtom $ "E.Simplify.typecon-reduce.{" ++ show n ++ "}" )
     app (ELit (lc { litArgs = xs ++ [a], litType = subst ta a tt }),as)
@@ -135,6 +138,7 @@ programDecomposedCombs prog = map f $ scc g where
 programDecomposedDs :: Program -> [Either (TVr, E) [(TVr,E)]]
 programDecomposedDs prog = decomposeDs $ programDs prog
 
+programSubProgram :: Program -> Bool -> [Comb] -> Program
 programSubProgram prog rec ds = progCombinators_s ds prog {  progType = SubProgram rec, progEntry = fromList (map combIdent ds) }
 
 {-

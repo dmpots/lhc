@@ -34,18 +34,19 @@ import Util.SetLike
 import Util.UniqueMonad
 import Options (verbose)
 
+annotateId :: String -> Id -> Id
 annotateId mn x = case fromId x of
     Just y -> toId (toName Val (mn,'f':show y))
     Nothing -> toId (toName Val (mn,'f':show x))
 
 
--- | transform simple recursive functions into non-recursive variants
--- this is exactly the opposite of lambda lifting, but is a big win if the function ends up inlined
--- and is conducive to other optimizations
+-- | Transform simple recursive functions into non-recursive variants.
+-- This is exactly the opposite of lambda lifting, but is a big win if the function ends up inlined
+-- and is conducive to other optimizations.
 --
--- in particular, the type arguments can almost always be transformed away from the recursive inner function
+-- In particular, the type arguments can almost always be transformed away from the recursive inner function.
 --
--- this has potentially exponential behavior. beware
+-- This has potentially exponential behavior. Beware.
 
 staticArgumentTransform :: Program -> Program
 staticArgumentTransform prog = ans where
@@ -97,17 +98,17 @@ etaReduce e = case f e 0 of
         f (ELam t (EAp x (EVar t'))) n | n `seq` True, t == t' && not (tvrIdent t `member` (freeVars x :: IdSet)) = f x (n + 1)
         f e n = (e,n)
 
--- | we do not lift functions that only appear in saturated strict contexts,
+-- | We do not lift functions that only appear in saturated strict contexts,
 -- as these functions will never have an escaping thunk or partial app
 -- built and can be turned into local functions in grin.
 --
--- Although grin is only able to take advantage of groups of possibily
+-- Although grin is only able to take advantage of groups of possibly
 -- mutually recursive local functions that only tail-call each other, we leave
 -- all candidate functions local, as further grin transformations can expose
--- tail-calls that arn't evident in core.
+-- tail-calls that aren't evident in core.
 --
 -- A final lambda-lifting needs to be done in grin to get rid of these local
--- functions that cannot be turned into loops
+-- functions that cannot be turned into loops.
 
 calculateLiftees :: Program -> IO IdSet
 calculateLiftees prog = do
@@ -158,6 +159,7 @@ calculateLiftees prog = do
 implies :: Value Bool -> Value Bool -> IO ()
 implies x y = addRule $ y `isSuperSetOf` x
 
+assert :: Value Bool -> IO ()
 assert x = value True `implies` x
 
 
@@ -332,10 +334,12 @@ lambdaLift prog@Program { progDataTable = dataTable, progCombinators = cs } = do
     annotateProgram nz (\_ nfo -> return nfo) (\_ nfo -> return nfo) (\_ nfo -> return nfo) prog { progCombinators =  ncs, progStats = progStats prog `mappend` nstat }
 
 
+typeLift :: E -> String
 typeLift ECase {} = "Case"
 typeLift ELam {} = "Lambda"
 typeLift _ = "Other"
 
+removeType :: TVr -> E -> E -> E
 removeType t v e  = subst' t v e
 {-
 removeType t v e = ans where
