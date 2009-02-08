@@ -61,6 +61,8 @@ static inline void lhc_alloc_print_stats(void) { GC_dump(); }
 // memory allocated in 1MB chunks.
 #define LHC_MEM_CHUNK_SIZE (1 << 20)
 
+unsigned mem_limit = 1024*1024*1024;
+
 static char initial_chunk[LHC_MEM_CHUNK_SIZE];
 
 static void *lhc_current_chunk = initial_chunk;
@@ -70,11 +72,16 @@ static unsigned mem_chunks,mem_offset;
 static inline void
 lhc_malloc_init(void) { return; }
 
+static unsigned memoryAllocated(void) {
+    return (LHC_MEM_CHUNK_SIZE*(mem_chunks)) + mem_offset;
+}
+
 static void
 lhc_alloc_print_stats(void) {
-        fprintf(stderr, "Memory Allocated: %u bytes\n", (LHC_MEM_CHUNK_SIZE*(mem_chunks)) + mem_offset);
+        fprintf(stderr, "Memory Allocated: %u bytes\n", memoryAllocated() );
         print_alloc_size_stats();
 }
+
 
 static void
 lhc_malloc_grow(void) {
@@ -90,6 +97,10 @@ lhc_malloc_grow(void) {
 
 static inline void * A_MALLOC
 lhc_malloc_basic(size_t n) {
+        if (memoryAllocated() >= mem_limit) {
+            fputs("Reached memory limit!",stderr);
+            abort();
+        }
         n = ALIGN(sizeof(void *),n);
         if (n > (LHC_MEM_CHUNK_SIZE - mem_offset))
                 lhc_malloc_grow();
