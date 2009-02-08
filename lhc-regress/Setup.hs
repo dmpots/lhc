@@ -52,7 +52,7 @@ cmd_options :: OptDescr (Config -> Config)
 cmd_options = Option "" ["lhc-options"] (ReqArg optionsFlag "OPTS")
               "Give extra options to lhc"
   where
-    optionsFlag s cfg = cfg{cfgLHCOptions = words s ++ cfgLHCOptions cfg}
+    optionsFlag s cfg = cfg{cfgLHCOptions = cfgLHCOptions cfg ++ words s}
 
 cmd_complete :: OptDescr (Config -> Config)
 cmd_complete = Option "c" ["complete"] (OptArg completeFlag "BOOL")
