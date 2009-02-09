@@ -64,33 +64,39 @@ import Debug.Trace
 type Bind = (TVr,E)
 
 data Occurance =
-    Unused        -- ^ unused means a var is not used at the term level, but might be at the type level
+    Unused        -- ^ Unused means a var is not used at the term level, but might be at the type level
     | Once        -- ^ Used at most once not inside a lambda or as an argument
-    | OnceInLam   -- ^ used once inside a lambda
-    | ManyBranch  -- ^ used once in several branches
-    | Many        -- ^ used many or an unknown number of times
-    | LoopBreaker -- ^ chosen as a loopbreaker, never inline
+    | OnceInLam   -- ^ Used once inside a lambda
+    | ManyBranch  -- ^ Used once in several branches
+    | Many        -- ^ Used many or an unknown number of times
+    | LoopBreaker -- ^ Chosen as a loopbreaker, never inline
     deriving(Show,Eq,Ord)
 
 data UseInfo = UseInfo {
-    useOccurance :: !Occurance,   -- ^ occurance Info
-    minimumArgs  :: !Int          -- ^ minimum number of args that are ever passed to this function (if used)
+    useOccurance :: !Occurance,   -- ^ Occurance Info
+    minimumArgs  :: !Int          -- ^ Minimum number of args that are ever passed to this function (if used)
     }
     deriving(Show,Eq,Ord,Typeable)
 
+noUseInfo :: UseInfo
 noUseInfo = UseInfo { useOccurance = Many, minimumArgs = 0 }
+notUsedInfo :: UseInfo
 notUsedInfo = UseInfo { useOccurance = Unused, minimumArgs = maxBound }
 
 
 newtype OM a = OM (ReaderWriter IdSet (OMap,IdSet) a)
     deriving(Monad,Functor,MonadWriter (OMap,IdSet),MonadReader IdSet)
 
+unOM :: OM a -> ReaderWriter IdSet (OMap,IdSet) a
 unOM (OM a) = a
 
 newtype OMap = OMap (IdMap UseInfo)
    deriving(HasSize,SetLike,BuildSet (Id,UseInfo),MapLike Id UseInfo,Show,IsEmpty,Eq,Ord)
 
+
+andOM :: MapLike k UseInfo m => m -> m -> m
 andOM x y = munionWith andOcc x y
+andOcc :: UseInfo -> UseInfo -> UseInfo
 andOcc UseInfo { useOccurance = Unused } x = x
 andOcc x UseInfo { useOccurance = Unused } = x
 andOcc x y = UseInfo { useOccurance = Many, minimumArgs = min (minimumArgs x) (minimumArgs y) }
@@ -135,6 +141,7 @@ $(derive makeMonoid ''Env)
 $(derive makeUpdate ''Env)
 
 
+maybeLetRec :: [(TVr, E)] -> E -> E
 maybeLetRec [] e = e
 maybeLetRec ds e = ELetRec ds e
 
@@ -267,19 +274,25 @@ programPruneOccurance prog =
 
 
 -- delete any occurance info for non-let-bound vars to be safe
+annb' :: TVr' e -> TVr' e
 annb' tvr = tvrInfo_u (Info.delete noUseInfo) tvr
+annbind' :: OMap -> TVr -> TVr
 annbind' idm tvr = case mlookup (tvrIdent tvr) idm of
     Nothing | sortTermLike (getType tvr) -> annb' tvr { tvrIdent = emptyId }
     _ -> annb' tvr
 
--- add ocucrance info
+-- add occurance info
+annbind :: OMap -> TVr' e -> TVr' e
 annbind idm tvr = case mlookup (tvrIdent tvr) idm of
     Nothing -> annb notUsedInfo tvr { tvrIdent = emptyId }
     Just x -> annb x tvr
+annb :: UseInfo -> TVr' e -> TVr' e
 annb x tvr = tvrInfo_u (Info.insert x) tvr
 
+mapLitBinds :: (e -> e') -> Lit e t -> Lit e' t
 mapLitBinds f lc@LitCons { litArgs = es } = lc { litArgs = map f es }
 mapLitBinds f (LitInt e t) = LitInt e t
+mapLitBindsM :: Monad m => (e -> m e') -> Lit e t -> m (Lit e' t)
 mapLitBindsM f lc@LitCons { litArgs = es } = do
     es <- mapM f es
     return lc { litArgs = es }
@@ -292,6 +305,7 @@ collectBinding comb = do
         romap = OMap (idSetToIdMap (const noUseInfo) rvars)
     return (combBody_s e' comb,romap)
 
+unOMap :: OMap -> IdMap UseInfo
 unOMap (OMap x) = x
 
 collectCombs :: [Comb] -> OMap -> OM [Comb]
@@ -299,18 +313,22 @@ collectCombs cs _ = return cs
 
 -- TODO this should use the occurance info
 -- loopFunc t _ | getProperty prop_PLACEHOLDER t = -100  -- we must not choose the placeholder as the loopbreaker
+loopFunc :: (HasProperties a, Num b) => a -> E -> b
 loopFunc t e = negate (baseInlinability t e)
 
 
+inLam :: OMap -> OMap
 inLam (OMap om) = OMap (fmap il om) where
     il ui@UseInfo { useOccurance = Once } = ui { useOccurance = OnceInLam }
     il ui = ui { useOccurance = Many }
 
 --andOM :: IdMap UseInfo -> IdMap UseInfo -> IdMap UseInfo
 
+orMaps :: [OMap] -> OMap
 orMaps ms = OMap $ fmap orMany $ foldl (munionWith (++)) mempty (map (fmap (:[])) (map unOMap ms)) where
     unOMap (OMap m) = m
 
+orMany :: [UseInfo] -> UseInfo
 orMany [] = error "empty orMany"
 orMany xs = f (filter ((/= Unused) . useOccurance) xs) where
     f [] = notUsedInfo
@@ -334,6 +352,7 @@ data SimplifyOpts = SimpOpts {
     }
     {- derive: Monoid -}
 
+emptySimplifyOpts :: SimplifyOpts
 emptySimplifyOpts = SimpOpts { so_noInlining  = False
                              , so_finalPhase  = False
                              , so_boundVars   = mempty
@@ -341,6 +360,7 @@ emptySimplifyOpts = SimpOpts { so_noInlining  = False
                              , so_boundVarsCache = mempty
                              , so_cachedScope = mempty }
 
+cacheSimpOpts :: SimplifyOpts -> SimplifyOpts
 cacheSimpOpts opts = opts {
     so_boundVarsCache = idMapToIdSet (so_boundVars opts),
     so_cachedScope = cacheSubst (extendScope initScope mempty { envSubst = mapMaybeIdMap bb  (so_boundVars opts), envRules = rules })
@@ -352,6 +372,7 @@ cacheSimpOpts opts = opts {
     f Comb { combRules = rs } = if null rs then Nothing else Just $ arules rs
 
 
+isBoundTo :: UseInfo -> E -> Binding
 isBoundTo o e = IsBoundTo {
     bindingOccurance = useOccurance o,
     bindingE = e,
@@ -370,8 +391,10 @@ instance Monoid Forced where
     mappend ForceNoinline _ = ForceNoinline
     mappend ForceInline ForceInline = ForceInline
 
+fixInline :: HasProperties a => Bool -> a -> Binding -> Binding
 fixInline finalPhase v bt@IsBoundTo {} = bt { inlineForced = inlineForced bt `mappend` calcForced finalPhase v }  where
 
+calcForced :: HasProperties a => Bool -> a -> Forced
 calcForced finalPhase v =
     let props = getProperties v in
         case (forceNoinline props,finalPhase,forceInline props) of
@@ -424,6 +447,7 @@ cacheScope env = env { envInScopeCache = mapMaybeIdMap fromBinding (envInScope e
 substLookup :: Id -> SM (Maybe Range)
 substLookup id = SM $ ask >>= return . mlookup id . envSubst
 
+substAddList :: [(Id, Range)] -> Env -> Env
 substAddList ls env = cacheSubst env { envSubst = fromList ls `union` envSubst env }
 
 
@@ -438,6 +462,7 @@ evalRange :: Range -> SM OutE
 evalRange (Done e) = return e
 evalRange (Susp e s) = localEnv (envSubst_s s)  $ dosub e
 
+cacheSubst :: Env -> Env
 cacheSubst env = env { envCachedSubst = applySubst (envSubst env) (envInScope env) }
 
 dosub :: InE -> SM OutE
@@ -473,6 +498,7 @@ data Cont =
         }-}
     deriving(Show)
 
+isApplyTo :: Cont -> Bool
 isApplyTo ApplyTo {} = True
 isApplyTo _ = False
 
@@ -946,6 +972,7 @@ newNameSM fn
          let ident  = genNewId env
          localEnv (insertInScope ident NotKnown) (fn ident)
 
+genNewId :: Env -> Id
 genNewId env = head $ filter (`mnotMember` envInScope env) $ idList
     where idList = map anonymous [2,4..]
 
@@ -953,6 +980,7 @@ data KnowSomething = KnowNothing | KnowNotOneOf [Name] | KnowIsCon Name | KnowIs
     deriving(Eq)
 
 
+someBenefit :: t -> E -> [KnowSomething] -> Bool
 someBenefit _ e _ | isAtomic e = True
 someBenefit _ ELit {} _ = True
 someBenefit _ EPi {} _ = True
@@ -1003,6 +1031,7 @@ exprSize max e discount known = f max e >>= \n -> return (max - n) where
         f n e
 
 
+noSizeIncrease :: E -> [a] -> Bool
 noSizeIncrease e xs = f e xs where
     currentSize = 1 + length xs
     f (ELam t e) (x:xs) = f e xs
@@ -1018,10 +1047,14 @@ noSizeIncrease e xs = f e xs where
 --
 --
 
+scrutineeDiscount :: Int
 scrutineeDiscount = 4
+extraArgDiscount :: Int
 extraArgDiscount = 1
+knowSomethingDiscount :: Int
 knowSomethingDiscount = 2
 
+multiInline :: t -> E -> [KnowSomething] -> Bool
 multiInline _ e xs | noSizeIncrease e xs = True
 multiInline v e xs | not (someBenefit v e xs) = False
 multiInline v e xs = f e xs [] where
@@ -1033,6 +1066,7 @@ multiInline v e xs = f e xs [] where
 
 
 
+worthStricting :: E -> Bool
 worthStricting EError {} = True
 worthStricting ELit {} = False
 worthStricting ELam {} = False
@@ -1046,6 +1080,7 @@ coerceOpt fn e = do
     e'' <- fn e'
     return (p e'')
 
+stat_unsafeCoerce :: Atom
 stat_unsafeCoerce = toAtom "E.Simplify.unsafeCoerce"
 
 
@@ -1059,11 +1094,13 @@ data SmState = SmState {
     smStdGen :: !StdGen
     }
 
+smState :: SmState
 smState = SmState { idsUsed = mempty, idsBound = mempty, smStdGen = mkStdGen 42 }
 
 newtype SM a = SM (RWS Env Stats.Stat SmState a)
     deriving(Monad,Functor,MonadReader Env, MonadState SmState)
 
+localEnv :: (Env -> Env) -> SM a -> SM a
 localEnv f (SM action) = SM $ local (cacheSubst . f) action
 
 
@@ -1075,10 +1112,13 @@ instance MonadStats SM where
    mticks' n k = SM $ tell (Stats.singleStat n k) >> return ()
    mtickStat = error "mtickStat is not defined for SM"
 
+modifyIds :: ((IdSet, IdSet) -> (IdSet, IdSet)) -> SM ()
 modifyIds fn = SM $ modify f where
     f s@SmState { idsUsed = used, idsBound = bound, smStdGen=gen } = case fn (used,bound) of (used',bound') -> s { idsUsed = used', idsBound = bound', smStdGen = gen }
+getIds :: SM (IdSet, IdSet)
 getIds = SM $ liftM f get where
     f s@SmState { idsUsed = used, idsBound = bound } = (used,bound)
+putIds :: (IdSet, IdSet) -> SM ()
 putIds x = SM $ modify (f x) where
     f (used,bound) = \s -> s { idsUsed = used, idsBound = bound }
 
@@ -1113,15 +1153,20 @@ instance NameMonad Id SM where
         put sm{smStdGen = g1}
         newNameFrom (map anonymous $ filter (>0) $ filter even $ randoms g2)
 
+smUsedNames :: SM IdSet
 smUsedNames = SM $ gets idsUsed
+smBoundNames :: SM IdSet
 smBoundNames = SM $ gets idsBound
 
 
 
+smAddNamesIdSet :: IdSet -> SM ()
 smAddNamesIdSet nset = --trace ("addNamesIdSet: "++ show (size nset)) $
    do modifyIds (\ (used,bound) -> (nset `union` used, bound) )
+smAddBoundNamesIdSet :: IdSet -> SM ()
 smAddBoundNamesIdSet nset = --trace ("addBoundNamesIdSet: "++show (size nset)) $
    do modifyIds (\ (used,bound) -> (nset `union` used, nset `union` bound) )
 
+smAddBoundNamesIdMap :: IdMap a -> SM ()
 smAddBoundNamesIdMap = smAddNamesIdSet . idMapToIdSet
 
