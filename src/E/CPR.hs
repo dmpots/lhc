@@ -26,12 +26,12 @@ newtype Env = Env (Map.Map TVr Val)
     deriving(Monoid)
 
 data Val =
-    Top               -- the top.
-    | Fun Val         -- function taking an arg
-    | Tup Name [Val]  -- A constructed product
-    | VInt Number     -- A number
-    | Tag [Name]      -- A nullary constructor, like True, False
-    | Bot             -- the bottom
+    Top               -- ^ The top
+    | Fun Val         -- ^ Function taking an arg
+    | Tup Name [Val]  -- ^ A constructed product
+    | VInt Number     -- ^ A number
+    | Tag [Name]      -- ^ A nullary constructor, like True, False
+    | Bot             -- ^ The bottom
     deriving(Eq,Ord,Typeable)
 $(derive makeBinary ''Val)
 

@@ -1,7 +1,7 @@
-module E.Eval(eval, strong) where
+-- | Simple lambda Calculus interpreter.
+-- Does not handle recursive Let or Case statements, but those don't appear in types anyway.
 
--- Simple lambda Calculus interpreter
--- does not handle recursive Let or Case statements, but those don't appear in types anyway.
+module E.Eval(eval, strong) where
 
 import Control.Monad.Writer
 import qualified Data.Map as Map

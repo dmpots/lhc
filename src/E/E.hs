@@ -35,9 +35,9 @@ isWHNF ELetRec { eBody = e } = isWHNF e
 isWHNF _ = False
 
 
------------
--- E values
------------
+-------------
+-- * E values
+-------------
 
 instance TypeNames E where
     tStar = eStar
@@ -77,9 +77,9 @@ tFunc a b = ePi (tVr emptyId a) b
 tvrSilly :: TVr
 tvrSilly = tVr sillyId Unknown
 
------------------
--- E constructors
------------------
+-------------------
+-- * E constructors
+-------------------
 
 
 

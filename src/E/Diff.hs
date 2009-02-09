@@ -10,7 +10,7 @@ import E.FreeVars()
 import Support.FreeVars
 import Stats
 
--- | take two expressions and return (hopefully smaller) expressions with their differences
+-- | Take two expressions and return (hopefully smaller) expressions with their differences
 
 diff ::  E -> E -> (E,E)
 diff a b = f a b where
@@ -19,12 +19,13 @@ diff a b = f a b where
     g ds ds' = [ d | d@(v,e) <- ds, not (lookup v ds' == Just e)  ]
 
 
--- show terms which contain interesting free variables
+-- | Show terms which contain interesting free variables
 findOddFreeVars  :: [TVr] -> E -> E
 findOddFreeVars fs (ELetRec ds e) = ELetRec [ ds | ds@(_,e) <- ds, any (`elem` fs) (freeVars e) ] e
 findOddFreeVars _ e = e
 
 
+-- | Print statistics about E code (but why is it in this module?)
 printEStats :: E -> IO ()
 printEStats e = do
     stats <- Stats.new

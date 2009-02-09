@@ -141,15 +141,16 @@ programDecomposedDs prog = decomposeDs $ programDs prog
 programSubProgram :: Program -> Bool -> [Comb] -> Program
 programSubProgram prog rec ds = progCombinators_s ds prog {  progType = SubProgram rec, progEntry = fromList (map combIdent ds) }
 
-{-
+{- |
 Map recursive program groups.
 
 Consider the program:
-x = y
-y = z
-z = y
 
-This would call 'f [x]' and 'f [y,z]'.
+> x = y
+> y = z
+> z = y
+
+This would call @f [x]@ and @f [y,z]@.
 
 The code is made by the need for substitutions. The names of bindings can't change
 but their types or other associated info might.
