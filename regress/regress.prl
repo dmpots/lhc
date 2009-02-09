@@ -67,7 +67,7 @@ regress [options] [conditions]
    -n            go faster by not linting
    -p            profile LHC (requires lhcp to have been built)
 
-   --rts         extra GHC RTS flags for LHC
+   --rts         extra GHC RTS flags for LHC (but only when profiling???)
    --clean       build .ho files for tests from scratch
 
 =head1 DESCRIPTION
