@@ -61,18 +61,22 @@ import qualified FrontEnd.Tc.Type as T(Rule(..))
 import qualified FrontEnd.Tc.Type as Type
 import qualified Info.Info as Info
 
+ump :: SrcLoc -> E -> E
 ump sl e = EError (show sl ++ ": Unmatched pattern") e
 
 
+createIf :: Monad m => E -> E -> E -> Ce m E
 createIf e a b = do
     [tv] <- newVars [Unknown]
     return $ createIfv tv e a b
 
+createIfv :: TVr' e -> E -> E -> E -> E
 createIfv v e a b = res where
     tv = v { tvrType = tBoolzh }
     ic = eCase (EVar tv) [Alt lTruezh a, Alt lFalsezh b] Unknown
     res = eCase e [Alt (litCons { litName = dc_Boolzh, litArgs = [tv], litType = tBool }) ic] Unknown
 
+ifzh :: E -> E -> E -> E
 ifzh e a b = eCase e [Alt lTruezh a, Alt lFalsezh b] Unknown
 
 newVars :: Monad m => [E] -> Ce m [TVr]
@@ -83,6 +87,7 @@ newVars xs = f xs [] where
         f xs (tVr (anonymous (2*s)) x:ys)
 
 
+tipe :: Type -> E
 tipe t = f t where
     f (TAp t1 t2) = eAp (f t1) (f t2)
     f (TArrow t1 t2) =  EPi (tVr emptyId (f t1)) (f t2)
@@ -101,6 +106,7 @@ tipe t = f t where
     lt n | nameType n == TypeVal = toId n  -- verifies namespace
          | otherwise = error "E.FromHs.lt"
 
+kind :: Kind -> E
 kind (KBase KUTuple) = eHash
 kind (KBase KHash) = eHash
 kind (KBase Star) = eStar
@@ -111,20 +117,25 @@ kind (KVar _) = error "Kind variable still existing."
 kind _ = error "E.FromHs.kind: unknown"
 
 
+simplifyDecl :: HsDecl -> HsDecl
 simplifyDecl (HsPatBind sl (HsPVar n)  rhs wh) = HsFunBind [HsMatch sl n [] rhs wh]
 simplifyDecl x = x
 
 
 
+fromTyvar :: Tyvar -> TVr
 fromTyvar (Tyvar _ n k) = tVr (toId n) (kind k)
 
+fromSigma :: Type -> ([TVr], E)
 fromSigma (TForAll vs (_ :=> t)) = (map fromTyvar vs, tipe t)
 fromSigma t = ([], tipe t)
 
+monadicLookup :: (Monad m, Ord k) => k -> Map.Map k a -> m a
 monadicLookup k m = case Map.lookup k m of
     Just x  -> return x
     Nothing -> fail "key not found"
 
+convertValue :: Monad m => Name -> Ce m (TVr, E, E -> E)
 convertValue n = do
     assumps <- asks ceAssumps
     dataTable <- asks ceDataTable
@@ -147,12 +158,15 @@ convertValue n = do
 --    return $ removeNewtypes dataTable (tipe t)
 
 
+matchesConv :: [HsMatch] -> [([HsPat], HsRhs, [HsDecl])]
 matchesConv ms = map v ms where
     v (HsMatch _ _ ps rhs wh) = (ps,rhs,wh)
 
+altConv :: [HsAlt] -> [([HsPat], HsRhs, [HsDecl])]
 altConv as = map v as where
     v (HsAlt _ p rhs wh) = ([p],rhs,wh)
 
+argTypes :: E -> ([E], [E])
 argTypes e = span (sortSortLike . getType) (map tvrType xs) where
     (_,xs) = fromPi e
 argTypes' :: E -> ([E],E)
@@ -232,6 +246,7 @@ createInstanceRules dataTable classHierarchy funcs = fromRules ans where
         Nothing -> fail $ "Cannot find: " ++ show name
         Just n -> return n
 
+getTypeCons :: Type -> Name
 getTypeCons (TCon (Tycon n _)) = n
 getTypeCons (TAp a _) = getTypeCons a
 getTypeCons (TArrow {}) = tc_Arrow
@@ -304,7 +319,9 @@ convertE tiData classHierarchy assumps dataTable srcLoc exp = do
     [(_,_,e)] <- convertDecls tiData mempty classHierarchy assumps dataTable [HsPatBind srcLoc (HsPVar sillyName') (HsUnGuardedRhs exp) []]
     return e
 
+v_silly :: Name
 v_silly = toName Val ("Lhc@","silly")
+sillyName' :: HsName
 sillyName' = nameName v_silly
 
 data CeEnv = CeEnv {
@@ -726,14 +743,17 @@ convertDecls tiData props classHierarchy assumps dataTable hsDecls = liftM fst $
         return (cClass cr) -- ++ primitiveInstances className)
     cClassDecl _ = error "cClassDecl"
 
+convertVar :: Monad m => Name -> Ce m TVr
 convertVar n = do
     (t,_,_) <- convertValue n
     return t
+convertTyp :: Monad m => Name -> Ce m E
 convertTyp n = do
     (_,t,_) <- convertValue n
     return t
 
 
+toTVr :: Map.Map Name Type -> DataTable -> Name -> TVr
 toTVr assumps dataTable n = tVr (toId n) typeOfName where
     typeOfName = case Map.lookup n assumps of
         Just z -> removeNewtypes dataTable (tipe z)
@@ -741,11 +761,14 @@ toTVr assumps dataTable n = tVr (toId n) typeOfName where
 
 
 
+integer_cutoff :: Integer
 integer_cutoff = 500000000
 
+intConvert :: Integer -> E
 intConvert i | abs i > integer_cutoff  =  ELit (litCons { litName = dc_Integer, litArgs = [ELit $ LitInt (fromInteger i) (rawType "bits<max>")], litType = tInteger })
 intConvert i =  ELit (litCons { litName = dc_Int, litArgs = [ELit $ LitInt (fromInteger i) (rawType "bits32")], litType = tInt })
 
+intConvert' :: FuncNames E -> E -> Integer -> E
 intConvert' funcs typ i = EAp (EAp fun typ) (ELit (litCons { litName = con, litArgs = [ELit $ LitInt (fromInteger i) (rawType rawtyp)], litType = ltype }))  where
     (con,ltype,fun,rawtyp) = case abs i > integer_cutoff of
         True -> (dc_Integer,tInteger,f_fromInteger,"bits<max>")
@@ -753,12 +776,14 @@ intConvert' funcs typ i = EAp (EAp fun typ) (ELit (litCons { litName = con, litA
     f_fromInt = func_fromInt funcs
     f_fromInteger = func_fromInteger funcs
 
+litconvert :: (Show a, Eq a, TypeNames a) => HsLiteral -> a -> Lit e a
 litconvert (HsChar i) t | t == tChar =  LitInt (fromIntegral $ ord i) tCharzh
 litconvert (HsCharPrim i) t | t == tCharzh =  LitInt (fromIntegral $ ord i) tCharzh
 litconvert (HsIntPrim i) t  =  LitInt (fromIntegral $  i) t
 litconvert e t = error $ "litconvert: shouldn't happen: " ++ show (e,t)
 
 
+fromHsPLitInt :: Monad m => HsPat -> m HsLiteral
 fromHsPLitInt (HsPLit l@(HsInt _)) = return l
 fromHsPLitInt (HsPLit l@(HsFrac _)) = return l
 fromHsPLitInt x = fail $ "fromHsPLitInt: " ++ show x
@@ -815,7 +840,8 @@ tidyPat p b = f p where
             zs <- mapM f (getNamesFromHsPat p)
             return (HsPWildCard,lbv . eLetRec zs)
 
--- converts a value to an updatable closure if it isn't one already.
+-- | converts a value to an updatable closure if it isn't one already.
+varify :: Monad m => E -> Ce m (E -> E, E)
 varify b@EVar {} = return (id,b)
 varify b = do
     [bv] <- newVars [getType b]
