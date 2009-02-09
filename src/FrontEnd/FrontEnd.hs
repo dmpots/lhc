@@ -21,6 +21,13 @@ import qualified FlagDump as FD
 import qualified FrontEnd.Tc.Module as Tc
 
 
+makeLibrary :: (CollectedHo -> Ho -> IO CollectedHo)
+               -> (CollectedHo
+                   -> Ho
+                   -> Tc.TiData
+                   -> IO (CollectedHo, Ho))
+               -> FilePath
+               -> IO ()
 makeLibrary ifunc func hl = do buildLibrary ifunc (doModules func) hl
 
 -- | Main entry point to front end
@@ -45,6 +52,7 @@ doModules func ho ms  = do
     (ho',tiData) <- Tc.tiModules' ho ms
     func ho ho' tiData
 
+modInfo :: MonadWarn m => HsModule -> m ModInfo
 modInfo m = do
     opt <- case fileOptions (hsModuleOptions m) of
         Just o -> return o
