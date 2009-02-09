@@ -1,4 +1,4 @@
-{-# OPTIONS_JHC -N -funboxed-tuples #-}
+{-# OPTIONS_LHC -N -funboxed-tuples #-}
 
 data MyWorld__ :: #
 
