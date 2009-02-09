@@ -43,6 +43,7 @@ import Util.SetLike
 import qualified FlagDump as FD
 import qualified FrontEnd.HsPretty as HsPretty
 
+trimEnv :: Map.Map Name a -> Map.Map Name a
 trimEnv env = Map.filterWithKey (\k _ -> isGlobal k) env
 
 
@@ -61,6 +62,7 @@ data TiData = TiData {
     tiAllAssumptions :: Map.Map Name Type
 }
 
+isGlobal :: Name -> Bool
 isGlobal x |  (_,(_::String,(h:_))) <- fromName x =  not $ isDigit h
 isGlobal _ = error "isGlobal"
 

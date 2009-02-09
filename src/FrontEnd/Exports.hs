@@ -41,6 +41,7 @@ instance Eq ModInfo where
 instance Ord ModInfo where
     compare a b = compare (modInfoName a) (modInfoName b)
 
+modInfoModImports :: ModInfo -> [HsImportDecl]
 modInfoModImports m =  mp  [ i | i <- hsModuleImports (modInfoHsModule m)] where
     mp xs
         | any ((== Module "Prelude") . hsImportDeclModule) xs = xs
@@ -130,6 +131,7 @@ determineExports' owns doneMods todoMods = mdo
         cd n =  [toName DataConstructor n, toName Val n, toName FieldLabel n ]
 
 
+defsToRel :: [(Name, a, b)] -> Set (Name, Name)
 defsToRel xs = R.fromList $ map f xs where
     f (n,_,_) = (toUnqualified n,n)
 
