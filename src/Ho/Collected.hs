@@ -23,13 +23,26 @@ import E.Annotate
 import qualified Info.Info as Info
 import qualified Data.Map as Map
 
+import Name.Name (Name)
+import FrontEnd.Representation (Type)
+import FrontEnd.TypeSynonyms (TypeSynonyms)
+import FrontEnd.Infix (FixityMap)
+import FrontEnd.Class (ClassHierarchy)
+import E.Rules (Rules)
 
+choDataTable :: CollectedHo -> DataTable
 choDataTable = hoDataTable . hoBuild . choHo
+choClassHierarchy :: CollectedHo -> ClassHierarchy
 choClassHierarchy = hoClassHierarchy . hoBuild . choHo
+choTypeSynonyms :: CollectedHo -> TypeSynonyms
 choTypeSynonyms = hoTypeSynonyms . hoBuild . choHo
+choFixities :: CollectedHo -> FixityMap
 choFixities = hoFixities . hoBuild . choHo
+choAssumps :: CollectedHo -> Map.Map Name Type
 choAssumps = hoAssumps . hoBuild . choHo
+choRules :: CollectedHo -> Rules
 choRules = hoRules . hoBuild . choHo
+choEs :: CollectedHo -> [(TVr, E)]
 choEs cho = [ (combHead c,combBody c) | c <- melems $  choCombinators cho]
 
 instance Monoid CollectedHo where
@@ -48,6 +61,7 @@ instance Monoid CollectedHo where
         choHoMap = Map.union (choHoMap a) (choHoMap b)
         }
 
+choHo :: CollectedHo -> Ho
 choHo cho = hoBuild_u (hoEs_u f) . mconcat . Map.elems $ choHoMap cho where
     f ds = runIdentity $ annotateDs mmap  (\_ -> return) (\_ -> return) (\_ -> return) (map g ds) where
         mmap = mfilterWithKey (\k _ -> (k `notElem` (map (tvrIdent . fst) ds))) (choVarMap cho)

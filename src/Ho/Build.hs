@@ -86,11 +86,17 @@ import System.FilePath (takeExtension)
 --
 --
 
+cff_magic :: ChunkType
 cff_magic = chunkType "LHC"
+cff_rdrt :: ChunkType
 cff_rdrt  = chunkType "RDRT"
+cff_jhdr :: ChunkType
 cff_jhdr  = chunkType "JHDR"
+cff_core :: ChunkType
 cff_core  = chunkType "CORE"
+cff_defs :: ChunkType
 cff_defs  = chunkType "DEFS"
+cff_idep :: ChunkType
 cff_idep  = chunkType "IDEP"
 
 
@@ -140,6 +146,7 @@ data Done = Done {
 $(derive makeMonoid ''Done)
 $(derive makeUpdate ''Done)
 
+fileOrModule :: FilePath -> Either Module FilePath
 fileOrModule f = case takeExtension f of
                    ".hs"  -> Right f
                    ".lhs" -> Right f
@@ -155,6 +162,7 @@ doDependency as = do
     sm <- knownSourceMap `fmap` readIORef done_ref
     mapM_ print $ melems sm
 
+replaceSuffix :: String -> String -> String
 replaceSuffix suffix fp = reverse (dropWhile ('.' /=) (reverse fp)) ++ suffix
 
 hoFile :: FilePath -> Maybe Module -> SourceHash -> FilePath
@@ -226,6 +234,7 @@ resolveDeps done_ref m = do
     fetchSource done_ref (map fst $ searchPaths (show m)) (Just m)
     return ()
 
+sourceIdent :: SourceCode -> String
 sourceIdent SourceParsed { sourceModule = m } = show $ hsModuleName m
 sourceIdent SourceRaw { sourceModName = fp } = show fp
 
@@ -255,6 +264,7 @@ instance ProvidesModules SourceCode where
 
 type CompUnitGraph = [(HoHash,([HoHash],CompUnit))]
 
+showCUnit :: (HoHash,([HoHash],CompUnit)) -> String
 showCUnit (hash,(deps,cu)) = printf "%s : %s" (show hash) (show deps)  ++ "\n" ++ f cu where
     f (CompHo (Just s) _ _) = s
     f (CompHo _ _ _) = "ho"
@@ -545,6 +555,7 @@ recordHoFile ho idep fs header = do
 
 
 
+hsModuleRequires :: HsModule -> [Module]
 hsModuleRequires x = Module "Lhc.Prim":ans where
     noPrelude =   or $ not (optPrelude options):[ opt == c | opt <- hsModuleOptions x, c <- ["-N","--noprelude"]]
     ans = snub $ (if noPrelude then id else  (Module "Prelude":)) [  hsImportDeclModule y | y <- hsModuleImports x]
@@ -559,6 +570,7 @@ searchPaths m = ans where
 m4Prelude :: IO FilePath
 m4Prelude = writeFile "/tmp/lhc_prelude.m4" prelude_m4 >> return "/tmp/lhc_prelude.m4"
 
+langmap :: [(String, String)]
 langmap = [
     "m4" ==> "m4",
     "cpp" ==> "cpp",
@@ -680,6 +692,7 @@ buildLibrary ifunc func = ans where
 instance DocLike d => PPrint d SrcLoc where
     pprint sl = tshow sl
 
+vindent :: [String] -> String
 vindent xs = vcat (map ("    " ++) xs)
 
 {-# NOINLINE dumpHoFile #-}

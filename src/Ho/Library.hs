@@ -48,6 +48,7 @@ parseLibraryDescription fs =  g [] (lines (f [] fs)) where
             (nm,bd) = break (== ':') r
     g rs [] = return rs
 
+condenseWhitespace :: String -> String
 condenseWhitespace xs =  reverse $ dropWhile isSpace (reverse (dropWhile isSpace (cw xs))) where
     cw (x:y:zs) | isSpace x && isSpace y = cw (' ':zs)
     cw (x:xs) = x:cw xs
