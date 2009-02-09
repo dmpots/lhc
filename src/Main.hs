@@ -85,23 +85,30 @@ import qualified System.IO as IO
 import System.FilePath (takeExtension)
 import System.Directory (removeFile)
 
+runMain :: IO a -> IO ()
 runMain action = Ex.catches (action >> return ())
                    [ Handler $ \ (e::Exit.ExitCode) -> throw e
                    , Handler $ \ (e::SomeException) -> putErrDie $ show e ]
 
+progress :: String -> IO ()
 progress str = wdump FD.Progress $  (putErrLn str) >> hFlush stderr
+progressM :: IO String -> IO ()
 progressM c  = wdump FD.Progress $ (c >>= putErrLn) >> hFlush stderr
 
 
+collectPassStats :: Bool
 collectPassStats = verbose
 
+bracketHtml :: IO a -> IO a
 bracketHtml action = do
     (argstring,_) <- getArgString
     wdump FD.Html $ putStrLn $ "<html><head><title>" ++ argstring ++ "</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body style=\"background: black; color: lightgrey\"><pre>"
     action `finally` (wdump FD.Html $ putStrLn "</pre></body></html>")
 
+catom :: IO a -> IO a
 catom action = action `finally` dumpToFile
 
+main :: IO ()
 main = runMain . bracketHtml $ do
     o <- processOptions
     progressM $ do
@@ -122,6 +129,7 @@ main = runMain . bracketHtml $ do
         _             -> processFiles  (optArgs o)
 
 
+processFiles :: [FilePath] -> IO ()
 processFiles [] | Nothing <- optMainFunc options = do
                                putErrDie "lhc: no input files"
                                processFilesModules [Left (Module "Prelude")]
@@ -131,18 +139,22 @@ processFiles [] | Just (b,m) <- optMainFunc options = do
                                   processFilesModules [Left m]
 processFiles cs = do processFilesModules (map fileOrModule cs)
 
+processFilesModules :: [Either Module String] -> IO ()
 processFilesModules fs = do
     compileModEnv =<< parseFiles fs processInitialHo processDecls
 
+fileOrModule :: FilePath -> Either Module FilePath
 fileOrModule f = case takeExtension f of
                    ".hs"  -> Right f
                    ".lhs" -> Right f
                    _      -> Left $ Module f
 
 
+barendregtProg :: MonadIO m => Program -> m Program
 --barendregtProg prog = transformProgram transBarendregt prog
 barendregtProg prog = return prog
 
+transBarendregt :: TransformParms Program
 transBarendregt = transformParms {
         transformCategory = "Barendregt",
         transformIterate = DontIterate,
@@ -154,8 +166,11 @@ transBarendregt = transformParms {
         (ELetRec ds' Unknown,_) = renameE mempty mempty (ELetRec (programDs prog) Unknown)
 
 
+lamann :: Monad m => a -> Info.Info -> m Info.Info
 lamann _ nfo = return nfo
+letann :: Monad m => E -> Info.Info -> m Info.Info
 letann e nfo = return (annotateArity e nfo)
+idann :: Monad m => IdMap Properties -> Id -> Info.Info -> m Info.Info
 idann ps i nfo = return (props ps i nfo) where
     props :: IdMap Properties -> Id -> Info.Info -> Info.Info
     props ps i = case mlookup i ps of
@@ -196,6 +211,7 @@ processInitialHo accumho aho = do
 
 
 
+coreMini, corePass, coreSteps, miniCorePass, miniCoreSteps :: Bool
 coreMini = dump FD.CoreMini
 corePass = dump FD.CorePass
 coreSteps = dump FD.CoreSteps
@@ -474,7 +490,9 @@ etaExpandProg pass prog = do
                                     , transformDumpProgress = miniCorePass,  transformOperation = evaluate . f } prog
 
 
+getExports :: HoExp -> Set.Set Id
 getExports ho =  Set.fromList $ map toId $ concat $  Map.elems (hoExports ho)
+shouldBeExported :: Set.Set Id -> TVr -> TVr
 shouldBeExported exports tvr
     | tvrIdent tvr `Set.member` exports || getProperty prop_SRCLOC_ANNOTATE_FUN tvr  = setProperty prop_EXPORTED tvr
     | otherwise = tvr
@@ -482,6 +500,7 @@ shouldBeExported exports tvr
 
 --idHistogram e = execWriter $ annotate mempty (\id nfo -> tell (Histogram.singleton id) >> return nfo) (\_ -> return) (\_ -> return) e
 
+transTypeAnalyze :: TransformParms Program
 transTypeAnalyze = transformParms { transformCategory = "typeAnalyze",  transformOperation = typeAnalyze True }
 
 -- | Actually put together all the E code and compile a program
@@ -696,6 +715,7 @@ cleanupE e = runIdentity (f e) where
     f ec@ECase { eCaseBind = t@TVr { tvrIdent = v } } | not (isEmptyId v), v `notMember` (freeVars (caseBodies ec)::IdSet) = f ec { eCaseBind = t { tvrIdent = emptyId } }
     f e = emapEG f f e
 
+simplifyParms :: TransformParms Grin
 simplifyParms = transformParms {
     transformDumpProgress = verbose,
     transformCategory = "Simplify",
@@ -704,6 +724,7 @@ simplifyParms = transformParms {
     transformIterate = IterateDone
     }
 
+compileToGrin :: Program -> IO ()
 compileToGrin prog = do
     stats <- Stats.new
     progress "Converting to Grin..."
@@ -790,6 +811,7 @@ compileToGrin prog = do
     compileGrinToC x
 
 
+dumpFinalGrin :: Grin -> IO ()
 dumpFinalGrin grin = do
     wdump FD.GrinGraph $ do
         let dot = graphGrin grin
@@ -800,6 +822,7 @@ dumpFinalGrin grin = do
 
 
 
+compileGrinToC :: Grin -> IO ()
 compileGrinToC grin | optMode options `elem` [GenerateExe
                                              ,GenerateC
                                              ,KeepTmpFiles] = do
@@ -832,6 +855,7 @@ compileGrinToC grin | optMode options `elem` [GenerateExe
     when (optMode options `elem` [KeepTmpFiles, GenerateExe]) compileC
 compileGrinToC grin | otherwise = return ()
 
+dumpCore :: String -> Program -> IO ()
 dumpCore pname prog = do
     let fn = optOutName options ++ "_" ++ pname ++ ".lhc_core"
     putErrLn $ "Writing: " ++ fn
@@ -845,6 +869,7 @@ dumpCore pname prog = do
         printProgram prog
         putErrLn $ "^-- " ++ pname ++ " Core"
 
+simplifyProgram :: MonadIO m => SS.SimplifyOpts -> String -> Bool -> Program -> m Program
 simplifyProgram sopt name dodump prog = liftIO $ do
     let istat = progStats prog
     let g prog = do
@@ -869,6 +894,7 @@ simplifyProgramPStat sopt name dodump prog = do
     when ((dodump && dump FD.Progress) || dump FD.CoreSteps) $ Stats.printStat ("Total: " ++ name) (progStats prog)
     return prog { progStats = progStats prog `mappend` istat }
 -}
+simplifyProgram' :: SS.SimplifyOpts -> String -> Bool -> Iterate -> Program -> IO Program
 simplifyProgram' sopt name dodump iterate prog = do
     let istat = progStats prog
     let g =  return . SS.programSSimplify sopt . SS.programPruneOccurance
@@ -936,6 +962,7 @@ transformProgram tp prog = liftIO $ do
 
 
 
+typecheck :: DataTable -> E -> IO E
 typecheck dataTable e = case inferType dataTable [] e of
     Left ss -> do
         putErrLn (render $ ePretty e)
@@ -944,6 +971,7 @@ typecheck dataTable e = case inferType dataTable [] e of
         return Unknown
     Right v -> return v
 
+maybeDie :: IO ()
 maybeDie = case optKeepGoing options of
     True -> return ()
     False -> putErrDie "Internal Error"
@@ -953,6 +981,7 @@ onerrNone = return ()
 
 
 
+lintCheckE :: IO a -> DataTable -> TVr -> E -> IO ()
 lintCheckE onerr dataTable tvr e | flint = case inferType dataTable [] e of
     Left ss -> do
         onerr
@@ -963,6 +992,7 @@ lintCheckE onerr dataTable tvr e | flint = case inferType dataTable [] e of
     Right v -> return ()
 lintCheckE _ _ _ _ = return ()
 
+lintCheckProgram :: IO a -> Program -> IO ()
 lintCheckProgram onerr prog | flint = do
     when (hasRepeatUnder fst (programDs prog)) $ do
         onerr
@@ -1001,6 +1031,7 @@ lintCheckProgram onerr prog | flint = do
 lintCheckProgram _ _ = return ()
 
 
+printCheckName' :: DataTable -> TVr -> E -> IO ()
 printCheckName' dataTable tvr e = do
     putErrLn (show $ tvrInfo tvr)
     putErrLn  ( render $ hang 4 (pprint tvr <+> equals <+> pprint e <+> text "::") )
