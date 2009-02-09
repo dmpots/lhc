@@ -1,11 +1,4 @@
-module Cmm.Op where
-
-import Data.DeriveTH
-import Data.Derive.All
-import Data.Binary
-import Util.Gen
-import Control.Monad
-{-
+{- |
 
 Basic operations. These are chosen to be roughly equivalent to c-- operations,
 but can be effectively used to generate C or assembly code as well.
@@ -24,17 +17,25 @@ separate opcodes, even if it could be determined by the type they operate on.
 
 -}
 
+module Cmm.Op where
+
+import Data.DeriveTH
+import Data.Derive.All
+import Data.Binary
+import Util.Gen
+import Control.Monad
 
 
--- these take 2 arguments of the same type, and return one of the same type.
--- an exception are the mulx routines, which may return a type exactly
--- double in size of the original, and the shift and rotate routines, where the
--- second argument may be of any width and is interpreted as an unsigned
--- number.
+-- | These take 2 arguments of the same type, and return a value of:
+-- 
+-- * The same type for normal arithmetic operators
 --
--- the invarient is that the return type is always exactly determined by the
--- argument types
-
+-- * The type which is twice as wide for 'Mulx' and 'UMulx'
+-- 
+-- * @bool@ ('TyBool') for comparison operations
+--
+-- The invarient is that the return type is always exactly determined by the
+-- argument types.
 
 data BinOp
     = Add
@@ -44,14 +45,14 @@ data BinOp
     | Mulx
     | UMulx
 
-    | Div   -- ^ round to -Infinity
-    | Mod   -- ^ mod rounding to -Infinity
+    | Div   -- ^ Round to -Infinity
+    | Mod   -- ^ @mod@ rounding to -Infinity
 
-    | Quot  -- ^ round to 0
-    | Rem   -- ^ rem rounding to 0
+    | Quot  -- ^ Round to 0
+    | Rem   -- ^ @rem@ rounding to 0
 
-    | UDiv  -- ^ round to zero (unsigned)
-    | UMod  -- ^ unsigned mod
+    | UDiv  -- ^ Round to zero (unsigned)
+    | UMod  -- ^ Unsigned @mod@
 
     -- bitwise
     | And
@@ -90,16 +91,15 @@ data BinOp
     | FGte
     | FLt
     | FLte
-    -- whether two values can be compared at all.
-    | FOrdered
+    | FOrdered -- ^ Whether two values can be compared at all
     deriving(Eq,Show,Ord,Read)
 
 data UnOp
-    = Neg   -- ^ 2s compliment negation
-    | Com   -- ^ bitwise compliment
+    = Neg   -- ^ 2's compliment negation
+    | Com   -- ^ Bitwise complement
     -- floating
-    | FAbs  -- ^ floating absolute value
-    | FNeg  -- ^ floating point negation
+    | FAbs  -- ^ Floating point absolute value
+    | FNeg  -- ^ Floating point negation
     | Sin
     | Cos
     | Tan
@@ -115,20 +115,20 @@ data UnOp
     deriving(Eq,Show,Ord,Read)
 
 
--- conversion ops
+-- | Conversion operators
 
 data ConvOp
-    = F2I         -- ^ convert a floating point to an integral value via truncation
-    | F2U         -- ^ convert a floating point to an unsigned integral value via truncation, negative values become zero
-    | U2F         -- ^ convert an unsigned integral value to a floating point number
-    | I2F         -- ^ convert an integral value to a floating point number
-    | F2F         -- ^ convert a float from one precision to another, preserving value as much as possible
-    | Lobits      -- ^ extract the low order bits
-    | Sx          -- ^ sign extend a value (signed)
-    | Zx          -- ^ zero extend a value (unsigned)
-    | I2I         -- ^ perform a 'Lobits' or a 'Sx' depending on the sizes of the arguments
-    | U2U         -- ^ perform a 'Lobits' or a 'Zx' depending on the sizes of the arguments
-    | B2B         -- ^ a nop, useful for coercing hints (bits 2 bits)
+    = F2I         -- ^ Convert a floating point to an integral value via truncation
+    | F2U         -- ^ Convert a floating point to an unsigned integral value via truncation, negative values become zero
+    | U2F         -- ^ Convert an unsigned integral value to a floating point number
+    | I2F         -- ^ Convert an integral value to a floating point number
+    | F2F         -- ^ Convert a float from one precision to another, preserving value as much as possible
+    | Lobits      -- ^ Extract the low order bits
+    | Sx          -- ^ Sign extend a value (signed)
+    | Zx          -- ^ Zero extend a value (unsigned)
+    | I2I         -- ^ Perform a 'Lobits' or a 'Sx' depending on the sizes of the arguments
+    | U2U         -- ^ Perform a 'Lobits' or a 'Zx' depending on the sizes of the arguments
+    | B2B         -- ^ A nop, useful for coercing hints (bits 2 bits)
     deriving(Eq,Show,Ord,Read)
 
 
@@ -150,9 +150,9 @@ data TyBits = Bits !Int | BitsArch !ArchBits |  BitsExt String
 data TyHint
     = HintSigned
     | HintUnsigned
-    | HintFloat        -- an IEEE floating point value
-    | HintCharacter    -- a unicode character, implies unsigned
-    | HintNone         -- no hint
+    | HintFloat        -- ^ An IEEE floating point value
+    | HintCharacter    -- ^ A unicode character, implies unsigned
+    | HintNone         -- ^ No hint
     deriving(Eq,Ord)
 
 data Ty
@@ -228,7 +228,13 @@ data Op v
     deriving(Eq,Show,Ord)
 
 
-binopType :: BinOp -> Ty -> Ty -> Ty
+-- | Calculate the result type of a 'BinOp' from the argument types
+--
+-- FIXME: Shouldn't we check that the arg types match ?
+binopType :: BinOp -- 'BinOp'
+          -> Ty -- ^ Left argument type
+          -> Ty -- ^ Right argument type
+          -> Ty -- ^ Result type
 binopType Mulx  (TyBits (Bits i) h) _ = TyBits (Bits (i*2)) h
 binopType UMulx (TyBits (Bits i) h) _ = TyBits (Bits (i*2)) h
 binopType Eq  _ _ =  TyBool
@@ -250,6 +256,7 @@ binopType FLte _ _ =  TyBool
 binopType FOrdered _ _ =  TyBool
 binopType _ t1 _ = t1
 
+-- | Is the 'BinOp' commutable?
 isCommutable :: BinOp -> Bool
 isCommutable x = f x where
     f Add = True
@@ -266,6 +273,7 @@ isCommutable x = f x where
     f FOrdered = True
     f _ = False
 
+-- | If the given BinOp has a mirror-image, return @'Just' /mirror/@. Otherwise return 'Nothing'.
 commuteBinOp :: BinOp -> Maybe BinOp
 commuteBinOp x | isCommutable x = return x
 commuteBinOp Lt = return Gt
@@ -282,6 +290,7 @@ commuteBinOp FLte = return FGte
 commuteBinOp FGte = return FLte
 commuteBinOp _ = Nothing
 
+-- | Is the 'BinOp' associative?
 isAssociative :: BinOp -> Bool
 isAssociative x = f x where
     f Add = True
@@ -291,6 +300,9 @@ isAssociative x = f x where
     f Xor = True
     f _ = False
 
+-- | Is there a C floating-point function that corresponds to this 'UnOp' at this 'Ty', and if so what is it?
+--
+-- FIXME: why do we return Nothing if the 'TyHint' isn't 'HintFloat'?
 unopFloat :: Ty -> UnOp -> Maybe String
 unopFloat (TyBits b HintFloat) op = g b =<< f op where
     g (Bits 64) x = return x
@@ -313,6 +325,7 @@ unopFloat (TyBits b HintFloat) op = g b =<< f op where
     f _ = Nothing
 unopFloat _ _ = Nothing
 
+-- | Is there a C function that corresponds to this 'BinOp' at this 'Ty', and if so what is it?
 binopFunc :: Ty -> Ty -> BinOp -> Maybe String
 binopFunc (TyBits b _) _ bop = g b =<< f bop where
     g (Bits 64) x = return x
@@ -323,6 +336,9 @@ binopFunc (TyBits b _) _ bop = g b =<< f bop where
     f _ = Nothing
 binopFunc TyBool _ bop = Nothing where
 
+-- | What C infix operator, if any, corresponds to this 'BinOp' at this 'Ty' (and what is its precedence)?
+--
+-- FIXME: What about fixity -- don't we need to worry about that too?
 binopInfix :: BinOp -> Maybe (String,Int)
 binopInfix UDiv = Just ("/",8)
 binopInfix Mul  = Just ("*",8)
@@ -343,7 +359,10 @@ binopInfix NEq  = Just ("!=",2)
 binopInfix _ = Nothing
 
 class IsOperator o where
+    -- | Is this operation cheap?
     isCheap :: o -> Bool
+    -- | Is it safe to float this operation back in time? (It isn't if
+    -- it could cause some kind of exception, such as divide by zero.)
     isEagerSafe :: o -> Bool
 
 
@@ -366,6 +385,7 @@ instance IsOperator UnOp where
 
 
 instance IsOperator ConvOp where
+    -- FIXME: are FP<->integral conversions really cheap ?
     isCheap _ = True
     isEagerSafe _ = True
 

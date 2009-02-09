@@ -31,28 +31,36 @@ data DotNetPrim = DotNetField | DotNetCtor | DotNetMethod
     deriving(Typeable, Eq, Ord, Show)
 
 data Prim =
-    PrimPrim Atom          -- Special primitive implemented in the compiler somehow.
-    | CConst { primConst :: String, primRetType :: ExtType }  -- C code which evaluates to a constant
+    -- | Special primitive implemented in the compiler somehow.
+    PrimPrim Atom
+    -- | C code which evaluates to a constant
+    | CConst { primConst :: String, primRetType :: ExtType }
+    -- | Function call with C calling convention
     | Func {
         funcIOLike :: !Bool,
         funcName :: PackedString,
         primArgTypes :: [ExtType],
         primRetType :: ExtType
-        }   -- function call with C calling convention
+        }
+    -- |  Indirect function call with C calling convention
     | IFunc {
         funcIOLike :: !Bool,
         primArgTypes :: [ExtType],
         primRetType :: ExtType
-        } -- indirect function call with C calling convention
-    | AddrOf PackedString              -- address of linker name
-    | Peek { primArgTy :: Op.Ty }  -- read value from memory
-    | Poke { primArgTy :: Op.Ty }  -- write value to memory
+        }
+    -- | Address of linker name
+    | AddrOf PackedString
+    -- | Read value from memory
+    | Peek { primArgTy :: Op.Ty }
+    -- | Write value to memory
+    | Poke { primArgTy :: Op.Ty }
     | PrimTypeInfo {
         primArgTy :: Op.Ty,
         primRetTy :: Op.Ty,
         primTypeInfo :: PrimTypeInfo
         }
-    | PrimString PackedString                                 -- address of a raw string. encoded in utf8.
+    -- | Address of a raw string encoded in UTF-8
+    | PrimString PackedString
     | PrimDotNet {
         primStatic :: !Bool,
         primDotNet :: DotNetPrim,
@@ -80,9 +88,9 @@ primStaticTypeInfo (Op.TyBits (Op.Bits b) _) w = Just ans where
         PrimUMaxBound -> 2^bits - 1
 primStaticTypeInfo _ _ = Nothing
 
--- | These primitives may safely be duplicated without affecting performance or
--- correctness too adversly. either because they are cheap to begin with, or
--- will be recombined in a later pass.
+-- | Whether a primitive may safely be duplicated without affecting performance or
+-- correctness too adversely, either because it is cheap to begin with, or
+-- because the copies will probably be recombined in a later pass.
 
 primIsCheap :: Prim -> Bool
 primIsCheap AddrOf {} = True
@@ -96,8 +104,9 @@ aprimIsCheap :: APrim -> Bool
 aprimIsCheap (APrim p _) = primIsCheap p
 
 
--- | whether a primitive represents a constant expression (assuming all its arguments are constant)
--- TODO needs grin support
+-- | Whether a primitive represents a constant expression (assuming all its arguments are constant).
+--
+-- FIXME: needs grin support.
 primIsConstant :: Prim -> Bool
 primIsConstant CConst {} = True
 primIsConstant AddrOf {} = True
@@ -106,8 +115,9 @@ primIsConstant PrimTypeInfo {} = True
 primIsConstant Op { primCOp = op } = Op.isEagerSafe op
 primIsConstant _ = False
 
--- | whether a primitive can be eagarly evaluated.
--- TODO needs grin support
+-- | Whether a primitive can be eagarly evaluated.
+--
+-- FIXME: needs grin support.
 primEagerSafe :: Prim -> Bool
 primEagerSafe CConst {} = True
 primEagerSafe PrimString {} = True
