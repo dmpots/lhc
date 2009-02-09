@@ -31,16 +31,18 @@ data Arg =
     | Cons Constructor [(Arg,TVr)]
     | Plain
 
+isPlain :: Arg -> Bool
 isPlain Plain = True
 isPlain _ = False
 
+fsubs :: Demand.SubDemand -> [Demand.Demand]
 fsubs Demand.None = repeat Demand.lazy
 fsubs (Demand.Product xs) = xs ++ repeat Demand.lazy
 
 wrappable :: Monad m =>
-    DataTable   -- ^ data table
-    -> TVr      -- ^ function name we want to workwrap
-    -> E        -- ^ function body
+    DataTable   -- ^ Data table
+    -> TVr      -- ^ Function name we want to workwrap
+    -> E        -- ^ Function body
     -> m (Maybe Name,E,[(Arg,TVr)])  -- ^ (CPR Constructor,Body,Args)
 wrappable dataTable mtvr e@ELam {} = ans where
     cpr = maybe Top id (Info.lookup (tvrInfo mtvr))
@@ -68,10 +70,12 @@ wrappable dataTable mtvr e@ELam {} = ans where
         if c == s_Star then return () else Nothing
 wrappable _ _ _ = fail "Only lambdas are wrappable"
 
+workerName :: Id -> Id
 workerName x = case fromId x of
     Just y -> toId (toName Val ("W@",'f':show y))
     Nothing -> toId (toName Val ("W@",'f':show x))
 
+tmpNames :: NameType -> Id -> [Id]
 tmpNames ns x = case fromId x of
     Just y  -> [toId (toName ns ("X@",'f':show y ++ "@" ++ show i)) | i <- [(1::Int)..] ]
     Nothing -> [toId (toName ns ("X@",'f':show x ++ "@" ++ show i)) | i <- [(1::Int)..] ]
