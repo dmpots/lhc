@@ -24,7 +24,7 @@ my $opt_timeout=60*5;
 my $opt_help;
 my $opt_man;
 
-Getopt::Long::Configure ("bundling", "auto_help");
+Getopt::Long::Configure ("bundling");
 GetOptions(
     help  => \$opt_help,
     man   => \$opt_man,
@@ -69,7 +69,7 @@ regress [options] [conditions]
 
    --rts         extra GHC RTS flags for LHC
    --clean       build .ho files for tests from scratch
- 
+
 =head1 DESCRIPTION
 
 Run the LHC test suite.
