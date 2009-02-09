@@ -850,8 +850,8 @@ varify b = do
 tidyHeads ::
     Monad m
     => E
-    -> [([HsPat],E->E)]  -- [(pats,else -> value)]
-    -> Ce m [(HsPat,[HsPat],E->E)]  -- pulls the head off of each pattern, tidying it up perhaps
+    -> [([HsPat],E->E)]  -- ^ [(pats,else -> value)]
+    -> Ce m [(HsPat,[HsPat],E->E)]  -- ^ pulls the head off of each pattern, tidying it up perhaps
 tidyHeads b ps = mapM f ps where
     f (~(p:ps),fe) = do
         (p',fe') <- tidyPat p b
@@ -860,9 +860,9 @@ tidyHeads b ps = mapM f ps where
 
 convertMatches ::
     Monad m
-    => [E]               -- input expressions we are matching against.
-    -> [([HsPat],E->E)]  -- [(pats,else -> value)]
-    -> E                 -- else, what to do if nothing matches
+    => [E]               -- ^ input expressions we are matching against.
+    -> [([HsPat],E->E)]  -- ^ [(pats,else -> value)]
+    -> E                 -- ^ else, what to do if nothing matches
     -> Ce m E
 convertMatches bs ms err = do
     assumps <- asks ceAssumps
