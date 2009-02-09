@@ -55,14 +55,14 @@ import E.Traverse
 import qualified Data.Traversable as T
 
 
-{- | Tags
+{- Tags
  'f' - normal function
  'F' - postponed function
  'P' - partial application of function
  'C' - data constructor
  'T' - type constructor
  'Y' - partial application of type constructor (think, broken T)
- 'b' - built in funttion
+ 'b' - built in function
  'B' - postponed built in function (built in functions may not be partially applied)
  '@' - very special function or tag
 -}
@@ -101,6 +101,7 @@ data CEnv = CEnv {
     counter :: IORef Int
 }
 
+dumpTyEnv :: TyEnv -> IO ()
 dumpTyEnv (TyEnv tt) = mapM_ putStrLn $ sort [ fromAtom n <+> hsep (map show as) <+> "::" <+> show t <> f z <> g th
                                              | (n,TyTy { tySlots = as, tyReturn = t, tySiblings = z
                                                        , tyThunk = th}) <- Map.toList tt]
@@ -110,9 +111,11 @@ dumpTyEnv (TyEnv tt) = mapM_ putStrLn $ sort [ fromAtom n <+> hsep (map show as)
     g TyNotThunk = mempty
     g x = text " " <> tshow x
 
+tagArrow :: Atom
 tagArrow = convertName tc_Arrow
 
 
+flattenScc :: [SCC a] -> [a]
 flattenScc xs = concatMap f xs where
     f (AcyclicSCC x) = [x]
     f (CyclicSCC xs) = xs
@@ -131,11 +134,14 @@ instance Op.ToCmmTy E where
 
 
 
+scTag :: TVr' e -> Atom
 scTag n
     | Just nm <- fromId (tvrIdent n) = toAtom ('f':show nm)
     | otherwise = toAtom ('f':show (tvrIdent n))
+cafNum :: TVr' e -> Var
 cafNum n = V $ - fromAtom (partialTag (scTag n) 0)
 
+toEntry :: (TVr' e, [TVr' E], E) -> (Atom, [Ty], [Ty])
 toEntry (n,as,e) = f (scTag n) where
         f x = (x,map (toType tyINode . tvrType )  as,toTypes TyNode (getType (e::E) :: E))
 
@@ -164,10 +170,11 @@ toTypes node = toty . followAliases mempty where
     toty e |  sortKindLike e = [tyDNode]
     toty _ = [node]
 
+toTyTy :: ([Ty], [Ty]) -> TyTy
 toTyTy (as,r) = tyTy { tySlots = as, tyReturn = r }
 
 
--- Remove all disambiguity due to name shadowing.
+-- | Remove all disambiguity due to name shadowing.
 disambiguateProgram :: Program -> Program
 disambiguateProgram prog
   = evalState (programMapBodies (fn Map.empty) prog) 1
@@ -311,6 +318,7 @@ compile prog@Program { progDataTable = dataTable } = do
         sibs = getSiblings dataTable (conName c)
     con _ = fail "not needed"
 
+discardResult :: Exp -> Exp
 discardResult exp = exp :>>= map (Var v0) (getType exp) :-> Return []
 
 
@@ -327,10 +335,13 @@ instance Keepable Ty where
 instance Keepable Val where
     keepIt t = getType t /= TyUnit
 
+keepIts :: (Keepable a) => [a] -> [a]
 keepIts xs = filter keepIt xs
 
+tySusp :: Tag -> [Ty] -> (Tag, TyTy)
 tySusp fn ts = (partialTag fn 0,(toTyTy (keepIts ts,[TyNode])) { tyThunk = TySusp fn })
 
+makePartials :: (Tag, [Ty], [Ty]) -> [(Tag, TyTy)]
 makePartials (fn,ts,rt) | 'f':_ <- show fn = (fn,toTyTy (keepIts ts,rt)):f undefined 0 (reverse ts) where
     f _ 0 ts = tySusp fn (reverse ts):f fn 1 ts
     f nfn n (t:ts) = (mfn,(toTyTy (reverse $ keepIts ts,[TyNode])) { tyThunk = TyPApp (if keepIt t then Just t else Nothing) nfn }):f mfn (n + 1) ts  where
@@ -339,6 +350,7 @@ makePartials (fn,ts,rt) | 'f':_ <- show fn = (fn,toTyTy (keepIts ts,rt)):f undef
 --    ans = (fn,toTyTy (keepIts ts,rt)):[(partialTag fn i,toTyTy (keepIts $ reverse $ drop i $ reverse ts ,TyNode)) |  i <- [0.. length ts] ]
 makePartials x = error "makePartials"
 
+primTyEnv :: TyEnv
 primTyEnv = TyEnv . Map.map toTyTy $ Map.fromList $ [
     (tagArrow,([tyDNode, tyDNode],[TyNode])),
     (funcEval, ([tyINode],[tyDNode])),
@@ -346,12 +358,13 @@ primTyEnv = TyEnv . Map.map toTyTy $ Map.fromList $ [
     ]
 
 
--- | constant CAF analysis
+-- | Constant CAF analysis.
+--
 -- In grin, partial applications are constant data, rather than functions. Since
 -- many cafs consist of constant applications, we preprocess them into values
 -- beforehand. This also catches recursive constant toplevel bindings.
 --
--- takes a program and returns (cafs which are actually constants,which are recursive,rest of cafs)
+-- Takes a program and returns (cafs which are actually constants,which are recursive,rest of cafs)
 
 constantCaf :: Program -> ([(TVr,Var,Val)],[Var],[(TVr,Var,Val)])
 constantCaf Program { progDataTable = dataTable, progCombinators = combs } = ans where
@@ -402,6 +415,7 @@ instance ToVal TVr where
         ty -> Var (V (idToInt num)) ty
 
 
+doApply :: Val -> Val -> [Ty] -> Exp
 doApply x y ty | not (keepIt y) = App funcApply [x] ty
 doApply x y ty = App funcApply [x,y] ty
 
