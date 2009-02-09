@@ -197,7 +197,7 @@ sub do_it {
             }
             rlog "-- $name";
             my @libs = $opt_l ? () : ("", "-i../lib/base/dist/build");
-            my @fast = $opt_n ? () : ("-flint");
+            my @fast = $opt_n ? ("-fno-lint") : ("-flint");
             my @lhc  = $opt_p ? ("$lhc_dir/lhcp","+RTS", "-S$rd/$name.lhcp_prof",@opt_rts,"-RTS")  :  ("$lhc_dir/lhc");
             my @cmd = (@lhc, "", '--ho-dir', $ho_dir, @libs , @fast, "-o", "$rd/$name", @flags, @opts, "$cwd/$fn");
             my $res = join(" ",@cmd) . " > '$rd/$name.lhc_out' 2>&1";
