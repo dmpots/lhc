@@ -177,7 +177,7 @@ toTyTy (as,r) = tyTy { tySlots = as, tyReturn = r }
 -- | Remove all disambiguity due to name shadowing.
 disambiguateProgram :: Program -> Program
 disambiguateProgram prog
-  = evalState (programMapBodies (fn Map.empty) prog) 1
+  = evalState (programMapBodies (fn Map.empty) prog) 2
     where fn subst (ELam tvr e)
              = do (old,new) <- rename tvr
                   let newSubst = Map.insert old new subst
@@ -218,7 +218,7 @@ disambiguateProgram prog
           fn subst e = emapE (fn subst) e
           genNewId :: State Int Id
           genNewId = do s <- get
-                        put (s+1)
+                        put (s+2)
                         return (anonymous s)
           rename tvr | isEmptyId (tvrIdent tvr) = return (tvr,tvr)
                      | idIsNamed (tvrIdent tvr) = return (tvr,tvr)
@@ -409,6 +409,7 @@ getName' dataTable v@LitCons { litName = n, litArgs = es }
     cons = runIdentity $ getConstructor n dataTable
     nargs = length (conSlots cons)
 
+-- FIXME: this really isn't safe -- not all E variables translate to Grin variables
 instance ToVal TVr where
     toVal TVr { tvrType = ty, tvrIdent = num } = case toType (TyPtr TyNode) ty of
 --        TyTup [] -> Tup []
@@ -439,9 +440,13 @@ evalVar fty tvr  = do
 compile' ::  CEnv -> (TVr,[TVr],E) -> C (Atom,Lam)
 compile' cenv (tvr,as,e) = ans where
     ans = do
-        --putStrLn $ "Compiling: " ++ show nn
-        x <- cr e
         let (nn,_,_) = fromJust $ mlookup (tvrIdent tvr) (scMap cenv)
+        wdump FD.Progress $ liftIO $  do
+            putStrLn $ "Compiling: " ++ show nn
+            let fv = freeVars e
+            putStrLn "Free Variables:"
+            mapM_ putStrLn $ buildTableRL [(show (idToInt i), show i) | i <- fv, idIsNamed i]
+        x <- cr e
         return (nn,((keepIts $ map toVal as) :-> x))
     funcName = maybe (show $ tvrIdent tvr) show (fromId (tvrIdent tvr))
     cc, ce, cr :: E -> C Exp
