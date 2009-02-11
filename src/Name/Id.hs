@@ -59,10 +59,10 @@ import Data.DeriveTH
 import Data.Derive.All
 import Data.Binary
 
-data Id = Empty                -- Empty binding. Like '\ _ -> ...'.
-        | Etherial Int         -- Special ids used for typechecking. They should never be exposed to the user.
-        | Anonymous Int        -- Anonymous id created by the compiler.
-        | Named Name           -- Named id created mostly by the user.
+data Id = Empty                -- ^ Empty binding. Like '\ _ -> ...'.
+        | Etherial Int         -- ^ Special ids used for typechecking. They should never be exposed to the user.
+        | Anonymous Int        -- ^ Anonymous id created by the compiler.
+        | Named Name           -- ^ Named id created mostly by the user.
           deriving (Eq,Ord)
 
 $(derive makeBinary ''Id)
