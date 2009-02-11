@@ -174,7 +174,7 @@ toTyTy :: ([Ty], [Ty]) -> TyTy
 toTyTy (as,r) = tyTy { tySlots = as, tyReturn = r }
 
 
--- | Remove all disambiguity due to name shadowing.
+-- | Remove all ambiguity due to name shadowing.
 disambiguateProgram :: Program -> Program
 disambiguateProgram prog
   = evalState (programMapBodies (fn Map.empty) prog) 2
