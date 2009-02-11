@@ -5,7 +5,7 @@ module FrontEnd.Class(
     ClassRecord(..),
     isClassRecord,
     instanceName,
-    defaultInstanceName,
+--    defaultInstanceName,
     printClassSummary,
     findClassRecord,
     asksClassRecord,

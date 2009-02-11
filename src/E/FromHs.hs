@@ -1,7 +1,7 @@
 module E.FromHs(
     convertDecls,
     convertRules,
-    createInstanceRules,
+--  createInstanceRules,
     procAllSpecs,
     getMainFunction
     ) where
@@ -202,6 +202,7 @@ nameToEntryPoint dataTable main cname ffi ds = ans where
         return (tvrInfo_u (case ffi of Just ffi -> Info.insert ffi; Nothing -> id) $ setProperty prop_EXPORTED theMainTvr,ne)
 
 
+{-
 {-# NOINLINE createInstanceRules #-}
 createInstanceRules :: DataTable -> ClassHierarchy -> [(TVr,E)] -> Rules
 createInstanceRules dataTable classHierarchy funcs = fromRules ans where
@@ -245,6 +246,7 @@ createInstanceRules dataTable classHierarchy funcs = fromRules ans where
     findName name = case Map.lookup name nfuncs of
         Nothing -> fail $ "Cannot find: " ++ show name
         Just n -> return n
+-}
 
 getTypeCons :: Type -> Name
 getTypeCons (TCon (Tycon n _)) = n
