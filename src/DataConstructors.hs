@@ -473,6 +473,12 @@ followAliases _dataTable e = f e where
 dataTablePrims :: DataTable
 dataTablePrims = DataTable $ Map.fromList ([ (conName x,x) | x <- tarrow:primitiveTable ])
 
+-- | This function appears to replace the dummy instances of 'Eq',
+-- 'Ord', and 'Enum' that are derived for enumerations with versions
+-- that work on the bit16-in-a-box that we convert them to.
+--
+-- FIXME: We really should get rid of the call to 'instanceName'
+-- somehow. It won't work with MPTCs or ...
 deriveClasses :: IdMap Comb -> DataTable -> [(TVr,E)]
 deriveClasses cmap (DataTable mp) = concatMap f (Map.elems mp) where
     f c | TypeConstructor == nameType (conName c), Just is <- conVirtual c = concatMap (g is c) (conDeriving c)
