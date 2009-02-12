@@ -190,8 +190,8 @@ graphGrin grin = graphviz' gr [] fnode fedge  where
         ++ (if hasError e then [("color","red")] else [])
         ++ (if x `elem` grinEntryPointNames grin then [("shape","box")] else [])
     fedge :: CallType -> [(String,String)]
-    fedge TailCall = []
-    fedge StandardCall = [("style","dotted")]
+    fedge TailCall = [("style","dotted")]
+    fedge StandardCall = []
 
 hasError :: Exp -> Bool
 hasError x = isNothing (hasError' x)
