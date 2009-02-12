@@ -327,7 +327,7 @@ optimize1 grin postEval (n,l) = execUniqT 1 (g l) where
 --        mtick "Optimize.optimize.return-update"
 --        f (Return t :>>= v :-> Update w t :>>= lr)
     f (e :>>= v1 :-> Return v2) | (all isVar v1) && v1 == v2 = do
-        mtick "Optimize.optimize.unit-unit"
+        --mtick "Optimize.optimize.unit-unit"
         f e
     f (Store t :>>= [v] :-> Fetch v' :>>= lr) | v == v' = do
         mtick "Optimize.optimize.store-fetch"
