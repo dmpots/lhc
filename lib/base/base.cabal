@@ -17,7 +17,7 @@ Library
                 -- Control.Concurrent.QSem         
                 -- Control.Concurrent.QSemN                
                 -- Control.Concurrent.SampleVar
-                -- this is the wrong Control.Exception
+                -- this is the wrong Control.Exception:
                 Control.Exception
                 Control.Monad
                 Control.Monad.Fix
@@ -30,6 +30,7 @@ Library
                 -- Data.Bool
                 Data.Char
                 Data.Complex
+                -- Data.Data was added since base 3
 --                 Data.Data
                 -- Data.Dynamic
                 -- Data.Either
@@ -49,6 +50,7 @@ Library
                 -- Data.STRef
                 -- Data.STRef.Lazy
                 -- Data.STRef.Strict
+                -- Data.String
                 -- Data.Traversable
                 Data.Tuple
                 Data.Typeable
@@ -95,21 +97,33 @@ Library
                 -- Text.Show
                 Text.Show.Functions
                 Unsafe.Coerce
--- These aren't
+
+-- Base 3 has just the above (except as stated above) plus the contents of the new "syb" package
+
+-- These aren't in base 3 *or* 4:
+--   This is in "array" since at least base 3:
                 Data.Array
-                Data.Unicode
+--   These can't even have the same API as in "array" (needs MPTCs):
+                Data.Array.IO
+                Data.Array.Unboxed
+--   This is in "haskell98":
                 System
+--   This is in "directory":
                 System.Directory
-                System.IO.Binary
+--   This is in "old-locale":
                 System.Locale
+--   This is in "random":
 --                 System.Random
+--   This is in "old-time":
 --                 System.Time
+
+-- These are all LHC-specific:
+                Data.Unicode
+                System.IO.Binary
                 Lhc.Addr
                 Lhc.Basics
                 Lhc.Float
                 Lhc.Array
-                Data.Array.IO
-                Data.Array.Unboxed
                 Lhc.Handle
                 Lhc.IO
                 Lhc.Tuples
