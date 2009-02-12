@@ -2,6 +2,7 @@
 module Grin.PointsTo
   ( Equation(..)
   , Equations
+  , HptMap
   , pointsTo
   , varToCaseStmts
   , genApplyStmts
@@ -35,7 +36,8 @@ data EqPointer = Equation Var | HeapPointer HeapPointer deriving (Show,Eq,Ord)
 
 type Equations = Map.Map EqPointer [Equation]
 
-data PointsTo = PointsTo Equations
+-- Heap points-to result map.
+data HptMap = HptMap Equations
 
 eqUnion :: [Equation] -> [Equation] -> [Equation]
 eqUnion [] lst = lst
@@ -58,8 +60,8 @@ eqUnion (y:ys) (x:xs)
 eqUnions :: [[Equation]] -> [Equation]
 eqUnions = foldr eqUnion []
 
-varToCaseStmts :: PointsTo -> Grin -> Var -> [Lam]
-varToCaseStmts (PointsTo eqs) grin var
+varToCaseStmts :: HptMap -> Grin -> Var -> [Lam]
+varToCaseStmts (HptMap eqs) grin var
     = case Map.lookup (Equation var) eqs of
         Nothing   -> [ [Var (V 0) TyNode ] :-> Error "empty" [TyNode]] -- error $ "Grin.PointsTo.varToCaseStmt: this should not happen: " ++ show var
         Just vals -> [ tagToCaseStmt grin t | Tag t args <- vals ] ++
@@ -74,8 +76,8 @@ tagToCaseStmt grin tag
         vars = flip map (zip [1000000,1000002..] (tySlots tyty)) $ \(n,ty) ->
                  Var (V n) ty
 
-genApplyStmts :: PointsTo -> Grin -> Var -> Val -> [Ty] -> [Lam]
-genApplyStmts (PointsTo eqs) grin var val ty
+genApplyStmts :: HptMap -> Grin -> Var -> Val -> [Ty] -> [Lam]
+genApplyStmts (HptMap eqs) grin var val ty
     = case Map.lookup (Equation var) eqs of
         Nothing   -> [ [Var (V 0) TyNode] :-> Error "empty apply" ty]
         Just vals -> [ appToCaseStmt grin t val ty | Tag t _ <- vals ] ++
@@ -98,7 +100,7 @@ appToCaseStmt grin tag val retTy
 applications :: Var
 applications = V (fromAtom $ toAtom "APPLICATIONS")
 
-pointsTo :: Grin -> IO PointsTo
+pointsTo :: Grin -> IO HptMap
 pointsTo grin
   = do let loop [] = return ()
            loop ((name,args :-> body):fs)
@@ -114,7 +116,7 @@ pointsTo grin
        let eqs' = solve eqs
        putStrLn "Solved"
        showEnv eqs'
-       return $ PointsTo eqs'
+       return $ HptMap eqs'
 
 newtype GenEnv a = GenEnv { unGenEnv :: Map.Map Atom [Val] -> Equations -> Int -> (a,Equations, Int) }
 
