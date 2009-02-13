@@ -106,17 +106,17 @@ pointsTo grin
   = do let loop [] = return ()
            loop ((name,args :-> body):fs)
              = do ret <- setupEnv body
+                  --trace ("Binding " ++ show name ++ " to: " ++ show ret ++ "\n"++show body) $ return ()
                   atomToVar name "_result" =: ret
-                  when ("index" `isInfixOf` show name) $ trace (show name ++ ": " ++ show ret) $ return ()
                   sequence_ [ arg =: [Extract [Ident applications] (tagFlipFunction name) n] | (Var arg _, n) <- zip args [0..] ]
                   loop fs
            funcArgs = Map.fromList [ (name, args) | (name, args :-> _body) <- grinFuncs grin ]
        let (_,eqs, _n) = unGenEnv (loop (grinFuncs grin)) funcArgs Map.empty 0
-       putStrLn "Raw"
-       showEnv eqs
+       --putStrLn "Raw"
+       --showEnv eqs
        let eqs' = solve eqs
-       putStrLn "Solved"
-       showEnv eqs'
+       --putStrLn "Solved"
+       --showEnv eqs'
        return $ HptMap eqs'
 
 newtype GenEnv a = GenEnv { unGenEnv :: Map.Map Atom [Val] -> Equations -> Int -> (a,Equations, Int) }
