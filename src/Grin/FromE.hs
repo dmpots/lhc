@@ -139,7 +139,7 @@ scTag n
     | Just nm <- fromId (tvrIdent n) = toAtom ('f':show nm)
     | otherwise = toAtom ('f':show (tvrIdent n))
 cafNum :: TVr' e -> Var
-cafNum n = V $ - fromAtom (partialTag (scTag n) 0)
+cafNum n = V $ toId $ toName RawType $ ("caf_"++fromAtom (partialTag (scTag n) 0))
 
 toEntry :: (TVr' e, [TVr' E], E) -> (Atom, [Ty], [Ty])
 toEntry (n,as,e) = f (scTag n) where
@@ -413,7 +413,7 @@ getName' dataTable v@LitCons { litName = n, litArgs = es }
 instance ToVal TVr where
     toVal TVr { tvrType = ty, tvrIdent = num } = case toType (TyPtr TyNode) ty of
 --        TyTup [] -> Tup []
-        ty -> Var (V (idToInt num)) ty
+        ty -> Var (V num) ty
 
 
 doApply :: Val -> Val -> [Ty] -> Exp
@@ -653,7 +653,7 @@ compile' cenv (tvr,as,e) = ans where
         V vn <- newVar
         let t  = toAtom $ "Bap_" ++ show (length as) ++ "_" ++ funcName ++ "_" ++ show vn
             tl = toAtom $ "bap_" ++ show (length as) ++ "_" ++  funcName ++ "_" ++ show vn
-            targs = [Var v ty | v <- [v1..] | ty <- (TyPtr TyNode:map getType as)]
+            targs = [Var (V $ anonymous v) ty | v <- [2,4..] | ty <- (TyPtr TyNode:map getType as)]
             s = Store (NodeC t (keepIts $ e:as))
         d <- app [TyNode] (gEval p1) (tail targs)
         liftIO $ addNewFunction cenv (tl,(keepIts targs) :-> d)
@@ -815,7 +815,7 @@ compile' cenv (tvr,as,e) = ans where
     newVar = do
         i <- liftIO $ readIORef (counter cenv)
         liftIO $ (writeIORef (counter cenv) $! (i + 2))
-        return $! V i
+        return $! V $ anonymous i
 
 
 -- | converts an unboxed literal

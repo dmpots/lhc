@@ -10,8 +10,9 @@ import qualified Data.Set as Set
 import Grin.Grin
 import Grin.Noodle
 import Support.CanType
+import Name.Id
 
-type WhizState = Either (Set.Set Int) Int
+type WhizState = Either (Set.Set Id) Int
 type WhizEnv = Map.Map Var Val
 
 whizState :: WhizState
@@ -199,13 +200,14 @@ newVarName (V sv) = do
     case s of
         Left s -> do
             let nv = v sv
-                v n | n `Set.member` s = v (n + Set.size s)
+                v n | n `Set.member` s = v (anonymous $ idToInt n + Set.size s)
                     | otherwise = n
             put (Left $! Set.insert nv s)
             return (V nv)
         Right n -> do
             put $! (Right $! (n + 1))
-            return $ V n
+            return $ V (anonymous n)
+
 
 
 

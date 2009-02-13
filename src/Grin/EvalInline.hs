@@ -17,6 +17,7 @@ import Support.FreeVars(freeVars)
 import Support.CanType(getType)
 import Util.Once
 import Util.UniqueMonad()
+import Name.Id
 
 import Grin.PointsTo
 
@@ -120,7 +121,7 @@ createApply argType retType te ts'
 --        in rtag && ptag
     f t = ([NodeC t vs] :-> g ) where
         (ts,_) = runIdentity $ findArgsType te t
-        vs = [ Var v ty |  v <- [v3 .. ] | ty <- ts]
+        vs = [ Var (V $ anonymous v) ty |  v <- [400, 402 .. ] | ty <- ts]
         Just (n,fn) = tagUnfunction t
         a2s = if argType == TyUnit then [] else [a2]
         g | n == 1 =  App fn (vs ++ a2s) ty
@@ -174,14 +175,14 @@ inlineEvalApply grin
            f (ls :-> exp) = ls :-> g exp
            g (App fn [Var v vty] [ty]) | fn == funcEval
              = let fetchVal = Fetch (Var v vty)
-                   fetched  = Var (V 2) TyNode
-                   result   = Var (V 4) ty
+                   fetched  = Var (V $ anonymous 2) TyNode
+                   result   = Var (V $ anonymous 4) ty
                in fetchVal :>>= [fetched] :->
                   Case fetched (varToCaseStmts pointsTo grin v) :>>= [result] :->
                   --Update (Var v vty) result :>>= [] :->
                   Return [result]
            g (App fn [v1@(Var v _)] ty) | fn == funcApply
-             = Case v1 (genApplyStmts pointsTo grin v (Var (V 0) TyUnit) ty)
+             = Case v1 (genApplyStmts pointsTo grin v (Var (V emptyId) TyUnit) ty)
            g (App fn [v1@(Var v _), v2] ty) | fn == funcApply
              = Case v1 (genApplyStmts pointsTo grin v v2 ty)
            g x = runIdentity (mapExpExp (return . g) x)

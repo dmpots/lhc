@@ -83,7 +83,8 @@ deadCode stats roots grin = do
         _ -> return [(x,tyty)]
 
     return $ setGrinFunctions newFuncs grin {
-        grinCafs = newCafs,
+-- FIXME: CAFs were previously identified by their negative ID. Right now we have no way of telling them apart from normal vars.
+--        grinCafs = newCafs,
         grinPartFunctions = pappFuncs,
         grinTypeEnv = TyEnv $ Map.fromList mp',
         --grinArgTags = Map.fromList newArgTags,
@@ -113,7 +114,7 @@ go fixer pappFuncs suspFuncs usedFuncs usedArgs usedCafs postInline (fn,as :-> b
             addRule $ v `implies` x
         -- a lot of things are predicated on this so that CAFS are not held on to unnecesarily
         fn' <- supplyValue usedFuncs fn
-        let varValue v | v < v0 = sValue usedCafs v
+        let varValue v | v < v0 = sValue usedCafs v -- FIXME: This code is wrong. We can no longer identify CAFs by their sign.
                        | otherwise = sValue usedVars v
             f e = g e >> return e
             g (App a [e] _)   | a == funcEval =  addRule (doNode e)

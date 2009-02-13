@@ -7,6 +7,7 @@ import qualified Data.Set as Set
 import StringTable.Atom
 import Grin.Grin
 import Util.Graph
+import Name.Id
 
 -- TODO tuples
 
@@ -26,7 +27,8 @@ newConst cpr n = f n where
                 | otherwise = return $ Left (Lit i ty)
             g vp@(ValPrim _ _ ty)
                 | otherwise = return $ Left vp
-            g x@(Var (V n) _) | n < 0  = return $ Left x
+            -- This should be 'idIsCAF' instead of 'idIsNamed'.
+            g x@(Var (V n) _) | idIsNamed n  = return $ Left x
             g n@(Const (NodeC _ [])) = return $ Left n
             g n@(NodeC _ []) = return $ Left n
             g n@(Const (NodeC a _)) | a `Set.member` cpr = return $ Left n

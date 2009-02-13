@@ -37,12 +37,14 @@ import Support.FreeVars
 import Util.Gen
 import Util.UniqueMonad
 import qualified Cmm.Op as Op
+import Name.Id
 
 ---------------
 -- C Monad
 ---------------
 
 data Todo = TodoReturn | TodoExp [Expression] | TodoDecl Name Type | TodoNothing
+
 
 
 data Written = Written {
@@ -153,8 +155,8 @@ convertFunc ffie (n,as :-> body) = do
 
 
 fetchVar :: Var -> Ty -> C Expression
-fetchVar (V 0) _ = return $ noAssign (err "fetchVar v0")
-fetchVar v@(V n) _ | n < 0 = return $ (variable  $ varName v)
+fetchVar (V n) _ | isEmptyId n = return $ noAssign (err "fetchVar v0")
+--fetchVar v@(V n) _ | isEtherialId n = return $ (variable  $ varName v)
 fetchVar v ty = do
     t <- convertType ty
     is <- asks rInscope
@@ -163,7 +165,7 @@ fetchVar v ty = do
     return $ (if v == v0 then noAssign else id) $ if not dclare then variable n else localVariable t n
 
 fetchVar' :: Var -> Ty -> C (Name,Type)
-fetchVar' (V n) _ | n < 0 = error "fetchVar': CAF"
+--fetchVar' (V n) _ | isEtherialId n = error "fetchVar': CAF"
 fetchVar' v ty = do
     t <- convertType ty
     return $ (varName v,t)
@@ -562,7 +564,7 @@ convertExp Alloc { expValue = v, expCount = c, expRegion = r } | r == region_hea
 convertExp e = return (err (show e),err "nothing")
 
 ccaf :: (Var,Val) -> P.Doc
-ccaf (v,val) = text "/* " <> text (show v) <> text " = " <> (text $ show (pprint val :: P.Doc)) <> text "*/\n" <>
+ccaf (v,val) = text "/* " <> tshow v <> text " = " <> (text $ show (pprint val :: P.Doc)) <> text "*/\n" <>
      text "static node_t _" <> tshow (varName v) <> text ";\n" <>
      text "#define " <> tshow (varName v) <+>  text "(EVALTAGC(&_" <> tshow (varName v) <> text "))\n";
 
@@ -891,7 +893,8 @@ arg i = name $ 'a':show i
 
 
 varName :: Var -> Name
-varName (V n) | n < 0 = name $ 'g':show (- n)
+--varName (V n) | isEtherialId n = name $ 'g':show n
+varName (V n) | Just name <- fromId n = toName ('n':fromAtom (toAtom name))
 varName (V n) = name $ 'v':show n
 
 nodeTagName :: Atom -> Name

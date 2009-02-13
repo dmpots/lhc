@@ -17,6 +17,7 @@ import Support.CanType
 import Support.FreeVars
 import qualified Stats
 import Stats(mtick)
+import Name.Id
 
 -- This goes through and puts grin into a normal form, in addition, it carries out some straightforward
 -- simplifications.
@@ -30,14 +31,14 @@ import Stats(mtick)
 
 
 data SEnv = SEnv {
-    envSubst :: IM.IntMap Val,   -- renaming substitution
+    envSubst :: Map.Map Var Val,   -- renaming substitution
     envCSE   :: Map.Map Exp (Atom,Exp),
-    envPapp  :: IM.IntMap (Atom,[Val]),
-    envPush  :: IM.IntMap Exp
+    envPapp  :: Map.Map Var (Atom,[Val]),
+    envPush  :: Map.Map Var Exp
     }
 $(derive makeMonoid ''SEnv)
 
-newtype SState = SState { usedVars :: IS.IntSet }
+newtype SState = SState { usedVars :: Set.Set Id }
 
 data SCol = SCol {
     colStats :: Stats.Stat,
@@ -83,7 +84,7 @@ simpDone :: Exp -> S Exp
 simpDone e = do
     pmap <- asks envPapp
     case e of
-        (App fap (Var (V vn) _:fs) ty) | fap == funcApply, Just (tl,gs) <- IM.lookup vn pmap -> do
+        (App fap (Var vn _:fs) ty) | fap == funcApply, Just (tl,gs) <- Map.lookup vn pmap -> do
             (cl,fn) <- tagUnfunction tl
             let ne = if cl == 1 then App fn (gs ++ fs) ty else Return [NodeC (partialTag fn (cl - 1)) (gs ++ fs)]
             mtick $ if cl == 1 then "Simplify.Apply.Papp.{" ++ show tl  else ("Simplify.Apply.App.{" ++ show fn)
@@ -106,17 +107,17 @@ simpBind p e cont = f p e where
     cse' name xs = cse name ((e,Return p):xs)
     f p app@(App a [v] _) | a == funcEval =  cse' "Simplify.CSE.eval" [(Fetch v,Return p)]
     f p (Fetch v@Var {}) =  cse' "Simplify.CSE.fetch" [(gEval v,Return p)]
-    f [p@(Var (V vn) _)] (Return [v@(NodeC t vs)]) | not (isHoly v) = case tagUnfunction t of
+    f [p@(Var vn _)] (Return [v@(NodeC t vs)]) | not (isHoly v) = case tagUnfunction t of
         Nothing -> cse "Simplify.CSE.return-node" [(Return [p],Return [v]),(Store p,Store v)]
-        Just (n,fn) -> local (\s -> s { envPapp = IM.insert vn (t,vs) (envPapp s) }) $ cse' "Simplify.CSE.return-node" [(Return [p],Return [v]),(Store p,Store v)]
+        Just (n,fn) -> local (\s -> s { envPapp = Map.insert vn (t,vs) (envPapp s) }) $ cse' "Simplify.CSE.return-node" [(Return [p],Return [v]),(Store p,Store v)]
     f [p] (Store v@Var {})  =  cse' "Simplify.CSE.demote" [(Fetch p,Return [v]),(gEval p,Return [v])]
-    f [p@(Var (V vn) _)] (Store v@(NodeC t vs)) | not (isHoly v) = case tagIsWHNF t of
-        True -> local (\s -> s { envPush = IM.insert vn (Store v) (envPush s) }) $ cse "Simplify.CSE.store-whnf" [(Fetch p,Return [v]),(gEval p,Return [v])]
+    f [p@(Var vn _)] (Store v@(NodeC t vs)) | not (isHoly v) = case tagIsWHNF t of
+        True -> local (\s -> s { envPush = Map.insert vn (Store v) (envPush s) }) $ cse "Simplify.CSE.store-whnf" [(Fetch p,Return [v]),(gEval p,Return [v])]
         False -> cse' "Simplify.CSE.store" []
     f _ _ = cse "Simplify.CSE.NOT" []
 
 extEnv :: Var -> Val -> SEnv -> SEnv
-extEnv (V vn) v s = s { envSubst = IM.insert vn v (envSubst s) }
+extEnv vn v s = s { envSubst = Map.insert vn v (envSubst s) }
 
 
 
@@ -198,9 +199,9 @@ applySubstE x = mapExpVal applySubst x
 
 applySubst :: Val -> S Val
 applySubst x = f x where
-    f var@(Var (V v) _) = do
+    f var@(Var v _) = do
         env <- asks envSubst
-        case IM.lookup v env of
+        case Map.lookup v env of
             Just n -> tellFV n >> return n
             Nothing -> tellFV var >> return var
     f x = mapValVal f x
@@ -214,21 +215,21 @@ zeroVars fn x = f x where
 renamePattern :: [Val] ->  S ([Val],SEnv)
 renamePattern x = runWriterT (mapM f x) where
     f :: Val -> WriterT SEnv S Val
-    f (Var v@(V vn) t) = do
+    f (Var v t) = do
         v' <- lift $ newVarName v
         let nv = Var v' t
-        tell (mempty { envSubst = IM.singleton vn nv })
+        tell (mempty { envSubst = Map.singleton v nv })
         return nv
     f x = mapValVal f x
 
 newVarName :: Var -> S Var
-newVarName (V 0) = return (V 0)
+newVarName (V sv) | isEmptyId sv = return (V sv)
 newVarName (V sv) = do
     s <- gets usedVars
     let nv = v sv
-        v n | n `IS.member` s = v (1 + n + IS.size s)
+        v n | n `Set.member` s = v (anonymous $ 1 + idToInt n + Set.size s)
             | otherwise = n
-    modify (\e -> e { usedVars = IS.insert nv s })
+    modify (\e -> e { usedVars = Set.insert nv s })
     return (V nv)
 
 

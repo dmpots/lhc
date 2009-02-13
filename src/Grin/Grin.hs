@@ -80,6 +80,7 @@ import Util.Perhaps
 import qualified Info.Info as Info
 import qualified Cmm.Op as Op
 import qualified Stats
+import Name.Id
 
 data TyThunk =
     TyNotThunk                 -- ^ not the thunk
@@ -129,11 +130,11 @@ data Callable = Continuation | Function | Closure | LocalFunction | Primitive'
 
 type Tag = Atom
 
-newtype Var = V Int
-    deriving(Eq,Ord,Enum)
+newtype Var = V Id
+    deriving(Eq,Ord)
 
 instance Show Var where
-    showsPrec _ (V n) xs = 'v':shows n xs
+    showsPrec _ (V n) xs = shows n xs -- 'v':shows n xs
 
 
 
@@ -459,10 +460,10 @@ findArgs m a = case findArgsType m a of
     Just (as,_) -> return as
 
 v0, v1, v2, v3 :: Var
-v0 = V 0
-v1 = V 1
-v2 = V 2
-v3 = V 3
+v0 = V emptyId -- (anonymous 0)
+v1 = V (anonymous 2)
+v2 = V (anonymous 4)
+v3 = V (anonymous 6)
 
 n0, n1, n2, n3 :: Val
 n0 = Var v0 TyNode

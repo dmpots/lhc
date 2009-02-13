@@ -9,7 +9,8 @@ module Grin.PointsTo
   ) where
 
 import Grin.Grin
---import Name.Id
+import Name.Id
+import Name.Name
 import StringTable.Atom
 
 import Data.List (isInfixOf)
@@ -63,9 +64,9 @@ eqUnions = foldr eqUnion []
 varToCaseStmts :: HptMap -> Grin -> Var -> [Lam]
 varToCaseStmts (HptMap eqs) grin var
     = case Map.lookup (Equation var) eqs of
-        Nothing   -> [ [Var (V 0) TyNode ] :-> Error "empty" [TyNode]] -- error $ "Grin.PointsTo.varToCaseStmt: this should not happen: " ++ show var
+        Nothing   -> [ [Var (V emptyId) TyNode ] :-> Error "empty" [TyNode]] -- error $ "Grin.PointsTo.varToCaseStmt: this should not happen: " ++ show var
         Just vals -> [ tagToCaseStmt grin t | Tag t args <- vals ] ++
-                    [ [Var (V 0) TyNode] :-> Error ("case fell off: "++show (var,vals)) [TyNode]]
+                    [ [Var (V emptyId) TyNode] :-> Error ("case fell off: "++show (var,vals)) [TyNode]]
 
 tagToCaseStmt :: Grin -> Atom -> Lam
 tagToCaseStmt grin tag
@@ -74,14 +75,14 @@ tagToCaseStmt grin tag
       _           -> [NodeC tag vars] :-> Return [NodeC tag vars]
   where Just tyty = findTyTy (grinTypeEnv grin) tag
         vars = flip map (zip [1000000,1000002..] (tySlots tyty)) $ \(n,ty) ->
-                 Var (V n) ty
+                 Var (V (anonymous n)) ty
 
 genApplyStmts :: HptMap -> Grin -> Var -> Val -> [Ty] -> [Lam]
 genApplyStmts (HptMap eqs) grin var val ty
     = case Map.lookup (Equation var) eqs of
-        Nothing   -> [ [Var (V 0) TyNode] :-> Error "empty apply" ty]
+        Nothing   -> [ [Var (V emptyId) TyNode] :-> Error "empty apply" ty]
         Just vals -> [ appToCaseStmt grin t val ty | Tag t _ <- vals ] ++
-                    [ [Var (V 0) TyNode] :-> Error "app fell off" ty]
+                    [ [Var (V emptyId) TyNode] :-> Error "app fell off" ty]
 
 appToCaseStmt :: Grin -> Atom -> Val -> [Ty] -> Lam
 appToCaseStmt grin tag val retTy
@@ -92,13 +93,13 @@ appToCaseStmt grin tag val retTy
         Nothing     -> error "apply on non-function"
   where Just tyty = findTyTy (grinTypeEnv grin) tag
         vars = flip map (zip [1000000,1000002..] (tySlots tyty)) $ \(n,ty) ->
-                 Var (V n) ty
+                 Var (V (anonymous n)) ty
         newVars = vars ++ case val of
                             Var v TyUnit -> []
                             _ -> [val]
 
 applications :: Var
-applications = V (fromAtom $ toAtom "APPLICATIONS")
+applications = V (toId $ toName RawType "APPLICATIONS")
 
 pointsTo :: Grin -> IO HptMap
 pointsTo grin
@@ -139,7 +140,7 @@ setupEnv (App func [Var arg1 _, arg2] _) | func == funcApply
        return [Apply arg1 arg2']
 -- Handle special case for IO functions.
 setupEnv (App func [Var arg1 _] _) | func == funcApply
-  = do let arg2 = [Ident (V 0)]
+  = do let arg2 = [Ident (V emptyId)]
        applications =: [PartialApply arg1 arg2]
        return [Apply arg1 arg2]
 setupEnv (App func args _)
@@ -200,7 +201,7 @@ store prim
     (n, Map.insertWith eqUnion (HeapPointer n) prim eqs , n+1)
 
 (=:) :: Var -> [Equation] -> GenEnv ()
-(V 0) =: p = return ()
+(V n) =: p | isEmptyId n = return ()
 var =: p
   = GenEnv $ \_fns eqs n ->
     ((), Map.insertWith eqUnion (Equation var) p eqs, n)
@@ -218,7 +219,7 @@ lookupFuncArgs func
 
 atomToVar :: Atom -> String -> Var
 atomToVar atom suffix
-  = V $ fromAtom $ toAtom $ fromAtom atom ++ suffix
+  = V $ toId $ toName RawType $ fromAtom atom ++ suffix
 
 showEnv :: Equations -> IO ()
 showEnv eqs
