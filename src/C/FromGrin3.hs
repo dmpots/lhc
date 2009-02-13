@@ -153,7 +153,7 @@ convertFunc ffie (n,as :-> body) = do
 
 fetchVar :: Var -> Ty -> C Expression
 fetchVar (V n) _ | isEmptyId n = return $ noAssign (err "fetchVar v0")
-fetchVar v@(V n) _ | isEtherialId n = return $ (variable  $ varName v)
+--fetchVar v@(V n) _ | isEtherialId n = return $ (variable  $ varName v)
 fetchVar v ty = do
     t <- convertType ty
     is <- asks rInscope
@@ -162,7 +162,7 @@ fetchVar v ty = do
     return $ (if v == v0 then noAssign else id) $ if not dclare then variable n else localVariable t n
 
 fetchVar' :: Var -> Ty -> C (Name,Type)
-fetchVar' (V n) _ | isEmptyId n = error "fetchVar': CAF"
+--fetchVar' (V n) _ | isEmptyId n = error "fetchVar': CAF"
 fetchVar' v ty = do
     t <- convertType ty
     return $ (varName v,t)
@@ -552,9 +552,8 @@ convertExp Alloc { expValue = v, expCount = c, expRegion = r } | r == region_hea
 convertExp e = return (err (show e),err "nothing")
 
 ccaf :: (Var,Val) -> P.Doc
-ccaf (v,val) = text "/* " <> text (show v) <> text " = " <> (text $ show (pprint val :: P.Doc)) <> text "*/\n" <>
+ccaf (v,val) = text "/* " <> tshow v <> text " = " <> (text $ show (pprint val :: P.Doc)) <> text "*/\n" <>
      text "static node_t _" <> tshow (varName v) <> text ";\n" <>
---     text "#define " <> tshow (varName v) <+>  text "(EVALTAGC(&_" <> tshow (varName v) <> text "))\n";
      text "#define " <> tshow (varName v) <+>  text "((&_" <> tshow (varName v) <> text "))\n";
 
 
@@ -851,7 +850,7 @@ profile_function_inc = toStatement $ functionCall (name "lhc_function_inc") []
 arg i = name $ 'a':show i
 
 
-varName (V n) | isEtherialId n = name $ 'g':show n
+varName (V n) | Just name <- fromId n = toName ('n':fromAtom (toAtom name))
 varName (V n) = name $ 'v':show n
 
 nodeTagName :: Atom -> Name
