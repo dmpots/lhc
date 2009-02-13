@@ -26,41 +26,41 @@ import Control.Monad
 type SourceHash = MD5.MD5Digest
 type HoHash     = MD5.MD5Digest
 
--- the collected information that is passed around
+-- | The collected information that is passed around.
 data CollectedHo = CollectedHo {
-    -- this is a list of external names that are valid but that we may not know anything else about
-    -- it is used to recognize invalid ids.
+    -- | This is a list of external names that are valid but that we may not know anything else about.
+    -- It is used to recognize invalid ids.
     choExternalNames :: IdSet,
     choCombinators  :: IdMap Comb,
-    -- this is a map of ids to their full TVrs with all rules and whatnot attached.
+    -- | This is a map of ids to their full TVrs with all rules and whatnot attached.
     -- 'choVarMap' will never contain any Nothing elements. The Maybe is only there
     -- because the map is handed over to 'E.Annotate.annotateDs'.
     choVarMap :: IdMap (Maybe E),
-    -- these are rules that may need to be retroactively applied to other modules
+    -- | These are rules that may need to be retroactively applied to other modules
     choOrphanRules :: Rules,
-    -- the hos
+    -- | The 'Ho's
     choHoMap :: Map.Map String Ho
     }
 
 
--- this is the immutable information about modules that depnends only on their contents
--- it can be trusted even if the ho file itself is out of date.
+-- | This is the immutable information about modules that depends only on their contents.
+-- It can be trusted even if the ho file itself is out of date.
 newtype HoIDeps = HoIDeps {
     hoIDeps :: Map.Map SourceHash (Module,[Module])
     }
 
 data HoHeader = HoHeader {
-    -- | my sha1 id
+    -- | My identifying hash
     hohHash       :: HoHash,
     -- | Haskell Source files depended on
     hohDepends    :: [(Module,Maybe SourceHash)],
     -- | Other objects depended on to be considered up to date.
     hohModDepends :: [HoHash],
-    -- | metainformation, filled for hl-files, empty for normal objects.
+    -- | Meta-information, filled for hl-files, empty for normal objects.
     hohMetaInfo   :: [(String,PackedString)]
     }
 
--- data only needed for name resolution
+-- | Data only needed for name resolution
 data HoExp = HoExp {
     hoExports :: Map.Map Module [Name],
     hoDefs :: Map.Map Name (SrcLoc,[Name])
@@ -68,9 +68,9 @@ data HoExp = HoExp {
 
 
 data HoBuild = HoBuild {
-    hoAssumps :: Map.Map Name Type,        -- used for typechecking
+    hoAssumps :: Map.Map Name Type,        -- ^ Used for typechecking
     hoFixities :: FixityMap,
-    hoKinds :: KindEnv,                      -- used for typechecking
+    hoKinds :: KindEnv,                    -- ^ Used for typechecking
     hoClassHierarchy :: ClassHierarchy,
     hoTypeSynonyms :: TypeSynonyms,
     -- Filled in by E generation
