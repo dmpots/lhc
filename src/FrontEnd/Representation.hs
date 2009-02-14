@@ -65,16 +65,18 @@ data MetaVarType = Tau | Rho | Sigma
 
 data Type  = TVar { typeVar :: {-# UNPACK #-} !Tyvar }
            | TCon { typeCon :: !Tycon }
+           -- | Please don't call @TAp@; use 'tAp' instead.
            | TAp  Type Type
            | TArrow Type Type
            | TForAll { typeArgs :: [Tyvar], typeBody :: (Qual Type) }
            | TExists { typeArgs :: [Tyvar], typeBody :: (Qual Type) }
-           | TMetaVar { metaVar :: MetaVar }
+           | TMetaVar { metaVar :: MetaVar } -- ^ Used only in the typechecker
            | TAssoc   { typeCon :: !Tycon, typeClassArgs :: [Type], typeExtraArgs :: [Type] }
              deriving(Ord,Show)
 
 
-data MetaVar = MetaVar { metaUniq :: !Int, metaKind :: Kind, metaRef :: (IORef (Maybe Type)), metaType :: MetaVarType } -- ^ used only in typechecker
+-- | Used only in the typechecker
+data MetaVar = MetaVar { metaUniq :: !Int, metaKind :: Kind, metaRef :: (IORef (Maybe Type)), metaType :: MetaVarType }
              deriving(Show)
 
 instance Eq MetaVar where
@@ -89,15 +91,18 @@ instance TypeNames Type where
     tChar      = TCon (Tycon tc_Char kindStar)
     tUnit = TCon (Tycon tc_Unit kindStar)
 
--- Dummy instance. We'll never actually serialize a MetaVar.
+-- | Dummy instance. We'll never actually serialize a 'MetaVar'.
+--
 -- FIXME: Prove this statically.
 instance Binary MetaVar where
   get = error "get not defined for MetaVar"
   put = error "put not defined for MetaVar"
 
+-- | The @[]@ type constructor
 tList :: Type
 tList = TCon (Tycon tc_List (Kfun kindStar kindStar))
 
+-- | The @(->)@ type constructor. Invariant: @tArrow@ shall not be fully applied. To this end, see 'tAp'.
 tArrow :: Type
 tArrow = TCon (Tycon tc_Arrow (kindArg `Kfun` kindFunRet `Kfun` kindStar))
 
@@ -109,6 +114,7 @@ instance Eq Type where
     (TArrow a' a) == (TArrow b' b) = a' == b' && b == a
     _ == _ = False
 
+-- | Type application, enforcing the invariant that there be no fully-applied 'tArrow's
 tAp :: Type -> Type -> Type
 tAp (TAp c@TCon{} a) b | c == tArrow = TArrow a b
 tAp a b = TAp a b
@@ -116,10 +122,9 @@ tAp a b = TAp a b
 tassocToAp :: Type -> Type
 tassocToAp TAssoc { typeCon = con, typeClassArgs = cas, typeExtraArgs = eas } = foldl tAp (TCon con) (cas ++ eas)
 
--- Unquantified type variables
 
+-- | Unquantified type variable
 data Tyvar = Tyvar { tyvarAtom :: {-# UNPACK #-} !Atom, tyvarName ::  !Name, tyvarKind :: Kind }
-    {-  derive: Binary -}
 
 instance Show Tyvar where
     showsPrec _ Tyvar { tyvarName = hn, tyvarKind = k } = shows hn . ("::" ++) . shows k
@@ -154,8 +159,7 @@ instance Ord Tyvar where
 
 
 
--- Type constructors
-
+-- | Type constructor
 data Tycon = Tycon { tyconName :: Name, tyconKind :: Kind }
     deriving(Eq, Show,Ord)
 
@@ -167,6 +171,8 @@ instance ToTuple Type where
 instance DocLike d => PPrint d Tycon where
    pprint (Tycon i _) = pprint i
 
+
+-- | Build a function type
 infixr      4 `fn`
 fn         :: Type -> Type -> Type
 a `fn` b    = TArrow a b
@@ -174,11 +180,11 @@ a `fn` b    = TArrow a b
 --------------------------------------------------------------------------------
 
 
--- Predicates
+-- | Predicate
 data Pred   = IsIn Class Type | IsEq Type Type
               deriving(Show, Eq,Ord)
 
--- Qualified entities
+-- | Qualified entities
 data Qual t =  [Pred] :=> t
               deriving(Show, Eq,Ord)
 
