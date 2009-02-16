@@ -53,7 +53,7 @@ freeMetaVarsPred :: Pred -> Set.Set MetaVar
 freeMetaVarsPred (IsIn _ t) = freeMetaVars t
 freeMetaVarsPred (IsEq t1 t2) = freeMetaVars t1 `Set.union` freeMetaVars t2
 
--- | split predicates into ones that only mention metavars in the list vs other ones
+-- | Split predicates into ones that only mention metavars in the list vs other ones
 splitPreds :: Monad m
            => ClassHierarchy
            -> Set.Set MetaVar
@@ -148,10 +148,10 @@ match' (TVar mv) t | getType mv == getType t = return [(mv,t)]
 match' (TCon tc1) (TCon tc2) | tc1==tc2 = return mempty
 match' t1 t2  = fail $ "match: " ++ show (t1,t2)
 
-splitReduce :: Set.Set MetaVar -- ^ Meta vars from the environment
-            -> Set.Set MetaVar -- ???
+splitReduce :: Set.Set MetaVar -- ^ \"old\" meta vars, probably from the environment (already checked?)
+            -> Set.Set MetaVar -- ^ \"new\" meta vars
             -> [Pred]          -- ^ Relevant predicates
-            -> Tc ([MetaVar], [Pred], [Pred]) -- ^ (retained ??? meta-vars, untouched predicates, altered predicates)
+            -> Tc ([MetaVar], [Pred], [Pred]) -- ^ (retained \"new\" meta-vars, boring predicates, retained predicates)
 splitReduce fs gs ps = do
     h <- getClassHierarchy
     --liftIO $ putStrLn $ pprint (fs,gs,ps)
@@ -225,7 +225,7 @@ reduce h fs gs ps = do
     return (ds,rs')
 -}
 
--- 'candidates' from THIH
+-- | 'candidates' from THIH
 defs     :: ClassHierarchy -> MetaVar -> [Pred] -> [Type]
 defs h v qs = [ t | all ((TMetaVar v)==) ts,
                   all (`elem` stdClasses) cs, -- XXX needs fixing
@@ -236,7 +236,7 @@ defs h v qs = [ t | all ((TMetaVar v)==) ts,
        ts = [ t | (IsIn c t) <- qs ]
 
 
--- FIXME use @default@ declarations!
+-- | FIXME: use @default@ declarations!
 defaults    :: [Type]
 defaults
     | not $ fopts FO.Defaulting = []
