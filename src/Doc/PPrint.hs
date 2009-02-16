@@ -8,6 +8,7 @@
 module Doc.PPrint where
 
 import Doc.DocLike
+import qualified Data.Set as Set
 import qualified Data.Map as Map
 
 
@@ -59,6 +60,9 @@ instance (PPrint d a, PPrint d b, PPrint d c) => PPrint d (a,b,c) where
   pprint (x,y,z) = parens (hsep [pprint x <> comma,
                                 pprint y <> comma,
                                 pprint z])
+
+instance PPrint d a => PPrint d (Set.Set a) where
+    pprint s = braces . hcat . punctuate comma . map pprint . Set.toList $ s
 
 instance (PPrint d a, PPrint d b) => PPrint d (Map.Map a b) where
     pprint m = vcat [ pprint x <+> text "=>" <+> pprint y | (x,y) <- Map.toList m]
