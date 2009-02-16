@@ -21,6 +21,7 @@ import qualified Data.Set as Set
 
 import Doc.DocLike
 import Doc.PPrint
+import Doc.Pretty (Doc)
 import FrontEnd.Class
 import FrontEnd.Tc.Monad
 import FrontEnd.Tc.Type
@@ -32,7 +33,10 @@ import Support.CanType
 import FrontEnd.Warning
 import qualified FlagDump as FD
 import qualified FlagOpts as FO
+import Debug.Trace
 
+render :: Doc -> String
+render = show
 
 
 generalize :: [Pred] -> Rho -> Tc Sigma
@@ -154,17 +158,24 @@ splitReduce :: Set.Set MetaVar -- ^ \"old\" meta vars, probably from the environ
             -> Tc ([MetaVar], [Pred], [Pred]) -- ^ (retained \"new\" meta-vars, boring predicates, retained predicates)
 splitReduce fs gs ps = do
     h <- getClassHierarchy
-    --liftIO $ putStrLn $ pprint (fs,gs,ps)
+    wdump FD.BoxySteps $ liftIO $ putStrLn "splitReduce:"
+    wdump FD.BoxySteps $ liftIO $ putStrLn $ render $ pprint (fs,gs,ps)
+
     (ds, rs) <- splitPreds h fs ps
-    --liftIO $ putStrLn $ pprint (ds,rs)
+    wdump FD.BoxySteps $ liftIO $ putStrLn $ render $ pprint (ds,rs)
+
     (rs',sub) <- genDefaults h (fs `Set.union` gs) rs
-    --liftIO $ putStrLn $ pprint (rs')
+    wdump FD.BoxySteps $ liftIO $ putStrLn $ render $ pprint (rs')
+
     flip mapM_ sub $ \ (x,y) ->  do
         let msg = "defaulting: " <+> pprint x <+> "=>" <+> prettyPrintType y
         wdump FD.BoxySteps $ liftIO $ putStrLn msg
         addWarn "type-defaults" msg
     sequence_ [ varBind x y | (x,y) <- nub sub]
-    return (Set.toList gs List.\\ map fst sub, ds, rs')
+
+    ret <- return (Set.toList gs List.\\ map fst sub, ds, rs')
+    wdump FD.BoxySteps $ liftIO $ putStrLn $ render $ pprint ret
+    return ret
 
 withDefaults :: Monad m
              => ClassHierarchy
@@ -227,7 +238,8 @@ reduce h fs gs ps = do
 
 -- | 'candidates' from THIH
 defs     :: ClassHierarchy -> MetaVar -> [Pred] -> [Type]
-defs h v qs = [ t | all ((TMetaVar v)==) ts,
+defs h v qs = trace ("Tc.Class.defs" <+> pprint v <+> pprint qs) $
+              [ t | all ((TMetaVar v)==) ts,
                   all (`elem` stdClasses) cs, -- XXX needs fixing
                   any (`elem` numClasses) cs, -- XXX needs fixing
                   t <- defaults, -- XXX needs fixing
