@@ -545,6 +545,7 @@ tiImplGroups (Right x:xs) = do
     (ds',te') <- localEnv te $ tiImplGroups xs
     return (ds ++ ds', te `mappend` te')
 
+-- | Typecheck a single implicitly-typed declaration
 tiNonRecImpl :: HsDecl -> Tc (HsDecl, TypeEnv)
 tiNonRecImpl decl = withContext (locSimple (srcLoc decl) ("in the implicitly typed: " ++ show (getDeclName decl))) $ do
     when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiimpls " ++ show (getDeclName decl)
@@ -820,11 +821,13 @@ tiStmt env stmt@(HsLetStmt decls)
 
 -}
 
-getBindGroupName :: ([(a, HsDecl)], [Either HsDecl [HsDecl]]) -> [Name]
+getBindGroupName :: BindGroup -> [Name]
 getBindGroupName (expl,impls) =  map getDeclName (snds expl ++ concat (rights impls) ++ lefts impls)
 
 
-tiProgram ::  [BindGroup] -> [HsDecl] -> Tc [HsDecl]
+tiProgram :: [BindGroup]
+          -> [HsDecl]
+          -> Tc [HsDecl]
 tiProgram bgs es = ans where
     ans = do
         (r,ps) <- listenPreds $ f bgs [] mempty
@@ -855,7 +858,7 @@ tiProgram bgs es = ans where
         when verbose $ liftIO $ putStrLn "!"
         return (rs ++ concat pdecls)
 
--- Typing Literals
+-- | Typing Literals
 
 tiLit :: HsLiteral -> Tc Tau
 tiLit (HsChar _) = return tChar
@@ -885,7 +888,7 @@ tiLit (HsString _)  = return tString
 ------------------------------------------
 
 
--- create a Program structure from a list of decls and
+-- | Create a Program structure from a list of decls and
 -- type sigs. Type sigs are associated with corresponding
 -- decls if they exist
 
@@ -896,21 +899,21 @@ getFunDeclsBg sigEnv decls = makeProgram sigEnv equationGroups where
    bindDecls = collectBindDecls decls
 
 getBindGroups :: Ord name =>
-                 [node]           ->    -- List of nodes
-                 (node -> name)   ->    -- Function to convert nodes to a unique name
-                 (node -> [name]) ->    -- Function to return dependencies of this node
-                 [[node]]               -- Bindgroups
+                 [node]           ->    -- ^ List of nodes
+                 (node -> name)   ->    -- ^ Function to convert nodes to a unique name
+                 (node -> [name]) ->    -- ^ Function to return dependencies of this node
+                 [[node]]               -- ^ Bindgroups
 
 getBindGroups ns fn fd = map f $ stronglyConnComp [ (n, fn n, fd n) | n <- ns] where
     f (AcyclicSCC x) = [x]
     f (CyclicSCC xs) = xs
 
--- | make a program from a set of binding groups
+-- | Make a program from a set of binding groups
 makeProgram :: TypeEnv -> [[HsDecl]] -> [BindGroup]
 makeProgram sigEnv groups = map (makeBindGroup sigEnv ) groups
 
 
--- | reunite decls with their signatures, if ever they had one
+-- | Reunite decls with their signatures, if ever they had one
 
 makeBindGroup :: TypeEnv -> [HsDecl] -> BindGroup
 makeBindGroup sigEnv decls = (exps, f impls) where

@@ -60,7 +60,7 @@ freeMetaVarsPred (IsEq t1 t2) = freeMetaVars t1 `Set.union` freeMetaVars t2
 -- | Split predicates into ones that only mention metavars in the list vs other ones
 splitPreds :: Monad m
            => ClassHierarchy
-           -> Set.Set MetaVar
+           -> Set.Set MetaVar -- ^ \"fixed\" metavars
            -> Preds
            -> m (Preds, Preds)
 splitPreds h fs ps  = do
@@ -105,7 +105,7 @@ simplify h ps = loop [] ps where
         | otherwise = loop (p:rs) ps
 
 
--- | returns true when set of predicates implies some other predicate is satisfied.
+-- | Returns true when set of predicates implies some other predicate is satisfied.
 entails :: ClassHierarchy -> [Pred] -> Pred -> Bool
 --entails h ps e@(IsEq {}) = error $ pprint (ps,e)
 entails h ps p = (p `elem` concatMap (bySuper h) ps) ||
@@ -152,10 +152,12 @@ match' (TVar mv) t | getType mv == getType t = return [(mv,t)]
 match' (TCon tc1) (TCon tc2) | tc1==tc2 = return mempty
 match' t1 t2  = fail $ "match: " ++ show (t1,t2)
 
-splitReduce :: Set.Set MetaVar -- ^ \"old\" meta vars, probably from the environment (already checked?)
-            -> Set.Set MetaVar -- ^ \"new\" meta vars
+
+splitReduce :: Set.Set MetaVar -- ^ \"fixed\" meta vars
+            -> Set.Set MetaVar -- ^ \"generic\" meta vars (potentially)
             -> [Pred]          -- ^ Relevant predicates
-            -> Tc ([MetaVar], [Pred], [Pred]) -- ^ (retained \"new\" meta-vars, boring predicates, retained predicates)
+            -> Tc ([MetaVar], [Pred], [Pred])
+               -- ^ (retained \"generic\" meta-vars, "deferred" predicates, "retained" predicates)
 splitReduce fs gs ps = do
     h <- getClassHierarchy
     wdump FD.BoxySteps $ liftIO $ putStrLn "splitReduce:"
@@ -179,9 +181,9 @@ splitReduce fs gs ps = do
 
 withDefaults :: Monad m
              => ClassHierarchy
-             -> Set.Set MetaVar -- ^ Variables to be considered known
+             -> Set.Set MetaVar -- ^ Variables to be considered known (fixed + generic)
              -> [Pred]          -- ^ Predicates to consider
-             -> m [(MetaVar, [Pred], Type)] 
+             -> m [(MetaVar, [Pred], Type)]
              -- ^ List of (defaulted meta var, predicates involving it, type defaulted to)
 withDefaults h vs ps
   | any null tss = fail $ "withDefaults.ambiguity: " ++ (pprint ps)  ++ pprint (Set.toList vs) -- ++ show ps
@@ -193,7 +195,7 @@ withDefaults h vs ps
 -- | Return retained predicates and a defaulting substitution
 genDefaults :: Monad m
             => ClassHierarchy
-            -> Set.Set MetaVar -- ^ Variables to be considered known
+            -> Set.Set MetaVar -- ^ Variables to be considered known (fixed + generic)
             -> [Pred]          -- ^ Predicates to examine
             -> m ([Pred], [(MetaVar,Type)])
 genDefaults h vs ps = do
@@ -202,9 +204,9 @@ genDefaults h vs ps = do
         vs  = [ (v,t)  | (v,qs,t) <- ams ]
     return (ps \\ ps',  vs)
 
--- ambiguities from THIH + call to candidates
+-- @ambiguities@ from THIH + call to @candidates@
 ambig :: ClassHierarchy
-      -> Set.Set MetaVar -- ^ Variables that are to be considered known
+      -> Set.Set MetaVar -- ^ Variables to be considered known (fixed + generic)
       -> [Pred]          -- ^ Predicates to consider
       -> [(MetaVar, [Pred], [Type])] -- ^ List of (ambiguous meta var, predicates involving it, potential defaults)
 
