@@ -176,8 +176,8 @@ splitReduce :: Set.Set MetaVar -- ^ \"fixed\" meta vars -- free in the type envi
                -- ^ (retained \"generic\" meta-vars, "deferred" predicates, "retained" predicates)
 splitReduce fs gs ps = do
     h <- getClassHierarchy
-    wdump FD.BoxySteps $ liftIO $ putStrLn "splitReduce:"
-    wdump FD.BoxySteps $ liftIO $ putStrLn $ render $ pprint (fs,gs,ps)
+    when (not $ Set.null fs) $ liftIO $ putStrLn "splitReduce called with non-empty fixed set"
+    wdump FD.BoxySteps $ liftIO $ putStrLn $ "splitReduce " <+> pprint (fs,gs,ps)
 
     (ds, rs) <- splitPreds h fs ps
     wdump FD.BoxySteps $ liftIO $ putStrLn $ render $ pprint (ds,rs)
@@ -276,6 +276,7 @@ defaults
 
 topDefaults     :: [Pred] -> Tc ()
 topDefaults ps  = do
+    wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults" <+> pprint ps
     h <- getClassHierarchy
     let ams = ambig h Set.empty ps
         tss = [ ts | (v,qs,ts) <- ams ]
