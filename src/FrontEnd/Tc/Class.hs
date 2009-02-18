@@ -25,6 +25,7 @@ import qualified Data.Set as Set
 import Doc.DocLike
 import Doc.PPrint
 import Doc.Pretty (Doc)
+import FrontEnd.Diagnostic
 import FrontEnd.Class
 import FrontEnd.Tc.Monad
 import FrontEnd.Tc.Type
@@ -275,14 +276,13 @@ defaults
     | otherwise = map (\name -> TCon (Tycon name kindStar)) [tc_Integer, tc_Double]
 
 topDefaults     :: [Pred] -> Tc ()
+topDefaults []  = wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults [] -- skipping splitReduce"
 topDefaults ps  = do
     wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults" <+> pprint ps
-    h <- getClassHierarchy
-    let ams = ambig h Set.empty ps
-        tss = [ ts | (v,qs,ts) <- ams ]
-        _vs  = [ v  | (v,qs,ts) <- ams ]
-    when (any null tss) $ fail $ "Top Level ambiguity " ++ (pprint ps)
-    return ()
+    withContext (simpleMsg "while enforcing the monomorphism restriction") $ do
+        ([], [], []) <- splitReduce mempty mempty ps
+        return ()
+    
 --      | otherwise    -> return $ Map.fromList (zip vs (map head tss))
 --        where ams = ambig h [] ps
 --              tss = [ ts | (v,qs,ts) <- ams ]

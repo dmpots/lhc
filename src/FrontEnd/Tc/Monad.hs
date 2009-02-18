@@ -80,6 +80,7 @@ import Support.CanType
 import Support.FreeVars
 import Support.Tickle
 import FrontEnd.Warning
+import Util.ContextMonad
 import qualified FlagDump as FD
 import {-# SOURCE #-} FrontEnd.Tc.Class(ClassHierarchy,simplify)
 
@@ -186,14 +187,9 @@ runTc tcInfo  (Tc tim) = do
 instance OptionMonad Tc where
     getOptions = asks tcOptions
 
-
--- | given a diagnostic and a computation to take place inside the TI-monad,
---   run the computation but during it have the diagnostic at the top of the
---   stack
-
-withContext :: Diagnostic -> Tc a -> Tc a
-withContext diagnostic comp = do
-    local (tcDiagnostics_u (diagnostic:)) comp
+instance ContextMonad Diagnostic Tc where
+    withContext diagnostic comp = do
+        local (tcDiagnostics_u (diagnostic:)) comp
 
 addRule :: Rule -> Tc ()
 addRule r = tell mempty { checkedRules = [r] }
@@ -306,7 +302,9 @@ freshInstance _ x = return ([],x)
 addPreds :: Preds -> Tc ()
 addPreds ps = do
     sl <- getSrcLoc
-    Tc $ tell mempty { collectedPreds = [ p | p@IsIn {} <- ps ], constraints = [ Equality { constraintSrcLoc = sl, constraintType1 = a, constraintType2 = b } | IsEq a b <- ps ] }
+    Tc $ tell mempty { collectedPreds = [ p | p@IsIn {} <- ps ],
+                       constraints    = [ Equality { constraintSrcLoc = sl, constraintType1 = a, constraintType2 = b }
+                                          | IsEq a b <- ps ] }
 
 addConstraints :: [Constraint] -> Tc ()
 addConstraints ps = Tc $ tell mempty { constraints = ps }
