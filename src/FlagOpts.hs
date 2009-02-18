@@ -5,7 +5,6 @@ import qualified Data.Set as Set
 -- | Flags
 data Flag =
       Boehm             -- ^ use Boehm garbage collector
-    | Controlled        -- ^ with the '-f' flag, the following options are availible, you can
     | Cpp               -- ^ pass haskell source through c preprocessor
     | Cpr               -- ^ do CPR analysis
     | Debug             -- ^ enable debugging code in generated executable
@@ -18,7 +17,6 @@ data Flag =
     | Lint              -- ^ perform lots of extra type checks
     | M4                -- ^ pass haskell source through m4 preprocessor
     | MonomorphismRestriction -- ^ enforce monomorphism restriction
-    | Negate            -- ^ any particular one by prepending 'no-' to it.
     | Profile           -- ^ enable profiling code in generated executable
     | Raw               -- ^ just evaluate main to WHNF and nothing else.
     | Rules             -- ^ use rules
@@ -31,8 +29,6 @@ data Flag =
     deriving(Eq,Ord,Bounded)
 
 instance Show Flag where
-    show Controlled = "controlled"
-    show Negate = "negate"
     show UnboxedTuples = "unboxed-tuples"
     show UnboxedValues = "unboxed-values"
     show Ffi = "ffi"
@@ -77,8 +73,6 @@ one "rules" = Right $ Set.insert Rules
 one "no-rules" = Right $ Set.delete Rules
 one "monomorphism-restriction" = Right $ Set.insert MonomorphismRestriction
 one "no-monomorphism-restriction" = Right $ Set.delete MonomorphismRestriction
-one "controlled" = Right $ Set.insert Controlled
-one "no-controlled" = Right $ Set.delete Controlled
 one "debug" = Right $ Set.insert Debug
 one "no-debug" = Right $ Set.delete Debug
 one "wrapper" = Right $ Set.insert Wrapper
@@ -98,8 +92,6 @@ one "no-inline-eval" = Right $ Set.delete InlineEval
 one "global-optimize" = Right $ Set.insert GlobalOptimize
 one "no-global-optimize" = Right $ Set.delete GlobalOptimize
 one "default" = Right $ foldr (.) id [ f | Right f <- [ one "inline-pragmas",one "rules",one "wrapper",one "float-in",one "strictness",one "defaulting",one "type-analysis",one "monomorphism-restriction",one "boxy",one "eval-optimize",one "global-optimize"]]
-one "negate" = Right $ Set.insert Negate
-one "no-negate" = Right $ Set.delete Negate
 one "cpp" = Right $ Set.insert Cpp
 one "no-cpp" = Right $ Set.delete Cpp
 one "raw" = Right $ Set.insert Raw
@@ -118,5 +110,5 @@ process s xs = foldr f (s,[]) (map one xs) where
 helpMsg :: String
 helpMsg = "\n-- Code options --\n cpp\n    pass haskell source through c preprocessor\n ffi\n    support foreign function declarations\n inline-eval\n    replace calls to eval/apply with case expressions\n m4\n    pass haskell source through m4 preprocessor\n unboxed-tuples\n    allow unboxed tuple syntax to be recognized\n unboxed-values\n    allow unboxed value syntax\n unsafe\n    disable runtime assertions\n\n-- Typechecking --\n defaulting\n    perform defaulting of ambiguous types\n monomorphism-restriction\n    enforce monomorphism restriction\n\n-- Debugging --\n lint\n    perform lots of extra type checks\n\n-- Optimization Options --\n cpr\n    do CPR analysis\n float-in\n    perform float inward transform\n global-optimize\n    perform whole program E optimization\n inline-pragmas\n    use inline pragmas\n rules\n    use rules\n strictness\n    perform strictness analysis\n type-analysis\n    perhaps a basic points-to analysis on types right after method generation\n\n-- Code Generation --\n boehm\n    use Boehm garbage collector\n debug\n    enable debugging code in generated executable\n profile\n    enable profiling code in generated executable\n raw\n    just evaluate main to WHNF and nothing else.\n wrapper\n    wrap main in exception handler\n\n-- Default settings --\n default\n    inline-pragmas rules wrapper float-in strictness defaulting type-analysis monomorphism-restriction boxy eval-optimize global-optimize\n"
 helpFlags :: [String]
-helpFlags = ["boehm", "controlled", "cpp", "cpr", "debug", "default", "defaulting", "ffi", "float-in", "global-optimize", "inline-eval", "inline-pragmas", "lint", "m4", "monomorphism-restriction", "negate", "profile", "raw", "rules", "strictness", "type-analysis", "unboxed-tuples", "unboxed-values", "unsafe", "wrapper"]
+helpFlags = ["boehm", "cpp", "cpr", "debug", "default", "defaulting", "ffi", "float-in", "global-optimize", "inline-eval", "inline-pragmas", "lint", "m4", "monomorphism-restriction", "profile", "raw", "rules", "strictness", "type-analysis", "unboxed-tuples", "unboxed-values", "unsafe", "wrapper"]
 

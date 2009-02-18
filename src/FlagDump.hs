@@ -60,13 +60,11 @@ data Flag =
     | Stats             -- ^ show extra information about stuff
     | Steps             -- ^ show interpreter go
     | Tags              -- ^ list of all tags and their types
-    | The               -- ^ '-d' flag. The following is a list of possible parameters you can pass to
     | Types             -- ^ display unified type table containing all defined names
     | Tyvar             -- ^ show original tyvars rather than renaming them.
     deriving(Eq,Ord,Bounded)
 
 instance Show Flag where
-    show The = "the"
     show Preprocessed = "preprocessed"
     show Renamed = "renamed"
     show Parsed = "parsed"
@@ -128,8 +126,6 @@ instance Show Flag where
 
 one :: String -> Either String (Set.Set Flag -> Set.Set Flag)
 one "verbose" = Right $ foldr (.) id [ f | Right f <- [ one "progress"]]
-one "the" = Right $ Set.insert The
-one "no-the" = Right $ Set.delete The
 one "core-mini" = Right $ Set.insert CoreMini
 one "no-core-mini" = Right $ Set.delete CoreMini
 one "kind-steps" = Right $ Set.insert KindSteps
@@ -259,5 +255,5 @@ process s xs = foldr f (s,[]) (map one xs) where
 helpMsg :: String
 helpMsg = "\n-- Front End --\n defs\n    Show all defined names in a module\n dep-graph\n    Dump module dependancy graph to deps.dot\n derived\n    show generated derived instances\n exports\n    show which names are exported from each module\n imports\n    show in scope names for each module\n parsed\n    parsed code\n preprocessed\n    code after preprocessing/deliting\n renamed\n    code after uniqueness renaming\n scc-modules\n    show strongly connected modules in dependency order\n\n-- Type Checker --\n all-dcons\n    show unified data constructor table\n all-kind\n    show unified kind table after everything has been typechecked\n all-types\n    show unified type table, after everything has been typechecked\n aspats\n    show as patterns\n bindgroups\n    show bindgroups\n boxy-steps\n    show step by step what the type inferencer is doing\n class\n    detailed information on each class\n class-summary\n    summary of all classes\n dcons\n    data constructors\n decls\n    processed declarations\n instance\n    show instances\n kind\n    show results of kind inference for each module\n kind-steps\n    show steps of kind inference\n program\n    impl expls, the whole shebang.\n sigenv\n    initial signature environment\n srcsigs\n    processed signatures from source code\n types\n    display unified type table containing all defined names\n tyvar\n    show original tyvars rather than renaming them.\n\n-- Intermediate code --\n core\n    show intermediate core code\n core-afterlift\n    show final core before writing ho file\n core-beforelift\n    show core before lambda lifting\n core-initial\n    show core right after E.FromHs conversion\n core-mangled\n    de-typed core right before it is converted to grin\n core-mini\n    show details even when optimizing individual functions\n core-pass\n    show each iteration of code while transforming\n core-steps\n    show what happens in each pass\n datatable\n    show data table of constructors\n e-alias\n    show expanded aliases\n e-info\n    show info tags on all bound variables\n e-size\n    print the size of E after each pass\n e-verbose\n    print very verbose version of E code always\n optimization-stats\n    show combined stats of optimization passes\n rules\n    show all user rules and catalysts\n rules-spec\n    show specialization rules\n\n-- Grin code --\n eval\n    show detailed eval inlining info\n grin\n    show final grin code\n grin-graph\n    print dot file of final grin code to outputname_grin.dot\n grin-initial\n    grin right after conversion from core\n grin-normalized\n    grin right after first normalization\n grin-pass\n    show each iteration of code while transforming\n grin-posteval\n    show grin code just before eval/apply inlining\n grin-preeval\n    show grin code just before eval/apply inlining\n grin-steps\n    show what happens in each transformation\n steps\n    show interpreter go\n tags\n    list of all tags and their types\n\n-- General --\n html\n    use html escape codes in output\n progress\n    show basic progress indicators\n square-stats\n    use square corners (this is now the only option, though)\n stats\n    show extra information about stuff\n verbose\n    progress\n veryverbose\n    progress stats\n"
 helpFlags :: [String]
-helpFlags = ["all-dcons", "all-kind", "all-types", "aspats", "bindgroups", "boxy-steps", "class", "class-summary", "core", "core-afterlift", "core-beforelift", "core-initial", "core-mangled", "core-mini", "core-pass", "core-steps", "datatable", "dcons", "decls", "defs", "dep-graph", "derived", "e-alias", "e-info", "e-size", "e-verbose", "eval", "exports", "grin", "grin-graph", "grin-initial", "grin-normalized", "grin-pass", "grin-posteval", "grin-preeval", "grin-steps", "html", "imports", "instance", "kind", "kind-steps", "optimization-stats", "parsed", "preprocessed", "program", "progress", "renamed", "rules", "rules-spec", "scc-modules", "sigenv", "square-stats", "srcsigs", "stats", "steps", "tags", "the", "types", "tyvar", "verbose", "veryverbose"]
+helpFlags = ["all-dcons", "all-kind", "all-types", "aspats", "bindgroups", "boxy-steps", "class", "class-summary", "core", "core-afterlift", "core-beforelift", "core-initial", "core-mangled", "core-mini", "core-pass", "core-steps", "datatable", "dcons", "decls", "defs", "dep-graph", "derived", "e-alias", "e-info", "e-size", "e-verbose", "eval", "exports", "grin", "grin-graph", "grin-initial", "grin-normalized", "grin-pass", "grin-posteval", "grin-preeval", "grin-steps", "html", "imports", "instance", "kind", "kind-steps", "optimization-stats", "parsed", "preprocessed", "program", "progress", "renamed", "rules", "rules-spec", "scc-modules", "sigenv", "square-stats", "srcsigs", "stats", "steps", "tags", "types", "tyvar", "verbose", "veryverbose"]
 

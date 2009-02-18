@@ -3,8 +3,8 @@
 # Code Options
 
 Various options affecting how lhc interprets and compiles code can be
-controlled with the '-f' flag, the following options are availible, you can
-negate any particular one by prepending 'no-' to it.
+Controlled with the '-f' flag, the following options are availible, you can
+Negate any particular one by prepending 'no-' to it.
 
 !Code options
 unboxed-tuples allow unboxed tuple syntax to be recognized
