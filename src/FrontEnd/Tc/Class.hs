@@ -1,3 +1,6 @@
+-- | Typeclass-related code, still heavily based on /Typing Haskell in Haskell/
+--   <http://web.cecs.pdx.edu/~mpj/thih/>.
+
 module FrontEnd.Tc.Class(
     Pred,
     ClassHierarchy(),
@@ -50,14 +53,17 @@ generalize ps r = do
     addPreds nps
     quantify mvs' rp r
 
+-- | Unsurprisingly, this finds the free 'MetaVar's of some 'Preds'.
 freeMetaVarsPreds :: Preds -> Set.Set MetaVar
 freeMetaVarsPreds ps = Set.unions (map freeMetaVarsPred ps)
 
+-- | Yes, this finds the free 'MetaVar's of a 'Pred'.
 freeMetaVarsPred :: Pred -> Set.Set MetaVar
 freeMetaVarsPred (IsIn _ t) = freeMetaVars t
 freeMetaVarsPred (IsEq t1 t2) = freeMetaVars t1 `Set.union` freeMetaVars t2
 
--- | Split predicates into ones that only mention metavars in the list vs other ones
+-- | Split predicates into ones that only mention metavars in the list vs other ones,
+--   after getting rid of the silly and redundant ones. (Based on THIH's @split@).
 splitPreds :: Monad m
            => ClassHierarchy
            -> Set.Set MetaVar -- ^ \"fixed\" metavars
@@ -67,9 +73,11 @@ splitPreds h fs ps  = do
     ps' <- toHnfs h ps
     return $ partition (\p -> freeMetaVarsPred p `Set.isSubsetOf` fs) $ simplify h  $ ps'
 
+-- | From THIH. Convert many predicates to 'head-normal form'.
 toHnfs      :: Monad m => ClassHierarchy -> [Pred] -> m [Pred]
 toHnfs h ps =  mapM (toHnf h) ps >>= return . concat
 
+-- | From THIH. Convert a predicate to as many 'head-normal form' predicates as needed to replace it.
 toHnf :: Monad m => ClassHierarchy -> Pred -> m [Pred]
 toHnf h p
     | inHnf p = return [p]
@@ -77,6 +85,7 @@ toHnf h p
          Nothing -> fail $ "context reduction, no instance for: "  ++ (pprint  p)
          Just ps -> toHnfs h ps
 
+-- | Extended from THIH. Check whether or not the given Pred is in 'head-normal form'.
 inHnf       :: Pred -> Bool
 inHnf (IsEq t1 t2) = True
 inHnf (IsIn c t) = hnf t
@@ -88,6 +97,7 @@ inHnf (IsIn c t) = hnf t
        hnf TForAll {} = False
        hnf TExists {} = False
        hnf TAssoc {} = True
+
 
 reducePred :: Monad m => ClassHierarchy -> Pred -> m [Pred]
 reducePred h p@(IsEq t1 t2) = fail "reducePred" -- return [p]
@@ -113,17 +123,22 @@ entails h ps p = (p `elem` concatMap (bySuper h) ps) ||
              Nothing -> False
              Just qs -> all (entails h ps) qs
 
+-- | From THIH. Returns a list of all predicates implied by the given predicate due to superclasses
 bySuper :: ClassHierarchy -> Pred -> [Pred]
 bySuper h p@IsEq {} = [p]
 bySuper h p@(IsIn c t)
  = p : concatMap (bySuper h) supers
    where supers = [ IsIn c' t | c' <- supersOf h c ]
 
+-- | Based on THIH, but the 'Inst' argument is new. If the given
+--   instance could be used to satisfy the given predicate, return a
+--   list of subgoals that must also be satisfied.
 byInst             :: Monad m => Pred -> Inst -> m [Pred]
 byInst p Inst { instHead = ps :=> h } = do
     u <- matchPred h p
     return (map (inst mempty (Map.fromList [ (tyvarAtom mv,t) | (mv,t) <- u ])) ps)
 
+-- | Devise a substitution to convert the first argument to the second using 'match'.
 matchPred :: Monad m => Pred -> Pred -> m [(Tyvar,Type)]
 matchPred x@(IsIn c t) y@(IsIn c' t')
       | c == c'   = match t t'
@@ -153,8 +168,9 @@ match' (TCon tc1) (TCon tc2) | tc1==tc2 = return mempty
 match' t1 t2  = fail $ "match: " ++ show (t1,t2)
 
 
-splitReduce :: Set.Set MetaVar -- ^ \"fixed\" meta vars
-            -> Set.Set MetaVar -- ^ \"generic\" meta vars (potentially)
+-- | Appears to be based on THIH's @reduce@
+splitReduce :: Set.Set MetaVar -- ^ \"fixed\" meta vars -- free in the type environment
+            -> Set.Set MetaVar -- ^ \"generic\" meta vars -- we want to quantify over these
             -> [Pred]          -- ^ Relevant predicates
             -> Tc ([MetaVar], [Pred], [Pred])
                -- ^ (retained \"generic\" meta-vars, "deferred" predicates, "retained" predicates)
@@ -179,6 +195,8 @@ splitReduce fs gs ps = do
     wdump FD.BoxySteps $ liftIO $ putStrLn $ render $ pprint ret
     return ret
 
+
+-- | Resolve all ambiguous variables (or die trying)
 withDefaults :: Monad m
              => ClassHierarchy
              -> Set.Set MetaVar -- ^ Variables to be considered known (fixed + generic)

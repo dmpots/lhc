@@ -825,6 +825,9 @@ getBindGroupName :: BindGroup -> [Name]
 getBindGroupName (expl,impls) =  map getDeclName (snds expl ++ concat (rights impls) ++ lefts impls)
 
 
+-- | This bears only passing resemblance to the one in THIH.
+--
+--   FIXME: what does it do? What are the 'HsDecl's for?
 tiProgram :: [BindGroup]
           -> [HsDecl]
           -> Tc [HsDecl]
