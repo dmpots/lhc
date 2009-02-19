@@ -278,6 +278,10 @@ defaults
 topDefaults     :: [Pred] -> Tc ()
 topDefaults []  = wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults [] -- skipping splitReduce"
 topDefaults ps  = do
+    -- Don't do anything unless the monomorphism restriction is in effect
+    mono <- flagOpt FO.MonomorphismRestriction
+    when mono $ do
+
     wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults" <+> pprint ps
     withContext (simpleMsg "while enforcing the monomorphism restriction") $ do
         ([], [], []) <- splitReduce mempty mempty ps
