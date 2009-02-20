@@ -577,7 +577,7 @@ tiImpls ::  [HsDecl] -> Tc ([HsDecl], TypeEnv)
 tiImpls [] = return ([],Map.empty)
 tiImpls bs = withContext (locSimple (srcLoc bs) ("in the recursive implicitly typed: " ++ (show (map getDeclName bs)))) $ do
     let names = map getDeclName bs
-    when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiimpls " ++ show names
+    when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiImpls " ++ show names
     ts <- sequence [newMetaVar Tau kindStar | _ <- bs]
     (res,ps) <- listenPreds $
         local (tcRecursiveCalls_u (Set.union $ Set.fromList names)) $
