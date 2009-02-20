@@ -75,7 +75,6 @@ import GenUtil
 import Name.Name
 import Name.Names
 import Options
-import Options
 import Support.CanType
 import Support.FreeVars
 import Support.Tickle
