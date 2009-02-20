@@ -278,9 +278,11 @@ defaults
 topDefaults     :: [Pred] -> Tc ()
 topDefaults []  = wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults [] -- skipping splitReduce"
 topDefaults ps  = do
-    -- Don't do anything unless the monomorphism restriction is in effect
+    -- Complain if we have predicates left with -fno-monomorphism-restriction on.
+    -- They should have gone into a quantifier.
     mono <- flagOpt FO.MonomorphismRestriction
-    when mono $ do
+    when (not mono) $ fail $ "topDefaults: Predicates left over but the Monomorphism Restriction is off:"
+                             <$> pprint ps 
 
     wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults" <+> pprint ps
     withContext (simpleMsg "while enforcing the monomorphism restriction") $ do
