@@ -108,6 +108,7 @@ isTau' :: Type -> Bool
 isTau' TForAll {} = False
 isTau' t = getAll $ tickleCollect (All . isTau') t
 
+-- | Are there any boxy 'MetaVar's in this type anywhere?
 isBoxy :: Type -> Bool
 isBoxy (TMetaVar MetaVar { metaType = t }) | t > Tau = True
 isBoxy t = getAny $ tickleCollect (Any . isBoxy) t

@@ -901,11 +901,11 @@ getFunDeclsBg sigEnv decls = makeProgram sigEnv equationGroups where
    equationGroups = getBindGroups bindDecls (nameName . getDeclName) getDeclDeps
    bindDecls = collectBindDecls decls
 
-getBindGroups :: Ord name =>
-                 [node]           ->    -- ^ List of nodes
-                 (node -> name)   ->    -- ^ Function to convert nodes to a unique name
-                 (node -> [name]) ->    -- ^ Function to return dependencies of this node
-                 [[node]]               -- ^ Bindgroups
+getBindGroups :: Ord name
+              => [node]               -- ^ List of nodes
+              -> (node -> name)       -- ^ Function to convert nodes to a unique name
+              -> (node -> [name])     -- ^ Function to return dependencies of this node
+              -> [[node]]             -- ^ Bindgroups
 
 getBindGroups ns fn fd = map f $ stronglyConnComp [ (n, fn n, fd n) | n <- ns] where
     f (AcyclicSCC x) = [x]
