@@ -57,7 +57,7 @@ described by the following.
 >    (#) is the sort of unboxed tuples
 >    ##  is the supersort of all unboxed values
 
->    In addition there exist user defined kinds, which are always of supersort @##@
+>    In addition there exist user defined kinds, which are always of supersort ##
 
 The following Rules table shows what sort of abstractions are allowed, a rule
 of the form (A,B,C) means you can have functions of things of sort A to things
@@ -70,8 +70,8 @@ not be typable via lambda abstractions. for instance, although a data
 constructor may have a functional type, it was not created via a lambda
 abstraction so these rules do not apply.
 
->    As a shortcut we will use @*#@ to mean either @*@ or @#@ and so forth
->    so @(*#,*#,*)@ means @(*,*,*)@ @(#,*,*)@ @(*,#,*)@ @(#,#,*)@
+>    As a shortcut we will use *# to mean either * or # and so forth
+>    so (*#,*#,*) means (*,*,*) (#,*,*) (*,#,*) (#,#,*)
 
 >    Rules =
 >       (*#!,*#!,*)  -- functions from values to values are boxed and lazy
