@@ -22,40 +22,50 @@ import Cmm.Number
 import Info.Types
 import qualified Info.Info as Info
 
+-- * Lhc core normalized forms
+
 {- $Internals
 
-# Lhc core normalized forms
-
 Lhc core has a number of 'normalized forms' in which certain invarients are
-met. many routines expect code to be in a certain form, and guarentee theier
+met. Many routines expect code to be in a certain form, and guarentee theier
 output is also in a given form. The type system also can change with each form
 by adding/removing terms from the PTS axioms and rules.
 
-normalized form alpha
-: There are basically no restrictions other than the code is typesafe, but
-certain constructs that are checked by the type checker are okay when they
-wouldn't otherwise be. In particular, 'newtype' casts still exist at the data
-level.  'enum' scrutinizations are creations may be in terms of the virtual
-constructors rather than the internal representations. let may bind unboxed
+Unfortunately, there is almost no documentation about what form is expected
+where, the PTS axioms/rules of mose are not known, and the typechecker only
+checks one form -- probably /beta/ or /blue/. The rules that it does check
+are (supposedly) given in "E.TypeCheck#PTS".
+
+  [Normalized form \"alpha\"]
+#alpha#
+There are basically no restrictions other than the code is typesafe, but
+certain constructs that are checked [FIXME: does this mean rejected?] by the type checker are okay when they
+wouldn't otherwise be. In particular, @newtype@ casts still exist at the data
+level.  @enum@ scrutinizations are creations may be in terms of the virtual
+constructors rather than the internal representations. @let@ may bind unboxed
 values, which is normaly not allowed.
 
-
-normalized form beta
-: This is like alpha except all data type constructors and case scrutinizations
+  [Normalized form \"beta\"]
+#beta#
+This is like "#alpha" except all data type constructors and case scrutinizations
 are in their final form. As in, newtype coercions are removed, Enums are
-desugared etc. also, 'let' bindings of unboxed values are translated to the
-appropriate 'case' statements. The output of E.FromHs is in this form.
+desugared etc. Also, @let@ bindings of unboxed values are translated to the
+appropriate @case@ statements. The output of "E.FromHs" is in this form.
 
-normalized form blue
-: This is the form that most routines work on.
+  [Normalized form \"blue\"]
+#blue#
+This is the form that most routines work on.
 
-normalized form larry
-: post lambda-lifting
+  [Normalized form \"larry\"]
+#larry#
+Post lambda-lifting. [But what does it look like?]
 
-normalized form mangled
-: All polymorphism has been replaced with subtyping
-
+  [Normalized form \"mangled\"]
+#mangled#
+All polymorphism has been replaced with subtyping. [But what is that?]
 -}
+
+-- * Documentation
 
 -- | The type of a supercombinator
 data Comb = Comb {

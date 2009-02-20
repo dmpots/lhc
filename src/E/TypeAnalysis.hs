@@ -1,5 +1,5 @@
--- | examine all uses of types in a program to determine which ones are
--- actually needed in the method generation
+-- | Examine all uses of types in a program to determine which ones are
+-- actually needed in the method generation.
 
 module E.TypeAnalysis(typeAnalyze, Typ(),expandPlaceholder) where
 

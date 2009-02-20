@@ -1,5 +1,8 @@
 module E.TypeCheck(
+    -- * Lhc Core Type System
     -- $Internals
+
+    -- * Exported Functions
     canBeBox,
     eAp,
     inferType,
@@ -38,26 +41,23 @@ import {-# SOURCE #-} DataConstructors
 
 
 {- $Internals
-
-# Lhc Core Type System
+#PTS#
 
 Lhc's core is based on a pure type system. A pure type system (also called a
 PTS) is actually a parameterized set of type systems. Lhc's version is
 described by the following.
 
-    Sorts  = (*,!,**,#,(#),##)
-    Axioms = (*::**,#::##,(#)::##,!::**)
+>    Sorts  = (*,!,**,#,(#),##)
+>    Axioms = (*::**,#::##,(#)::##,!::**)
 
+>    *   is the sort of boxed values
+>    !   is the sort of boxed strict values
+>    **  is the supersort of all boxed value
+>    #   is the sort of unboxed values
+>    (#) is the sort of unboxed tuples
+>    ##  is the supersort of all unboxed values
 
-    *   is the sort of boxed values
-    !   is the sort of boxed strict values
-    **  is the supersort of all boxed value
-    #   is the sort of unboxed values
-    (#) is the sort of unboxed tuples
-    ##  is the supersort of all unboxed values
-
-    in addition there exist user defined kinds, which are always of supersort ##
-
+>    In addition there exist user defined kinds, which are always of supersort @##@
 
 The following Rules table shows what sort of abstractions are allowed, a rule
 of the form (A,B,C) means you can have functions of things of sort A to things
@@ -70,25 +70,25 @@ not be typable via lambda abstractions. for instance, although a data
 constructor may have a functional type, it was not created via a lambda
 abstraction so these rules do not apply.
 
-    as a shortcut we will use *# to mean either * or # and so forth
-    so (*#,*#,*) means (*,*,*) (#,*,*) (*,#,*) (#,#,*)
+>    As a shortcut we will use @*#@ to mean either @*@ or @#@ and so forth
+>    so @(*#,*#,*)@ means @(*,*,*)@ @(#,*,*)@ @(*,#,*)@ @(#,#,*)@
 
-    Rules =
-       (*#!,*#!,*)  -- functions from values to values are boxed and lazy
-       (*#!,(#),*)  -- functions from values to unboxed tuples are boxed and lazy
-       ((#),*#!,!)  -- functions from unboxed tuples to values are boxed and strict
-       ((#),(#),!)  -- functions from unboxed tuples to unboxed tuples are boxed and strict
-       (**,*,*)     -- may have a function from an unboxed type to a value
-       (**,#,*)
-       (**,!,*)
-       (**,**,**)  -- we have functions from types to types
-       (**,##,##)  -- Array__ a :: #
+>    Rules =
+>       (*#!,*#!,*)  -- functions from values to values are boxed and lazy
+>       (*#!,(#),*)  -- functions from values to unboxed tuples are boxed and lazy
+>       ((#),*#!,!)  -- functions from unboxed tuples to values are boxed and strict
+>       ((#),(#),!)  -- functions from unboxed tuples to unboxed tuples are boxed and strict
+>       (**,*,*)     -- may have a function from an unboxed type to a value
+>       (**,#,*)
+>       (**,!,*)
+>       (**,**,**)  -- we have functions from types to types
+>       (**,##,##)  -- Array__ a :: #
 
-    The defining feature of boxed values is
+>    The defining feature of boxed values is
 
-    _|_ :: t iff t::*
+>    _|_ :: t iff t::*
 
-    This PTS is functional but not injective
+>    This PTS is functional but not injective
 
 -}
 
