@@ -32,8 +32,8 @@ data CollectedHo = CollectedHo {
     -- It is used to recognize invalid ids.
     choExternalNames :: IdSet,
     choCombinators  :: IdMap Comb,
-    -- | This is a map of ids to their full TVrs with all rules and whatnot attached.
-    -- 'choVarMap' will never contain any Nothing elements. The Maybe is only there
+    -- | This is a map of ids to their full 'TVr's with all rules and whatnot attached.
+    -- 'choVarMap' will never contain any @Nothing@ elements. The @Maybe@ is only there
     -- because the map is handed over to 'E.Annotate.annotateDs'.
     choVarMap :: IdMap (Maybe E),
     -- | These are rules that may need to be retroactively applied to other modules
