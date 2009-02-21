@@ -560,6 +560,7 @@ ppHsPat (HsPAsPat name (HsPIrrPat (Located _ pat))) =
 ppHsPat	(HsPAsPat name pat) = hcat[ppHsName name,char '@',ppHsPat pat]
 ppHsPat	HsPWildCard = char '_'
 ppHsPat	(HsPIrrPat (Located _ pat)) = char '~' <> ppHsPat pat
+ppHsPat (HsPTypeSig _ pat ty) = myFsep[ppHsPat pat, text "::", ppHsQualType ty]
 
 ppHsPatField :: HsPatField -> Doc
 ppHsPatField (HsPFieldPat name pat) = myFsep[ppHsQName name, equals, ppHsPat pat]
