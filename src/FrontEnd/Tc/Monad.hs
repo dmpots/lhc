@@ -87,10 +87,10 @@ import {-# SOURCE #-} FrontEnd.Tc.Class(ClassHierarchy,simplify)
 data BindingType = RecursiveInfered | Supplied
 type TypeEnv = Map.Map Name Sigma
 
--- read only environment, set up before type checking.
+-- | Read only environment, set up before type checking.
 data TcEnv = TcEnv {
     tcInfo              :: TcInfo,
-    tcDiagnostics       :: [Diagnostic],   -- list of information that might help diagnosis
+    tcDiagnostics       :: [Diagnostic],       -- ^ Context for use in type error messages
     tcVarnum            :: IORef Int,
     tcCollectedEnv      :: IORef (Map.Map Name Sigma),
     tcCollectedCoerce   :: IORef (Map.Map Name CoerceTerm),
@@ -98,7 +98,7 @@ data TcEnv = TcEnv {
     tcCurrentScope      :: Set.Set MetaVar,
     tcRecursiveCalls    :: Set.Set Name,
     tcInstanceEnv       :: InstanceEnv,
-    tcOptions           :: Opt  -- module specific options
+    tcOptions           :: Opt                 -- ^ Module-specific options
     }
 
 data Output = Output {
@@ -110,10 +110,10 @@ data Output = Output {
     outKnots         :: [(Name,Name)]
     }
 
--- | information that is passed into the type checker.
+-- | Information that is passed into the type checker.
 data TcInfo = TcInfo {
-    tcInfoEnv :: TypeEnv, -- initial typeenv, data constructors, and previously infered types
-    tcInfoSigEnv :: TypeEnv, -- type signatures used for binding analysis
+    tcInfoEnv :: TypeEnv,      -- ^ Initial typeenv, data constructors, and previously infered types
+    tcInfoSigEnv :: TypeEnv,   -- ^ Type signatures used for binding analysis
     tcInfoModName :: String,
     tcInfoKindInfo :: KindEnv,
     tcInfoClassHierarchy :: ClassHierarchy
@@ -126,7 +126,7 @@ $(derive makeMonoid ''Output)
 newtype Tc a = Tc (ReaderT TcEnv (WriterT Output IO) a)
     deriving(MonadFix,MonadIO,MonadReader TcEnv,MonadWriter Output,Functor)
 
--- | run a computation with a local environment
+-- | Run a computation with a local environment
 localEnv :: TypeEnv -> Tc a -> Tc a
 localEnv te act = do
     te' <- mapM (\ (x,y) -> do y <- flattenType y; return (x,y)) (Map.toList te)
@@ -134,8 +134,8 @@ localEnv te act = do
         fail $ "localEnv error!\n" ++ show te
      else local (tcCurrentEnv_u (Map.fromList te' `Map.union`)) act
 
--- | add to the collected environment which will be used to annotate uses of variables with their instantiated types.
--- should contain \@-aliases for each use of a polymorphic variable or pattern match.
+-- | Add to the collected environment which will be used to annotate uses of variables with their instantiated types.
+-- Should contain \@-aliases for each use of a polymorphic variable or pattern match.
 
 addToCollectedEnv :: TypeEnv -> Tc ()
 addToCollectedEnv te = do
@@ -337,7 +337,7 @@ toSigma :: Sigma -> Sigma
 toSigma t@TForAll {} = t
 toSigma t = TForAll [] ([] :=> t)
 
--- | replace bound variables with arbitrary new ones and drop the binding
+-- | replace bound variables with arbitrary new ones and drop the binding.
 -- TODO predicates?
 
 skolomize :: Sigma -> Tc ([Tyvar],[Pred],Type)
@@ -396,17 +396,17 @@ quantify vs ps r | not $ any isBoxyMetaVar vs = do
     ch <- getClassHierarchy
     return $ TForAll nvs (FrontEnd.Tc.Class.simplify ch ps :=> r)
 
--- turn all ?? into * types, as we can't abstract over unboxed types
+-- | Turn all @??@ into @*@ types, as we can't abstract over unboxed types
+groundKind :: MetaVar -> Tc MetaVar
+groundKind mv = zonkKind (fixKind $ metaKind mv) mv
+
 fixKind :: Kind -> Kind
 fixKind (KBase KQuestQuest) = KBase Star
 fixKind (KBase KQuest) = KBase Star
 fixKind (a `Kfun` b) = fixKind a `Kfun` fixKind b
 fixKind x = x
 
-groundKind :: MetaVar -> Tc MetaVar
-groundKind mv = zonkKind (fixKind $ metaKind mv) mv
-
--- this removes all boxes, replacing them with tau vars
+-- | This removes all boxes, replacing them with tau vars
 unBox ::  Type -> Tc Type
 unBox tv = ft' tv where
     ft t@(TMetaVar mv)
@@ -445,7 +445,7 @@ evalArrowApp (TAp (TAp (TCon tcon) ta) tb)
 evalArrowApp t = return t
 
 
--- Bind mv to type, first filling in any boxes in type with tau vars
+-- | Bind mv to type, first filling in any boxes in type with tau vars
 varBind :: MetaVar -> Type -> Tc ()
 varBind u t
 --    | getType u /= getType t = error $ "varBind: kinds do not match:" ++ show (u,t)

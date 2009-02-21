@@ -222,7 +222,7 @@ genDefaults h vs ps = do
         vs  = [ (v,t)  | (v,qs,t) <- ams ]
     return (ps \\ ps',  vs)
 
--- @ambiguities@ from THIH + call to @candidates@
+-- | @ambiguities@ from THIH + call to @candidates@
 ambig :: ClassHierarchy
       -> Set.Set MetaVar -- ^ Variables to be considered known (fixed + generic)
       -> [Pred]          -- ^ Predicates to consider
