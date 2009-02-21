@@ -548,7 +548,7 @@ tiImplGroups (Right x:xs) = do
 -- | Typecheck a single implicitly-typed declaration
 tiNonRecImpl :: HsDecl -> Tc (HsDecl, TypeEnv)
 tiNonRecImpl decl = withContext (locSimple (srcLoc decl) ("in the implicitly typed: " ++ show (getDeclName decl))) $ do
-    when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiimpls " ++ show (getDeclName decl)
+    when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiImpls " ++ show (getDeclName decl)
     mv <- newMetaVar Sigma kindStar
     (res,ps) <- listenPreds $ tcDecl decl mv
     ps' <- flattenType ps
@@ -839,28 +839,25 @@ tiProgram bgs es = ans where
         (r,ps) <- listenPreds $ f bgs [] mempty
         ps <- flattenType ps
         ch <- getClassHierarchy
+
+        -- The monomorphism restriction
+
+        -- Rule 2.
+        -- Any monomorphic type variables that remain when type inference for an entire module
+        -- is complete, are considered ambiguous, and are resolved to particular types using the
+        -- defaulting rules (Section 4.3.4).
+
         ([],rs) <- splitPreds ch Set.empty ps
         topDefaults rs
         return r
-        --ps <- return $ simplify ch ps
-        --liftIO $ mapM_ (putStrLn.show) ps
-        --return r
+
     f (bg:bgs) rs cenv  = do
-        ((ds,env),ps) <- listenPreds (tcBindGroup bg)
-        ch <- getClassHierarchy
-        withContext (makeMsg "in the binding group:" $ show (getBindGroupName bg)) $ do
-            ([],leftovers) <- splitPreds ch Set.empty ps
-            topDefaults leftovers
-            return ()
+        (ds,env) <- tcBindGroup bg
         when verbose $ liftIO $ do putChar '.'; hFlush stdout
         localEnv env $ f bgs (ds ++ rs) (env `mappend` cenv)
     f [] rs _cenv = do
-        ch <- getClassHierarchy
-        (pdecls,ps) <- listenPreds $ mapM tcPragmaDecl es
-        withContext (makeMsg "in the pragmas:" $ "rules") $ do
-            ([],leftovers) <- splitPreds ch Set.empty ps
-            topDefaults leftovers
-            return ()
+        -- FIXME: predicates from RULES shouldn't influence defaulting, should they ?
+        pdecls <- mapM tcPragmaDecl es
         when verbose $ liftIO $ putStrLn "!"
         return (rs ++ concat pdecls)
 

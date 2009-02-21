@@ -177,7 +177,6 @@ splitReduce :: Set.Set MetaVar -- ^ \"fixed\" meta vars -- free in the type envi
                -- ^ (retained \"generic\" meta-vars, "deferred" predicates, "retained" predicates)
 splitReduce fs gs ps = do
     h <- getClassHierarchy
-    when (not $ Set.null fs) $ liftIO $ putStrLn "splitReduce called with non-empty fixed set"
     wdump FD.BoxySteps $ liftIO $ putStrLn $ "splitReduce " <+> pprint (fs,gs,ps)
 
     (ds, rs) <- splitPreds h fs ps
@@ -276,7 +275,7 @@ defaults
     | otherwise = map (\name -> TCon (Tycon name kindStar)) [tc_Integer, tc_Double]
 
 topDefaults     :: [Pred] -> Tc ()
-topDefaults []  = wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults [] -- skipping splitReduce"
+topDefaults []  = wdump FD.BoxySteps $ liftIO $ putStrLn $ "topDefaults [] -- skipping"
 topDefaults ps  = do
     -- Complain if we have predicates left with -fno-monomorphism-restriction on.
     -- They should have gone into a quantifier.
