@@ -1,3 +1,5 @@
+-- | Simple constraint solver based on ideas from 'Once upon a polymorphic type' paper.
+
 module Util.UnionSolve(
     C(),
     solve,
@@ -12,8 +14,6 @@ import Data.Monoid
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Util.UnionFind as UF
-
--- simple constraint solver based on ideas from 'Once upon a polymorphic type' paper.
 
 
 class Fixable a where
@@ -33,7 +33,7 @@ class Fixable a where
     isTop _ = False
 
 
--- arguments are the lattice and the variable type
+-- | Arguments are the lattice and the variable type
 newtype C l v = C ([CL l v] -> [CL l v])
 
 instance Monoid (C l v) where
@@ -55,14 +55,15 @@ instance (Show e,Show l) => Show (CL l e) where
     showsPrec _ (x `Clte` y) = seither x . showString " <= " . seither y
     showsPrec _ (x `Cset` l) = seither x . showString " := " . seither l
 
--- basic constraints
+-- | Basic constraints
 islte,isgte,equals :: Either v l -> Either v l -> C l v
 islte  x y = C ((x `Clte` y):)
 isgte  x y = islte y x
 equals x y = C ((x `Cset` y):)
 
--- a variable is either set to a value or bounded by other values
-data R l a = R l |  Ri (Maybe l) (Set.Set (RS l a))  (Maybe l) (Set.Set (RS l a))
+-- | A variable is either set to a value or bounded by other values
+data R l a = R l 
+           | Ri (Maybe l) (Set.Set (RS l a))  (Maybe l) (Set.Set (RS l a))
     deriving(Show)
 
 type RS l a =  Element (R l a) a
