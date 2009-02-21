@@ -2,7 +2,7 @@
 -- | A Pretty printing class using multiparameter type classes for
 -- maximal generality with some useful instances.
 --
--- the pprinted type comes as the last argument so newtype deriving can be used
+-- The pprinted type comes as the last argument so newtype deriving can be used
 -- in more places.
 
 module Doc.PPrint where
