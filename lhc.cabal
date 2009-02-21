@@ -106,7 +106,7 @@ Executable lhc
   FrontEnd.Tc.Monad FrontEnd.Tc.Type FrontEnd.Tc.Unify FrontEnd.TypeSynonyms FrontEnd.TypeSigs
   FrontEnd.HsParser FrontEnd.TypeSyns FrontEnd.Unlit FrontEnd.Utils FrontEnd.Warning
   Grin.DeadCode Grin.Devolve Grin.FromE Grin.EvalInline Grin.Grin
-  Grin.HashConst Grin.Lint Grin.NodeAnalyze Grin.Noodle Grin.Optimize
+  Grin.HashConst Grin.Lint Grin.NodeAnalyze Grin.Noodle Grin.Optimize Grin.PointsTo
   Grin.SSimplify Grin.Show Grin.Simplify Grin.Val Grin.Whiz Ho.Collected
   Ho.Binary Ho.Build Ho.Library Ho.Type Info.Binary Info.Info Info.Types Info.Properties
   Name.Prim Name.Id Name.Name Name.Names Name.VConsts
