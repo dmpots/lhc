@@ -1,7 +1,7 @@
 -- | Examine all uses of types in a program to determine which ones are
 -- actually needed in the method generation.
 
-module E.TypeAnalysis(typeAnalyze, Typ(),expandPlaceholder) where
+module E.TypeAnalysis(typeAnalyze, Typ, expandPlaceholder) where
 
 import Control.Monad.Error
 import Control.Monad.Identity
@@ -49,7 +49,7 @@ extractValMap ds = fromList [ (tvrIdent t,f e []) | (t,e) <- ds] where
     f (ELam tvr e) rs | sortKindLike (getType tvr) = f e (runIdentity (Info.lookup $ tvrInfo tvr):rs)
     f _ rs = reverse rs
 
--- | all variables _must_ be unique before running this
+-- | All variables _must_ be unique before running this
 {-# NOINLINE typeAnalyze #-}
 typeAnalyze :: Bool -> Program -> IO Program
 typeAnalyze doSpecialize prog = do
