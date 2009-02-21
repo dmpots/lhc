@@ -14,7 +14,7 @@ import Fixer.Fixer
 import qualified Data.Map as Map
 
 
--- maps b's to values of a's, creating them as needed.
+-- | Maps @b@'s to @a@'s, creating @a@'s as needed.
 
 data Supply b a = Supply Fixer (IORef (Map.Map b (Value a)))
     deriving(Typeable)

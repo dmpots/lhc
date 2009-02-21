@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns, ExistentialQuantification, DeriveDataTypeable #-}
 -- find fixpoint of constraint problem
 
-{- 2009.01.05: Lemmih
+{- | 2009.01.05: Lemmih
 
 This may be obvious to a lot of people but it certainly wasn't obvious to me.
 
@@ -12,16 +12,19 @@ One example problem would be dead-code elimination. To remove all dead
 functions and function arguments, we have to mark everything that
 could possibly be alive (we necessarily have to be conservative).
 This is done in two steps:
+
 1) Walk through the code and make a note of all the dependencies
-   (eg. function 'x' uses function 'y' and function 'z'). The dependencies
+   (eg. function @x@ uses function @y@ and function @z@). The dependencies
    are then handed over to the fixpoint solver.
+
 2) The fixpoint solver iterate over all the data and use the dependencies
-   to propagate the usage information. That is, if 'x' is used then 'y' and 'z'
-   are as well. The next iteration will deal with the dependencies of 'y' and 'z'.
+   to propagate the usage information. That is, if @x@ is used then @y@ and @z@
+   are as well. The next iteration will deal with the dependencies of @y@ and @z@.
 
 Once there's no more usage information to propagate, we know we've found our fixpoint.
 There are several other problems that require fixpoint iteration. Perhaps the most
 distinguished is the heap points-to analysis we use to eliminate eval/apply calls.
+[Is that still true? -- 2009.02.13 SamB]
 
 -}
 
@@ -56,15 +59,15 @@ import Monad
 import qualified Data.Set as Set
 
 
--- | Fixable class, must satisfy the following rules
+-- | Fixable class, must satisfy the following rules:
 --
--- isBottom bottom == True
--- x `lub` x == x
--- x `lub` y == y `lub` x
--- x `lub` bottom == x
--- x `minus` bottom == x
--- bottom `minus` x == bottom
--- x `minus` y == z --> y `lub` z == x
+-- > isBottom bottom == True
+-- > x `lub` x == x
+-- > x `lub` y == y `lub` x
+-- > x `lub` bottom == x
+-- > x `minus` bottom == x
+-- > bottom `minus` x == bottom
+-- > x `minus` y == z --> y `lub` z == x
 
 class Fixable a where
     bottom :: a
@@ -134,7 +137,7 @@ instance Ord MkFixable where
 value :: a -> Value a
 value x = ConstValue x
 
--- | mainly for internal use
+-- | Mainly for internal use
 ioValue :: IO (Value a) -> Value a
 ioValue iov = IOValue iov
 
@@ -160,15 +163,15 @@ addAction (IV v) act = do
     c <- readIORef (current v)
     unless (isBottom c) (act c)
 
--- | add a rule to the current set
+-- | Add a rule to the current set
 addRule :: MonadIO m => Rule -> m ()
 addRule (Rule act) = liftIO act
 
--- | turn an IO action into a Rule
+-- | Turn an IO action into a Rule
 ioToRule :: IO () -> Rule
 ioToRule act = Rule act
 
--- | the function must satisfy the rule that if a >= b then f(a) >= f(b)
+-- | The function must satisfy the rule that if @a >= b@ then @f a >= f b@
 
 modifiedSuperSetOf :: (Fixable a, Fixable b) =>  Value b -> Value a -> (a -> b) -> Rule
 modifiedSuperSetOf (IV rv) (ConstValue cv) r = Rule $ propagateValue (r cv) rv
@@ -185,7 +188,7 @@ ConstValue v1 `isSuperSetOf` ConstValue v2 | v2 `lte` v1 =  Rule $ return ()
 ConstValue {} `isSuperSetOf` _ = Rule $  fail "Fixer.isSuperSetOf: You cannot modify a constant value"
 UnionValue {} `isSuperSetOf` _ = Rule $  fail "Fixer: You cannot modify a union value"
 
--- | the function must satisfy the rule that if a >= b then f(a) implies f(b)
+-- | The function must satisfy the rule that if @a >= b@ then @f a@ implies @f b@
 conditionalRule :: Fixable a => (a -> Bool) -> Value a -> Rule -> Rule
 conditionalRule cond v (Rule act) = Rule $ addAction v (\x -> if cond x then act else return ())
 
@@ -199,7 +202,7 @@ propagateValue p v = do
     modifyIORef (pending v) (lub p)
 
 
--- | read result, calculating fixpoint if needed
+-- | Read result, calculating fixpoint if needed
 readValue :: (Fixable a,MonadIO m) => Value a -> m a
 readValue (IV v) = liftIO $ do
     findFixpoint Nothing (fixer v)
@@ -224,7 +227,9 @@ readRawValue (UnionValue a b) = liftIO $ do
 calcFixpoint :: MonadIO m => String -> Fixer -> m ()
 calcFixpoint s fixer = findFixpoint (Just (s,stdout)) fixer
 
--- | find fixpoint, perhaps printing debugging information to specified handle. will not print anything if no calculation needed.
+-- | Find fixpoint, perhaps printing debugging information to
+-- specified handle. Will not print anything if no calculation
+-- needed.
 findFixpoint :: MonadIO m => Maybe (String,Handle) ->  Fixer -> m ()
 findFixpoint msh@(~(Just (mstring,_))) Fixer { vars = vars, todo = todo } = liftIO $ do
     to <- readIORef todo
