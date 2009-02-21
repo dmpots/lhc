@@ -236,7 +236,7 @@ ambig h vs ps
 
 assertEntailment :: Preds -> Preds -> Tc ()
 assertEntailment qs ps = do
---    liftIO $ putStrLn $ "Asserting entailment: " ++ pprint (qs,ps)
+    -- wdump FD.BoxySteps $ liftIO $ putStrLn $ "Asserting entailment: " ++ pprint (qs,ps)
     ch <- getClassHierarchy
     let ns = [ p  | p <- ps, not $ entails ch qs p ]
     if null ns then return () else
