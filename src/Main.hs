@@ -47,7 +47,6 @@ import GenUtil hiding(replicateM,putErrLn,putErr,putErrDie)
 import Grin.DeadCode
 import Grin.Devolve(twiddleGrin,devolveTransform)
 import Grin.EvalInline(createEvalApply,inlineEvalApply)
-import Grin.PointsTo
 import Grin.FromE
 import Grin.Grin
 import Grin.Lint
