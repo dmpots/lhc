@@ -34,9 +34,6 @@ import qualified FlagDump as FD
 import qualified FlagOpts as FO
 
 
-listenPreds :: Tc a -> Tc (a, [Pred])
-listenPreds = listenSolvePreds
-
 type Expl = (Sigma, HsDecl)
 -- TODO: this is different than the "Typing Haskell in Haskell" paper
 -- we do not further sub-divide the implicitly typed declarations in
@@ -550,7 +547,7 @@ tiNonRecImpl :: HsDecl -> Tc (HsDecl, TypeEnv)
 tiNonRecImpl decl = withContext (locSimple (srcLoc decl) ("in the implicitly typed: " ++ show (getDeclName decl))) $ do
     when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiImpls " ++ show (getDeclName decl)
     mv <- newMetaVar Sigma kindStar
-    (res,ps) <- listenPreds $ tcDecl decl mv
+    (res,ps) <- listenSolvePreds $ tcDecl decl mv
     ps' <- flattenType ps
     mv' <- flattenType mv
     fs <- freeMetaVarsEnv
@@ -580,7 +577,7 @@ tiImpls bs = withContext (locSimple (srcLoc bs) ("in the recursive implicitly ty
     let names = map getDeclName bs
     when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiImpls " ++ show names
     ts <- sequence [newMetaVar Tau kindStar | _ <- bs]
-    (res,ps) <- listenPreds $
+    (res,ps) <- listenSolvePreds $
         local (tcRecursiveCalls_u (Set.union $ Set.fromList names)) $
             localEnv (Map.fromList [  (d,s) | d <- names | s <- ts]) $
                 sequence [ tcDecl d s | d <- bs | s <- ts ]
@@ -623,7 +620,7 @@ tcPragmaDecl spec@HsPragmaSpecialize { hsDeclSrcLoc = sloc, hsDeclName = n, hsDe
         t <- hsTypeToType kt t
         let nn = toName Val n
         sc <- lookupName nn
-        listenPreds $ sc `subsumes` t
+        listenSolvePreds $ sc `subsumes` t
         addRule RuleSpec { ruleUniq = hsDeclUniq spec, ruleName = nn, ruleType = t, ruleSuper = hsDeclBool spec }
         return [spec]
 
@@ -656,8 +653,8 @@ tcRule prule@HsRule { hsRuleFreeVars = vs, hsRuleLeftExpr = e1, hsRuleRightExpr 
             let (vs,envs) = unzip vs'
             ch <- getClassHierarchy
             ((e1,rs1),(e2,rs2)) <- localEnv (mconcat envs) $ do
-                    (e1,ps1) <- listenPreds (tcExpr e1 tr)
-                    (e2,ps2) <- listenPreds (tcExpr e2 tr)
+                    (e1,ps1) <- listenSolvePreds (tcExpr e1 tr)
+                    (e2,ps2) <- listenSolvePreds (tcExpr e2 tr)
                     ([],rs1) <- splitPreds ch Set.empty ps1
                     ([],rs2) <- splitPreds ch Set.empty ps2
                     return ((e1,rs1),(e2,rs2))
@@ -754,7 +751,7 @@ tiExpl (sc, decl) = withContext (locSimple (srcLoc decl) ("in the explicitly typ
         mp = (Map.singleton (getDeclName decl) sc')
     addCoerce (getDeclName decl) (ctAbs vs)
     addToCollectedEnv mp
-    (ret,ps) <- localEnv mp $ listenPreds (tcDecl decl typ)
+    (ret,ps) <- localEnv mp $ listenSolvePreds (tcDecl decl typ)
     ps <- flattenType ps
     ch <- getClassHierarchy
     env <- freeMetaVarsEnv
@@ -836,7 +833,7 @@ tiProgram :: [BindGroup]
           -> Tc [HsDecl]
 tiProgram bgs es = ans where
     ans = do
-        (r,ps) <- listenPreds $ f bgs [] mempty
+        (r,ps) <- listenSolvePreds $ f bgs [] mempty
         ps <- flattenType ps
         ch <- getClassHierarchy
 
