@@ -1,8 +1,8 @@
 
--- a fast, straightforward points to analysis
+-- | A fast, straightforward points to analysis
 -- meant to determine nodes that are always in whnf
 -- and find out evals or applys that always
--- apply to a known value
+-- apply to a known value.
 
 module Grin.NodeAnalyze(nodeAnalyze) where
 

@@ -112,7 +112,7 @@ go fixer pappFuncs suspFuncs usedFuncs usedArgs usedCafs postInline (fn,as :-> b
             x <- supplyValue usedArgs ap
             v <- supplyValue usedVars v
             addRule $ v `implies` x
-        -- a lot of things are predicated on this so that CAFS are not held on to unnecesarily
+        -- a lot of things are predicated on this so that CAFS are not held on to unnecessarily
         fn' <- supplyValue usedFuncs fn
         let varValue v | v < v0 = sValue usedCafs v -- FIXME: This code is wrong. We can no longer identify CAFs by their sign.
                        | otherwise = sValue usedVars v

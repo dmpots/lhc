@@ -37,7 +37,7 @@ data EqPointer = Equation Var | HeapPointer HeapPointer deriving (Show,Eq,Ord)
 
 type Equations = Map.Map EqPointer [Equation]
 
--- Heap points-to result map.
+-- | Heap points-to result map.
 data HptMap = HptMap Equations
 
 eqUnion :: [Equation] -> [Equation] -> [Equation]
