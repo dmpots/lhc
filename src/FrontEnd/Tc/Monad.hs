@@ -1,6 +1,9 @@
 module FrontEnd.Tc.Monad(
     CoerceTerm(..),
     Tc(),
+    MonadTc(..),
+    asksTc,
+    censorTc,
     TcInfo(..),
     TypeEnv(),
     TcEnv(..),
@@ -124,7 +127,36 @@ $(derive makeUpdate ''Output)
 $(derive makeMonoid ''Output)
 
 newtype Tc a = Tc (ReaderT TcEnv (WriterT Output IO) a)
-    deriving(MonadFix,MonadIO,MonadReader TcEnv,MonadWriter Output,Functor)
+    deriving (MonadFix,MonadIO,Functor) -- ,MonadReader TcEnv,MonadWriter Output,Functor)
+
+class MonadIO m => MonadTc m where
+    askTc    :: m TcEnv
+    localTc  :: (TcEnv -> TcEnv) -> m a -> m a
+
+    tellTc   :: Output -> m ()
+    listenTc :: m a -> m (a, Output)
+    passTc   :: m (a, Output -> Output) -> m a
+
+asksTc :: MonadTc m => (TcEnv -> a) -> m a
+asksTc f = liftM f askTc
+
+listensTc :: MonadTc m => (Output -> b) -> m a -> m (a, b)
+listensTc f p = do (x, o) <- listenTc p
+                   return (x, f o)
+
+censorTc :: MonadTc m => (Output -> Output) -> m a -> m a
+censorTc f p = passTc $ do x <- p
+                           return (x, f)
+                                
+
+instance MonadTc Tc where
+    askTc            = Tc ask
+    localTc f (Tc p) = Tc (local f p)
+    
+    tellTc x         = Tc (tell x)
+    listenTc (Tc p)  = Tc (listen p)
+    passTc   (Tc p)  = Tc (pass p)
+
 
 -- | Run a computation with a local environment
 localEnv :: TypeEnv -> Tc a -> Tc a
@@ -132,31 +164,31 @@ localEnv te act = do
     te' <- mapM (\ (x,y) -> do y <- flattenType y; return (x,y)) (Map.toList te)
     if any isBoxy (snds te') then
         fail $ "localEnv error!\n" ++ show te
-     else local (tcCurrentEnv_u (Map.fromList te' `Map.union`)) act
+     else localTc (tcCurrentEnv_u (Map.fromList te' `Map.union`)) act
 
 -- | Add to the collected environment which will be used to annotate uses of variables with their instantiated types.
 -- Should contain \@-aliases for each use of a polymorphic variable or pattern match.
 
 addToCollectedEnv :: TypeEnv -> Tc ()
 addToCollectedEnv te = do
-    v <- asks tcCollectedEnv
+    v <- asksTc tcCollectedEnv
     liftIO $ modifyIORef v (te `Map.union`)
 
 addCoerce :: Name -> CoerceTerm -> Tc ()
 addCoerce n te = do
-    v <- asks tcCollectedCoerce
+    v <- asksTc tcCollectedCoerce
     liftIO $ modifyIORef v (Map.insert n te)
 
 getCollectedEnv :: Tc TypeEnv
 getCollectedEnv = do
-    v <- asks tcCollectedEnv
+    v <- asksTc tcCollectedEnv
     r <- liftIO $ readIORef v
     r <- T.mapM flattenType r
     return r
 
 getCollectedCoerce :: Tc (Map.Map Name CoerceTerm)
 getCollectedCoerce = do
-    v <- asks tcCollectedCoerce
+    v <- asksTc tcCollectedCoerce
     r <- liftIO $ readIORef v
     r <- T.mapM flattenType r
     return r
@@ -183,37 +215,37 @@ runTc tcInfo  (Tc tim) = do
         }
     return a
 
-instance OptionMonad Tc where
-    getOptions = asks tcOptions
+instance MonadTc m => OptionMonad m where
+    getOptions = asksTc tcOptions
 
 instance ContextMonad Diagnostic Tc where
     withContext diagnostic comp = do
-        local (tcDiagnostics_u (diagnostic:)) comp
+        localTc (tcDiagnostics_u (diagnostic:)) comp
 
 addRule :: Rule -> Tc ()
-addRule r = tell mempty { checkedRules = [r] }
+addRule r = tellTc mempty { checkedRules = [r] }
 
 
 getErrorContext :: Tc [Diagnostic]
-getErrorContext = asks tcDiagnostics
+getErrorContext = asksTc tcDiagnostics
 
 getClassHierarchy  :: Tc ClassHierarchy
-getClassHierarchy = asks (tcInfoClassHierarchy . tcInfo)
+getClassHierarchy = asksTc (tcInfoClassHierarchy . tcInfo)
 
 getKindEnv :: Tc KindEnv
-getKindEnv = asks (tcInfoKindInfo . tcInfo)
+getKindEnv = asksTc (tcInfoKindInfo . tcInfo)
 
 getSigEnv :: Tc TypeEnv
-getSigEnv = asks (tcInfoSigEnv . tcInfo)
+getSigEnv = asksTc (tcInfoSigEnv . tcInfo)
 
 getModName :: Tc String
-getModName = asks ( tcInfoModName . tcInfo)
+getModName = asksTc (tcInfoModName . tcInfo)
 
 
 
 dConScheme :: Name -> Tc Sigma
 dConScheme conName = do
-    env <- asks tcCurrentEnv
+    env <- asksTc tcCurrentEnv
     case Map.lookup conName env of
         Just s -> return s
         Nothing -> error $ "dConScheme: constructor not found: " ++ show conName ++
@@ -241,7 +273,7 @@ unificationError t1 t2 = do
 
 lookupName :: Name -> Tc Sigma
 lookupName n = do
-    env <- asks tcCurrentEnv
+    env <- asksTc tcCurrentEnv
     case Map.lookup n env of
         Just x -> freshSigma x
         Nothing | Just 0 <- fromUnboxedNameTuple n  -> do
@@ -256,7 +288,7 @@ lookupName n = do
 
 newMetaVar :: MetaVarType -> Kind -> Tc Type
 newMetaVar t k = do
-    te <- ask
+    te <- askTc
     n <- newUniq
     r <- liftIO $ newIORef Nothing
     return $ TMetaVar MetaVar { metaUniq = n, metaKind = k, metaRef = r, metaType = t }
@@ -303,23 +335,24 @@ addPreds ps = do
     sl <- getSrcLoc
     Tc $ tell mempty { collectedPreds = [ p | p@IsIn {} <- ps ],
                        constraints    = [ Equality { constraintSrcLoc = sl, constraintType1 = a, constraintType2 = b }
-                                          | IsEq a b <- ps ] }
+                                            | IsEq a b <- ps ] }
 
 addConstraints :: [Constraint] -> Tc ()
 addConstraints ps = Tc $ tell mempty { constraints = ps }
 
 listenPreds :: Tc a -> Tc (a,Preds)
-listenPreds action = censor (\x -> x { collectedPreds = mempty }) $ listens collectedPreds action
+listenPreds action = censorTc (\x -> x { collectedPreds = mempty }) $ listensTc collectedPreds action
 
 listenCPreds :: Tc a -> Tc (a,(Preds,[Constraint]))
-listenCPreds action = censor (\x -> x { constraints = mempty, collectedPreds = mempty }) $ listens (\x -> (collectedPreds x,constraints x)) action
+listenCPreds action = censorTc (\x -> x { constraints = mempty, collectedPreds = mempty }) $
+                        listensTc (\x -> (collectedPreds x,constraints x)) action
 
 listenCheckedRules :: Tc a -> Tc (a,[Rule])
-listenCheckedRules action = censor (\x -> x { checkedRules = mempty }) $ listens checkedRules action
+listenCheckedRules action = censorTc (\x -> x { checkedRules = mempty }) $ listensTc checkedRules action
 
 newVar :: Kind -> Tc Tyvar
 newVar k = do
-    te <- ask
+    te <- askTc
     n <- newUniq
     let ident = toName TypeVal (tcInfoModName $ tcInfo te,'v':show n)
         v = tyvar ident k
@@ -352,7 +385,7 @@ deconstructorInstantiate tfa@TForAll {} = do
     let f (_ `TArrow` b) = f b
         f b = b
         eqvs = vs List.\\ freeVars (f t)
-    tell mempty { existentialVars = eqvs }
+    tellTc mempty { existentialVars = eqvs }
     (_,t) <- freshInstance Sigma (TForAll (vs List.\\ eqvs) qt)
     return t
 deconstructorInstantiate x = return x
@@ -380,7 +413,7 @@ boxySpec (TForAll as qt@(ps :=> t)) = do
 
 freeMetaVarsEnv :: Tc (Set.Set MetaVar)
 freeMetaVarsEnv = do
-    env <- asks tcCurrentEnv
+    env <- asksTc tcCurrentEnv
     xs <- flip mapM (Map.elems env)  $ \ x -> do
         x <- flattenType x
         return $ freeMetaVars x
@@ -430,7 +463,7 @@ evalTAssoc ta@TAssoc { typeCon = Tycon { tyconName = n1 }, typeClassArgs = ~[car
     carg' <- evalType carg
     case fromTAp carg' of
         (TCon Tycon { tyconName = n2 }, as) -> do
-            InstanceEnv ie <- asks tcInstanceEnv
+            InstanceEnv ie <- asksTc tcInstanceEnv
             case Map.lookup (n1,n2) ie of
                 Just (aa,bb,tt) -> evalType (applyTyvarMap (zip aa as ++ zip bb eas) tt)
                 _ -> fail "no instance for associated type"
@@ -522,14 +555,14 @@ instance MonadWarn Tc where
 
 instance MonadSrcLoc Tc where
     getSrcLoc = do
-        xs <- asks tcDiagnostics
+        xs <- getErrorContext
         case xs of
             (Msg (Just sl) _:_) -> return sl
             _ -> return bogusASrcLoc
 
 instance UniqueProducer Tc where
     newUniq = do
-        v <- asks tcVarnum
+        v <- asksTc tcVarnum
         n <- liftIO $ do
             n <- readIORef v
             writeIORef v $! n + 1

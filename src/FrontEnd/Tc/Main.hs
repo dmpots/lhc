@@ -66,7 +66,7 @@ tcApps e@(HsVar v) as typ = do
     let vname = toName Val v
     --let nname = toName Val n
     when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "tcApps: " ++ (show vname)
-    rc <- asks tcRecursiveCalls
+    rc <- asksTc tcRecursiveCalls
     -- fall through if this is a recursive call to oneself
     if (vname `Set.member` rc) then tcApps' e as typ else do
     tcKnownApp e True vname as typ
@@ -141,10 +141,10 @@ tcExpr e t = do
 tiExpr (HsVar v) typ = do
     sc <- lookupName (toName Val v)
     f <- sc `subsumes` typ
-    rc <- asks tcRecursiveCalls
+    rc <- asksTc tcRecursiveCalls
     if (toName Val v `Set.member` rc) then do
         (e',n) <- wrapInAsPat (HsVar v)
-        tell mempty { outKnots = [(n,toName Val v)] }
+        tellTc mempty { outKnots = [(n,toName Val v)] }
         return e'
       else do
         doCoerce f (HsVar v)
@@ -578,7 +578,7 @@ tiImpls bs = withContext (locSimple (srcLoc bs) ("in the recursive implicitly ty
     when (dump FD.BoxySteps) $ liftIO $ putStrLn $ "*** tiImpls " ++ show names
     ts <- sequence [newMetaVar Tau kindStar | _ <- bs]
     (res,ps) <- listenSolvePreds $
-        local (tcRecursiveCalls_u (Set.union $ Set.fromList names)) $
+        localTc (tcRecursiveCalls_u (Set.union $ Set.fromList names)) $
             localEnv (Map.fromList [  (d,s) | d <- names | s <- ts]) $
                 sequence [ tcDecl d s | d <- bs | s <- ts ]
     ps' <- flattenType ps
@@ -756,6 +756,7 @@ tiExpl (sc, decl) = withContext (locSimple (srcLoc decl) ("in the explicitly typ
     ch <- getClassHierarchy
     env <- freeMetaVarsEnv
     (_,ds,rs) <- splitReduce env (freeMetaVarsPreds qs) ps
+    -- I think we need to include the constraints on free variables here somehow?
     assertEntailment qs (rs ++ ds)
     return ret
 
@@ -848,6 +849,7 @@ tiProgram bgs es = ans where
         topDefaults rs
         return r
 
+    f :: [BindGroup] -> [HsDecl] -> TypeEnv -> Tc [HsDecl]
     f (bg:bgs) rs cenv  = do
         (ds,env) <- tcBindGroup bg
         when verbose $ liftIO $ do putChar '.'; hFlush stdout

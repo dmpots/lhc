@@ -231,7 +231,7 @@ tiModules' cho ms = do
         }
 
     (localVarEnv,checkedRules,coercions,tcDs) <- withOptionsT (modInfoOptions tms) $ runTc tcInfo $ do
-        (tcDs,out) <- listen (tiProgram program (ds ++ filter isHsPragmaRules liftedInstances))
+        (tcDs,out) <- listenTc (tiProgram program (ds ++ filter isHsPragmaRules liftedInstances))
         env <- getCollectedEnv
         cc <- getCollectedCoerce
         let cc' = Map.union cc $ Map.fromList [ (as,lup v) | (as,v) <- outKnots out ]
