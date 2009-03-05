@@ -101,8 +101,8 @@ collectPassStats = verbose
 bracketHtml :: IO a -> IO a
 bracketHtml action = do
     (argstring,_) <- getArgString
-    wdump FD.Html $ putStrLn $ "<html><head><title>" ++ argstring ++ "</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body style=\"background: black; color: lightgrey\"><pre>"
-    action `finally` (wdump FD.Html $ putStrLn "</pre></body></html>")
+    wdump FD.Html $ putErrLn ("<html><head><title>" ++ argstring ++ "</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body style=\"background: black; color: lightgrey\"><pre>") >> hFlush stderr
+    action `finally` (wdump FD.Html $ putErrLn "</pre></body></html>" >> hFlush stderr)
 
 catom :: IO a -> IO a
 catom action = action `finally` dumpToFile
@@ -277,8 +277,9 @@ processDecls cho ho' tiData = do
     -- I don't think any functions depends on such shadowing to be removed.
     ds <- annotateDs mempty (\_ nfo -> return nfo) (\_ nfo -> return nfo) (\_ nfo -> return nfo) ds
 
-    wdump FD.CoreInitial $
-        mapM_ (\(v,lc) -> printCheckName'' fullDataTable v lc) ds
+    -- Never saw influence of preceding line, and it's confusing to see CoreInitial dump twice...
+    -- wdump FD.CoreInitial $
+    --     mapM_ (\(v,lc) -> printCheckName'' fullDataTable v lc) ds
 
     let rules@(Rules rules') = -- instanceRules `mappend`
                                userRules `mappend` specializeRules

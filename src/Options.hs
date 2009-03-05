@@ -185,6 +185,7 @@ postProcessFO o = case FlagOpts.process (optFOptsSet o) (optFOpts o) of
         (_,xs) -> fail ("Unrecognized flag passed to '-f': "
                         ++ unwords xs ++ "\nValid flags:\n\n" ++ FlagOpts.helpMsg)
 
+getArguments :: IO [String]
 getArguments = do
     x <- lookupEnv "LHCOPTS"
     let eas = maybe [] words x
