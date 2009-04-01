@@ -1,0 +1,4 @@
+Translating from GHC Core to GRIN:
+
+
+
