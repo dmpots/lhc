@@ -56,7 +56,7 @@ ppExpression (a :>>= Empty :-> c)
     = ppExpression a <$$>
       ppExpression c
 ppExpression (a :>>= b :-> c)
-    = ppValue b <+> text "<-" <+> hang 0 (ppExpression a) <$$>
+    = ppValue b <+> text "<-" <+> hang 0 (ppBeginExpression a) <$$>
       ppExpression c
 
 ppAlt (value :-> exp) = ppValue value <$$>
