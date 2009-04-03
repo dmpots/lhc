@@ -86,9 +86,8 @@ defToFunc sdef
                         , funcDefArgs = renamed
                         , funcDefBody = exp }
 
--- Translate Core to Grin in a strict context
-strictExpression :: SimpleExp -> M Expression
-strictExpression simplExp
+lazyExpression :: SimpleExp -> M Expression
+lazyExpression simplExp
     = case simplExp of
        Simple.Case exp binding alts mbDefault ->
          bindVariable binding $ \renamed ->
@@ -102,27 +101,20 @@ strictExpression simplExp
          do name <- lookupVariable var
             mbArity <- findArity var
             case mbArity of
-              Nothing -> return $ eval (Variable name)
-              Just 0  -> return $ Application name []
-              Just n  -> return $ Unit (Node name (FunctionNode n) [])
+              Nothing -> return $ Unit (Variable name)
+              Just n  -> return $ Store (Node name (FunctionNode n) [])
        Dcon con ->
          do name <- lookupVariable con
             Just n <-findArity con
             --trace (show (con,a)) (return ())
-            return $ Unit (Node name (ConstructorNode n) [])
-       Lit (Lint i) ->
-         return $ Unit (Integer i)
-       Lit (Lrational r) ->
-         return $ Unit (Rational r)
-       Lit (Lchar c) ->
-         return $ Unit (Char c)
-       Lit (Lstring str) ->
-         return $ Unit (String str)
+            return $ Store (Node name (ConstructorNode n) [])
+       Simple.Lit lit ->
+         return $ Store (Grin.Lit lit)
        Let bind func args arity e ->
          bindVariable bind $ \bind' ->
          do func' <- lookupVariable func
             args' <- mapM lookupVariable args
-            e' <- strictExpression e
+            e' <- lazyExpression e
             return $ Store (Node func' (FunctionNode (arity-length args)) (map Variable args')) :>>= Variable bind' :-> e'
        ap@App{} ->
          let loop acc (App a (Var b))
@@ -140,17 +132,20 @@ strictExpression simplExp
                       mbArity <- findArity var
                       case mbArity of
                         Nothing -> mkApply (reverse acc) name
+                        Just n  -> do v <- newVariable
+                                      ap <- mkApply (reverse acc) v
+                                      return $ Store (Node name (FunctionNode n) []) :>>= Variable v :-> ap
                         Just n  -> case length acc `compare` n of
-                                     LT -> return (Unit (Node name (FunctionNode (n-length acc)) (map Variable $ reverse acc)))
                                      GT -> do let (now,later) = splitAt n (reverse acc)
                                               v <- newVariable
                                               app <- mkApply later v
                                               return (Application name (map Variable now) :>>= Variable v :-> app)
-                                     EQ -> return (Application name (map Variable $ reverse acc))
+                                     _ -> return (Store (Node name (FunctionNode (n-length acc)) (map Variable $ reverse acc)))
+                                     --EQ -> return (Application name (map Variable $ reverse acc))
              loop acc (Dcon con)
                  = do name <- lookupVariable con
                       Just n <- findArity con
-                      return $ Unit (Node name (ConstructorNode (n-length acc)) (map Variable $ reverse acc))
+                      return $ Store (Node name (ConstructorNode (n-length acc)) (map Variable $ reverse acc))
              loop acc e
                  = do e' <- strictExpression e
                       v  <- newVariable
@@ -161,7 +156,7 @@ strictExpression simplExp
              mkApply (x:xs) v
                  = do v' <- newVariable
                       r <- mkApply xs v'
-                      return $ apply (Variable v) (Variable x) :>>= Variable v' :-> r
+                      return $ applyCell (Variable v) (Variable x) :>>= Variable v' :-> r
          in loop [] ap
        LetRec defs e ->
          let binds = [ bind | (bind,_,_,_) <- defs ]
@@ -206,40 +201,28 @@ update bind fn args arity
     = Application (Builtin $ fromString "update") [Variable bind, Node fn (ConstructorNode (arity-length args)) (map Variable args)]
 eval v = Application (Builtin $ fromString "eval") [v]
 apply a b = Application (Builtin $ fromString "apply") [a,b]
-
+applyCell a b = Store (Node (Builtin $ fromString "apply") (FunctionNode 0) [a,b])
 
 -- Translate a Core alternative to a Grin alternative
 alternative :: Simple.Alt -> M Lambda
 alternative (Acon con bs e)
     = bindVariables bs $ \renamed ->
-      do e' <- strictExpression e
+      do e' <- lazyExpression e
          name <- lookupVariable con
          return $ Node name (ConstructorNode 0) (map Variable renamed) :-> e'
 alternative (Adefault e)
-    = do e' <- strictExpression e
+    = do e' <- lazyExpression e
          v <- newVariable
          return $ Variable v :-> e'
-alternative (Alit (Lint int) e)
-    = do e' <- strictExpression e
-         return $ Integer int :-> e'
-alternative (Alit (Lrational r) e)
-    = do e' <- strictExpression e
-         return $ Rational r :-> e'
-alternative (Alit (Lchar char) e)
-    = do e' <- strictExpression e
-         return $ Char char :-> e'
-alternative (Alit (Lstring string) e)
-    = do e' <- strictExpression e
-         return $ String string :-> e'
+alternative (Alit lit e)
+    = do e' <- lazyExpression e
+         return $ Grin.Lit lit :-> e'
 
-lazyExpression :: SimpleExp -> M Expression
-lazyExpression e = strictExpression e
-lazyExpression _ = return $ Unit Empty
-{-
-splitExp (Lam (Vb b) exp) = let (args,body) = splitExp exp
-                            in (b:args, body)
-splitExp (Lam _ exp) = splitExp exp
-splitExp exp = ([], exp)
+strictExpression :: SimpleExp -> M Expression
+strictExpression e
+    = do v <- newVariable
+         r <- lazyExpression e
+         return $ r :>>= Variable v :-> eval (Variable v)
 
 {-
 let a = 1:b
@@ -266,11 +249,6 @@ a := Let_a a
 -}
 
 
-
-qualToCompact (pkg,mod,ident)
-    | L.null pkg && L.null mod = fromLazyByteString ident
-    | otherwise                = fromLazyByteString (L.concat [pkg, L.pack ":", mod, L.pack ".", ident])
--}
 
 bindVariable :: Variable -> (Renamed -> M a) -> M a
 bindVariable var fn

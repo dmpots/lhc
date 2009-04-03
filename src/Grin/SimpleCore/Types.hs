@@ -5,7 +5,6 @@ import CompactString
 import Traverse
 import Language.Core (Tdef(..),Cdef(..),Kind(..),Ty(..))
 import qualified Language.Core as Core
-import Grin.Types (Variable)
 import Control.Monad
 
 import Data.Binary
@@ -33,8 +32,8 @@ data SimpleExp
     | Dcon CompactString
     | Lit Lit
     | App SimpleExp SimpleExp
-    | Let CompactString CompactString [Variable] Int SimpleExp
-    | LetRec [(CompactString, CompactString, [Variable], Int)] SimpleExp
+    | Let CompactString CompactString [CompactString] Int SimpleExp
+    | LetRec [(CompactString, CompactString, [CompactString], Int)] SimpleExp
     | Case SimpleExp CompactString [Alt] (Maybe SimpleExp)
     | External String String
     | DynExternal String
@@ -43,7 +42,7 @@ data SimpleExp
       deriving (Show,Read)
 
 data Alt
-    = Acon CompactString [Variable] SimpleExp
+    = Acon CompactString [CompactString] SimpleExp
     | Alit Lit SimpleExp
     | Adefault SimpleExp
     deriving (Show,Read)

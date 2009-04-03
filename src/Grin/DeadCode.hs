@@ -45,11 +45,8 @@ dependencies (Unit v) = valueBound v
 lambda (v :-> e) = dependencies e `Set.difference` valueBound v
 
 valueBound (Node name _type args) = Set.insert name $ Set.unions (map valueBound args)
-valueBound Integer{} = Set.empty
-valueBound Rational{} = Set.empty
-valueBound Char{} = Set.empty
-valueBound String{} = Set.empty
-valueBound (Variable v) = Set.singleton v
-valueBound Hole{} = Set.empty
-valueBound Empty = Set.empty
+valueBound Lit{}                  = Set.empty
+valueBound (Variable v)           = Set.singleton v
+valueBound Hole{}                 = Set.empty
+valueBound Empty                  = Set.empty
 

@@ -1,13 +1,24 @@
-module Grin.Types where
+{-# LANGUAGE TemplateHaskell #-}
+module Grin.Types
+    ( module Grin.Types
+    , module Grin.SimpleCore.Types
+    ) where
 
 import CompactString
+
+import Grin.SimpleCore.Types (Lit(..))
+
+import Data.Binary
+import Data.DeriveTH
+import Control.Monad  (ap)
+
 
 -- Invariants:
 --   The nodes referred to by the functions are a subset of the nodes in 'grinNodes'.
 data Grin
-    = Grin { grinNodes :: [NodeDef]
+    = Grin { grinNodes     :: [NodeDef]
            , grinFunctions :: [FuncDef]
-           , grinUnique :: Int
+           , grinUnique    :: Int
            }
 
 data FuncDef
@@ -63,14 +74,20 @@ isBuiltin _ = False
 
 data Value
     = Node Renamed NodeType [Value]
-    | Integer Integer
-    | Rational Rational
-    | Char Char
-    | String String
+    | Lit Lit
     | Variable Renamed
     | Hole Int
     | Empty
     deriving (Show,Read)
 
 
+$(derive makeBinary ''NodeType)
+$(derive makeBinary ''Renamed)
+$(derive makeBinary ''Value)
+$(derive makeBinary ''FuncDef)
+$(derive makeBinary ''NodeDef)
+$(derive makeBinary ''Expression)
+$(derive makeBinary ''Type)
+$(derive makeBinary ''Lambda)
+$(derive makeBinary ''Grin)
 

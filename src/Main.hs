@@ -3,6 +3,7 @@ module Main where
 import System.Directory
 import System.FilePath
 import System.Environment
+import Control.Exception
 import qualified Data.ByteString.Lazy.Char8 as L
 import System.IO
 import qualified Data.Set as Set
@@ -46,6 +47,10 @@ build files
              defs = concatMap moduleDefs allSmods
          let grin = coreToGrin tdefs defs
              reduced = removeDeadCode ["main::Main.main"] grin
+         hPutStrLn stderr "Translating to grin..."
+         evaluate grin
+         hPutStrLn stderr "Removing dead code..."
+         evaluate reduced
          hPutStrLn stderr "Printing grin..."
          print (ppGrin reduced)
          return ()

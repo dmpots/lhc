@@ -66,8 +66,10 @@ ppValue (Node name nodeType args)
     = hsep (ppNodeType nodeType name : map ppValue args)
 ppValue (Hole size) = text "@hole" <+> hsep (replicate size (char '_'))
 ppValue Empty = text "()"
-ppValue (Integer i) = integer i
-ppValue (Rational r) = text (show r)
-ppValue (Char char) = text (show char)
-ppValue (String string) = text (show string)
+ppValue (Lit lit) = ppLit lit
 ppValue (Variable variable) = pretty variable
+
+ppLit (Lint i) = integer i
+ppLit (Lrational r) = text (show r)
+ppLit (Lchar char) = text (show char)
+ppLit (Lstring string) = text (show string)

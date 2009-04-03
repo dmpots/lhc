@@ -16,7 +16,7 @@ module Grin.SimpleCore
   , coreToSimpleCore
   ) where
 
-import Grin.Types (Variable,NodeType(..),Value(..))
+import Grin.Types (Variable,NodeType(..))
 import Grin.SimpleCore.Types
 import Language.Core (Ty,Vbind,Tdef,Vdef(..))
 import qualified Language.Core as Core
@@ -40,6 +40,7 @@ The data structures for the simplified core is similar to plain core with a few 
  * Lambdas have been removed
  * Application chains have been converted to lists of arguments.
 -}
+
 
 
 
