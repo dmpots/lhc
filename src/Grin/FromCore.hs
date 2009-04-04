@@ -1,5 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
-module Grin.FromCore where
+module Grin.FromCore
+    ( coreToGrin
+    ) where
 
 import CompactString
 import qualified Language.Core  as Core
@@ -109,7 +111,7 @@ lazyExpression simplExp
             --trace (show (con,a)) (return ())
             return $ Store (Node name (ConstructorNode n) [])
        Simple.Lit lit ->
-         return $ Store (Grin.Lit lit)
+         return $ Unit (Grin.Lit lit)
        Let bind func args arity e ->
          bindVariable bind $ \bind' ->
          do func' <- lookupVariable func
@@ -118,38 +120,39 @@ lazyExpression simplExp
             return $ Store (Node func' (FunctionNode (arity-length args)) (map Variable args')) :>>= Variable bind' :-> e'
        ap@App{} ->
          let loop acc (App a (Var b))
-                 = do n <- lookupVariable b
-                      loop (n:acc) a
+                 = do name <- lookupVariable b
+                      mbArity <- findArity b
+                      case mbArity of
+                        Nothing -> loop (name:acc) a
+                        Just n  -> do v <- newVariable
+                                      r <- loop  (v:acc) a
+                                      return $ Store (Node name (FunctionNode n) []) :>>= Variable v :-> r
              loop acc (App a b)
                  = do e <- lazyExpression b
                       v <- newVariable
                       r <- loop (v:acc) a
                       return $ e :>>= Variable v :-> r
              loop acc (Simple.Primitive p)
-                 = return $ Application (Builtin p) (map Variable $ reverse acc)
+                 = return $ Application (Builtin p) (map Variable acc)
+             loop acc (Simple.External fn conv)
+                 = return $ Application (Grin.External fn) (map Variable acc)
              loop acc (Var var)
                  = do name <- lookupVariable var
                       mbArity <- findArity var
                       case mbArity of
-                        Nothing -> mkApply (reverse acc) name
-                        Just n  -> do v <- newVariable
-                                      ap <- mkApply (reverse acc) v
-                                      return $ Store (Node name (FunctionNode n) []) :>>= Variable v :-> ap
-                        Just n  -> case length acc `compare` n of
-                                     GT -> do let (now,later) = splitAt n (reverse acc)
-                                              v <- newVariable
-                                              app <- mkApply later v
-                                              return (Application name (map Variable now) :>>= Variable v :-> app)
-                                     _ -> return (Store (Node name (FunctionNode (n-length acc)) (map Variable $ reverse acc)))
-                                     --EQ -> return (Application name (map Variable $ reverse acc))
+                        Nothing -> mkApply acc name
+                        Just n  -> do let (now,later) = splitAt n acc
+                                      v <- newVariable
+                                      ap <- mkApply later v
+                                      return $ Store (Node name (FunctionNode (n-length now)) (map Variable now)) :>>= Variable v :-> ap
              loop acc (Dcon con)
                  = do name <- lookupVariable con
                       Just n <- findArity con
-                      return $ Store (Node name (ConstructorNode (n-length acc)) (map Variable $ reverse acc))
+                      return $ Store (Node name (ConstructorNode (n-length acc)) (map Variable acc))
              loop acc e
                  = do e' <- strictExpression e
                       v  <- newVariable
-                      app <- mkApply (reverse acc) v
+                      app <- mkApply acc v
                       return (e' :>>= Variable v :-> app)
              mkApply [] v
                  = return (Unit (Variable v))
@@ -175,7 +178,7 @@ lazyExpression simplExp
        Note _ e ->
           strictExpression e
 --       Label str -> error $ "label: " ++ str
---       External conv fn -> error $ "external: " ++ show (conv,fn)
+       Simple.External fn conv -> return $ Unit $ Variable $ Grin.External fn
 --       DynExternal fn   -> error $ "dynexternal: " ++ fn
        _ ->
           return $ Unit Empty

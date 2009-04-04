@@ -67,10 +67,17 @@ type Variable = CompactString
 data Renamed = Aliased Int CompactString
              | Anonymous Int
              | Builtin CompactString
+             | External String
     deriving (Show,Read,Eq,Ord)
+
+isAliased Aliased{} = True
+isAliased _ = False
 
 isBuiltin Builtin{} = True
 isBuiltin _ = False
+
+isExternal External{} = True
+isExternal _ = False
 
 data Value
     = Node Renamed NodeType [Value]

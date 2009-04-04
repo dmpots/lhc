@@ -12,7 +12,7 @@ import qualified Data.Map as Map
 removeDeadCode :: [String] -> Grin -> Grin
 removeDeadCode entryPoints grin
     = let entries = [ (nameMap Map.! fromString e) | e <- entryPoints ]
-          loop seen ds = let deps = Set.filter (not . isBuiltin) $ Set.unions (map findFunc ds)
+          loop seen ds = let deps = Set.filter isAliased $ Set.unions (map findFunc ds)
                              new  = deps `Set.difference` seen
                              seen' = Set.union seen deps
                          in if Set.null new then seen else loop seen' (Set.toList new)

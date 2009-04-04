@@ -52,7 +52,7 @@ data Lit
     | Lrational Rational
     | Lchar Char
     | Lstring String
-    deriving (Show,Read)
+    deriving (Show,Read,Eq,Ord)
 
 $(derive makeBinary ''Alt)
 $(derive makeBinary ''Lit)

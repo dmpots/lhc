@@ -14,6 +14,7 @@ import Grin.SimpleCore
 import Grin.FromCore
 import Grin.Pretty
 import Grin.DeadCode
+import Grin.Eval.Basic
 
 main :: IO ()
 main = do args <- getArgs
@@ -21,7 +22,8 @@ main = do args <- getArgs
             [] -> error "No arguments!"
             ["libcheck"]      -> error "TODO"
             ("install":files) -> mapM_ installCoreFile files
-            ("build":files)   -> build files
+            ("build":files)   -> build False files
+            ("eval":files)    -> build True files
 
 
 installCoreFile :: FilePath -> IO ()
@@ -37,8 +39,8 @@ installCoreFile path
                             createDirectoryIfMissing False (dataDir </> modulePackage smod)
                             encodeFile (dataDir </> modulePackage smod </> moduleName smod) smod
 
-build :: [FilePath] -> IO ()
-build files
+build :: Bool -> [FilePath] -> IO ()
+build doEval files
     = do hPutStrLn stderr "Parsing core files..."
          smods <- mapM parseCore files
          hPutStrLn stderr "Tracking core dependencies..."
@@ -46,14 +48,15 @@ build files
          let tdefs = concatMap moduleTypes allSmods
              defs = concatMap moduleDefs allSmods
          let grin = coreToGrin tdefs defs
-             reduced = removeDeadCode ["main::Main.main"] grin
+             reduced = removeDeadCode ["main:Main.main"] grin
          hPutStrLn stderr "Translating to grin..."
          evaluate grin
          hPutStrLn stderr "Removing dead code..."
          evaluate reduced
-         hPutStrLn stderr "Printing grin..."
-         print (ppGrin reduced)
-         return ()
+         if doEval
+            then do print ((eval grin "main:Main.main"))
+            else do hPutStrLn stderr "Printing grin..."
+                    print (ppGrin reduced)
 
 loadDependencies :: [SimpleModule] -> IO [SimpleModule]
 loadDependencies smods

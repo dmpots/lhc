@@ -28,8 +28,8 @@ ppNodeType (FunctionNode n) name = char 'P' <> pretty name <> char '_' <> int n
 instance Pretty Renamed where
     pretty (Aliased n var) = pretty var <> char '_' <> pretty n
     pretty (Anonymous n)   = char 'x' <> pretty n
-    pretty (Builtin p)   = char '@' <> pretty p
-
+    pretty (Builtin p)     = char '@' <> pretty p
+    pretty (External e)    = parens (text "foreign" <+> text e)
 
 ppFuncDef :: FuncDef -> Doc
 ppFuncDef (FuncDef name args body)
