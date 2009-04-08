@@ -9,10 +9,18 @@ import Control.Monad (ap)
 import Control.Monad.State
 import Control.Monad.Reader
 import qualified Data.Map as Map
+import Foreign.Ptr
+import Foreign.Marshal.Alloc
+import Foreign.Marshal.Utils (copyBytes)
+import Foreign.Storable
+import Data.Char
+import Data.Word
+import Foreign.C.String
+import System.Posix (Fd(..), fdWrite)
 
 import Debug.Trace
 
-eval :: Grin -> String -> EvalValue
+eval :: Grin -> String -> IO EvalValue
 eval grin entry
     = runEval grin $
       do ptr <- storeValue =<< callFunction renamedEntry []
@@ -31,18 +39,20 @@ data EvalValue
     | HeapPointer HeapPointer
     | Hole Int
     | Empty
-      deriving (Show)
+      deriving (Show,Eq,Ord)
 data EvalState
     = EvalState { stateFunctions :: Map.Map Renamed FuncDef
+                , stateNodes     :: Map.Map CompactString NodeDef
                 , stateHeap      :: Heap
                 , stateFree      :: HeapPointer }
-type Eval a = StateT EvalState (Reader Scope) a
+type Eval a = StateT EvalState (ReaderT Scope IO) a
 
-runEval :: Grin -> Eval a -> a
+runEval :: Grin -> Eval a -> IO a
 runEval grin fn
-    = runReader (evalStateT fn initState) emptyScope
+    = runReaderT (evalStateT fn initState) emptyScope
     where emptyScope = Map.empty
           initState = EvalState { stateFunctions = Map.fromList [ (funcDefName def, def) | def <- grinFunctions grin ]
+                                , stateNodes     = Map.fromList [ (name, node) | node@NodeDef{nodeName = Aliased _ name} <- grinNodes grin ]
                                 , stateHeap      = Map.empty
                                 , stateFree      = 0 }
 
@@ -55,19 +65,137 @@ callFunction (Builtin fnName) [fnPtr,arg] | fnName == fromString "apply"
            Node nodeName (FunctionNode 1) args -> callFunction nodeName (args ++ [arg])
            Node nodeName (FunctionNode 0) args -> error $ "apply: over application?"
            Node nodeName (FunctionNode n) args -> return $ Node nodeName (FunctionNode (n-1)) (args ++ [arg])
-           _ -> error (show fn)
+           _ -> error $ "apply: " ++ (show fn)
 callFunction (Builtin fnName) [fn, handler, realWorld] | fnName == fromString "catch#"
+    = callFunction (Builtin $ fromString "apply") [fn, realWorld]
+callFunction (Builtin fnName) [fn, realWorld] | fnName == fromString "blockAsyncExceptions#"
     = callFunction (Builtin $ fromString "apply") [fn, realWorld]
 callFunction (Builtin fnName) [realWorld] | fnName == fromString "noDuplicate#"
     = return $ realWorld
 callFunction (Builtin fnName) [] | fnName == fromString "realWorld#"
     = return Empty
+callFunction (Builtin fnName) [int] | fnName == fromString "int2Word#"
+    = return int
+callFunction (Builtin fnName) [addr,Lit (Lint nth)] | fnName == fromString "indexCharOffAddr#"
+    = do case addr of
+           Lit (Lstring str) -> return (Lit (Lchar ((str++"\x0")!!fromIntegral nth)))
+           _ -> error $ "indexCharOffAddr#: " ++ show addr
+callFunction (Builtin fnName) [a,b] | fnName == fromString "==#"
+    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
+         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
+         if a == b
+            then return $ Node true (ConstructorNode 0) []
+            else return $ Node false (ConstructorNode 0) []
+callFunction (Builtin fnName) [a,b] | fnName == fromString ">#"
+    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
+         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
+         if a > b
+            then return $ Node true (ConstructorNode 0) []
+            else return $ Node false (ConstructorNode 0) []
+callFunction (Builtin fnName) [a,b] | fnName == fromString "<#"
+    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
+         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
+         if a > b
+            then return $ Node true (ConstructorNode 0) []
+            else return $ Node false (ConstructorNode 0) []
+callFunction (Builtin fnName) [a,b] | fnName == fromString ">=#"
+    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
+         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
+         if a >= b
+            then return $ Node true (ConstructorNode 0) []
+            else return $ Node false (ConstructorNode 0) []
+callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "+#"
+    = return $ Lit (Lint (a+b))
+callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "-#"
+    = return $ Lit (Lint (a-b))
+callFunction (Builtin fnName) [a,b] | fnName == fromString "-#"
+    = do Lit (Lint a') <- runEvalPrimitive a
+         Lit (Lint b') <- runEvalPrimitive b
+         return (Lit (Lint (a'+b')))
+callFunction (Builtin fnName) [Lit (Lint ptr), Lit (Lint offset),Lit (Lchar c),realWorld] | fnName == fromString "writeCharArray#"
+    = do liftIO $ poke (nullPtr `plusPtr` (fromIntegral $ ptr + offset)) (fromIntegral (ord c) :: Word8)
+         --liftIO $ putStrLn $ "writeCharArray: " ++ show c
+         return realWorld
+callFunction (Builtin fnName) [Lit (Lint size), realWorld] | fnName == fromString "newPinnedByteArray#"
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         ptr <- liftIO $ mallocBytes (fromIntegral size)
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint $ fromIntegral $ minusPtr ptr nullPtr)]
+callFunction (Builtin fnName) [val, realWorld] | fnName == fromString "newMutVar#"
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         ptr <- storeValue val
+         return $ Node node (ConstructorNode 0) [realWorld, HeapPointer ptr]
+callFunction (Builtin fnName) [ptr, realWorld] | fnName == fromString "readMutVar#"
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, ptr]
+callFunction (Builtin fnName) [ptr, val,realWorld] | fnName == fromString "writeMutVar#"
+    = do --liftIO $ putStrLn $ "writeMutVar: " ++ show (ptr,val)
+         HeapPointer hpPtr <- return ptr
+         updateValue hpPtr val
+         return $ realWorld
+callFunction (Builtin fnName) [realWorld] | fnName == fromString "newMVar#"
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         ptr <- storeValue Empty
+         --trace ("new mvar at: " ++ show ptr) $ return ()
+         return $ Node node (ConstructorNode 0) [realWorld, HeapPointer ptr]
+callFunction (Builtin fnName) [mvar,realWorld] | fnName == fromString "takeMVar#"
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         HeapPointer ptr <- return mvar
+         val <- fetch ptr
+         --trace ("Reading mvar: " ++ show (ptr,val)) $ return ()
+         return $ Node node (ConstructorNode 0) [realWorld, val]
+callFunction (Builtin fnName) [mvar,val,realWorld] | fnName == fromString "putMVar#"
+    = do HeapPointer ptr <- return mvar
+         updateValue ptr val
+         --trace ("updating mvar: " ++ show (ptr,val)) $ return ()
+         return $ realWorld
+callFunction (Builtin fnName) [mvar,val] | fnName == fromString "update"
+    = do HeapPointer ptr <- return mvar
+         updateValue ptr val
+         --trace ("updating var: " ++ show (ptr,val)) $ return ()
+         return $ Empty
+callFunction (Builtin fnName) [intVal] | fnName == fromString "narrow32Int#"
+    = do Lit (Lint val) <- runEvalPrimitive intVal
+         return $ Lit (Lint val)
+callFunction (Builtin fnName) [exp,realWorld] | fnName == fromString "raiseIO#"
+    = do val <- runEvalPrimitive exp
+         error $ "RaiseIO: " ++ show val
+callFunction (Builtin fnName) [key,val,finalizer,realWorld] | fnName == fromString "mkWeak#"
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Empty]
+callFunction (External "__hscore_memcpy_dst_off") [Lit (Lint dst),Lit (Lint off),Lit (Lint src),Lit (Lint size), realWorld]
+    = do let dstPtr = nullPtr `plusPtr` (fromIntegral (dst+off))
+             srcPtr = nullPtr `plusPtr` (fromIntegral src)
+         liftIO $ copyBytes dstPtr srcPtr (fromIntegral size)
+         node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint (dst+off))]
+callFunction (External "__hscore_PrelHandle_write") [Lit (Lint fd),Lit (Lint ptr),Lit (Lint offset),Lit (Lint size),realWorld]
+    = do --liftIO $ putStrLn $ "Writing to: " ++ show (fd,size)
+         let strPtr = nullPtr `plusPtr` fromIntegral (ptr+offset)
+         str <- liftIO $ peekCStringLen (strPtr,fromIntegral size)
+         out <- liftIO $ fdWrite (Fd (fromIntegral fd)) str
+         node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint $ fromIntegral out)]
+callFunction (External "__hscore_get_errno") [realWorld]
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 0)]
 callFunction (External "__hscore_bufsiz") [realWorld]
-    = return $ Lit (Lint 512)
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 512)]
+callFunction (External "isatty") [fd,realWorld]
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
+callFunction (External "fdReady") [fd,write,msecs,isSock,realWorld]
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
+callFunction (External "rtsSupportsBoundThreads") [realWorld]
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
 callFunction fnName args
     = do fn <- lookupFunction fnName
-         ret <- trace ("Calling: " ++ show fnName) $ runFunction fn args
-         trace ("calling: " ++ show fnName ++ ", returning: " ++ show ret) $ return ret
+         --liftIO $ putStrLn $ "Entering: " ++ show fnName
+         ret <- runFunction fn args
+         --liftIO $ putStrLn $ "Returning: " ++ show fnName ++ ", value: " ++ show ret
+         return ret
 
 runFunction :: FuncDef -> [EvalValue] -> Eval EvalValue
 runFunction def args
@@ -88,14 +216,14 @@ runExpression (Store v)
 runExpression (Application fn args)
     = callFunction fn =<< mapM toEvalValue args
 runExpression (Case val alts)
-    = do val' <- trace ("Case for: " ++ show (ppValue val)) $ toEvalValue val
+    = do val' <- {- trace ("Case for: " ++ show (ppValue val)) $ -} toEvalValue val
          runCase val' alts
-runExpression e = error (show (ppExpression e))
+runExpression e = error $ "Unhandled expression: " ++ (show (ppExpression e))
 
 runCase :: EvalValue -> [Lambda] -> Eval EvalValue
 runCase val@(Node nodeName _type args) alts
     = worker alts
-    where worker [] = error $ "Grin.Eval.Basic.runCase: no match found."
+    where worker [] = error $ "Grin.Eval.Basic.runCase: no match found: " ++ show (val)
           worker [Grin.Variable x :-> e] = bindValue x val (runExpression e)
           worker ((Grin.Variable x :-> e):y:ys) = worker (y:(Grin.Variable x :-> e):ys)
           worker ((Grin.Node tag _type tagArgs :-> e):_) | tag == nodeName
@@ -112,7 +240,7 @@ runCase (Lit lit) alts
           worker (x:xs) = worker xs
 runCase val [Grin.Variable x :-> e]
     = bindValue x val (runExpression e)
-runCase val alts = error (show (val,length alts))
+runCase val alts = error $ "runCase: " ++ (show (val,length alts))
 
 
 
@@ -126,15 +254,23 @@ storeValue val
          let newFree = stateFree st + 1
          put st{stateFree = newFree
                ,stateHeap = Map.insert (stateFree st) val (stateHeap st)}
+         {- trace ("Storing value at: " ++ show (stateFree st, val)) $ -}
          return (stateFree st)
+
+updateValue :: HeapPointer -> EvalValue -> Eval ()
+updateValue ptr val
+    = modify $ \st -> st{stateHeap = Map.alter fn ptr (stateHeap st)}
+    where fn _ = Just val
 
 bindLambda :: EvalValue -> Grin.Value -> Eval a -> Eval a
 bindLambda (Node tag _ args) (Grin.Node bTag _ bArgs) | length args == length bArgs
     = bindLambdas (zip args bArgs)
 bindLambda from (Grin.Variable to)
     = bindValue to from
+bindLambda from Grin.Empty
+    = id
 bindLambda from to
-    = error (show (from, to))
+    = error $ "bindLambda: " ++ (show (from, to))
 
 bindLambdas :: [(EvalValue, Grin.Value)] -> Eval a -> Eval a
 bindLambdas [] = id
@@ -157,6 +293,11 @@ lookupVariable :: Renamed -> Eval EvalValue
 lookupVariable variable
     = asks $ Map.findWithDefault errMsg variable
     where errMsg = error $ "Grin.Eval.Basic.lookupVariable: couldn't find variable: " ++ show variable
+
+lookupNode :: CompactString -> Eval Renamed
+lookupNode name
+    = gets $ \st -> nodeName $ Map.findWithDefault errMsg name (stateNodes st)
+    where errMsg = error $ "Couldn't find node: " ++ show name
 
 fetch :: HeapPointer -> Eval EvalValue
 fetch ptr

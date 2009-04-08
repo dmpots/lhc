@@ -40,7 +40,7 @@ data NodeDef
 data NodeType
     = ConstructorNode Int
     | FunctionNode Int    -- Function node with number of 'missing' arguments.
-    deriving (Show,Read)
+    deriving (Show,Read,Eq,Ord)
 
 data Type
     = PtrType

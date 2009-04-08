@@ -94,9 +94,9 @@ expToSimpleExp (Core.Dcon con) = return $ Dcon (qualToCompact con)
 expToSimpleExp (Core.Lit lit)  = return $ Lit $ fromCoreLit lit
 expToSimpleExp (Core.App a b)  = return App `ap` expToSimpleExp a `ap` expToSimpleExp b
 expToSimpleExp (Core.Appt a _) = expToSimpleExp a
-expToSimpleExp (Core.Lam Core.Tb{} e) = expToSimpleExp e
+expToSimpleExp (Core.Lamt _ e) = expToSimpleExp e
 -- We remove lambdas by translating them to let expressions.
-expToSimpleExp exp@(Core.Lam (Core.Vb (var,ty)) _)
+expToSimpleExp exp@(Core.Lam (var,ty) _)
     = let def     = Vdef { vdefLocal = False
                          , vdefName  = var
                          , vdefType  = error "unknown type"
@@ -162,10 +162,11 @@ lambdaLift :: Core.Vdef -> M (CompactString, CompactString, [Variable], Int)
 lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
     = do (pkg,mod) <- asks currentModule
          scope <- asks currentScope
+         unique <- newUnique
          let lambdaScope = Set.toList $ freeVariables exp `Set.intersection` scope
              (args,body) = splitExp exp
              realArgs = map qualToCompact (lambdaScope ++ args)
-             toplevelName = qualToCompact (pkg,mod,L.pack "@lifted@_" `L.append` ident)
+             toplevelName = qualToCompact (pkg,mod,L.pack "@lifted@_" `L.append` ident `L.append` L.pack (show unique))
 
          bindVariables (lambdaScope ++ args) $ vdefToSimpleDef' toplevelName realArgs body
 
@@ -180,7 +181,7 @@ noType = error "Urk, types shouldn't be needed"
 freeVariables :: Core.Exp -> Set.Set (Core.Qual Core.Id)
 freeVariables (Core.Var qual)                  = Set.singleton qual
 freeVariables (Core.Dcon qual)                 = Set.singleton qual
-freeVariables (Core.Lam (Core.Vb (var,_ty)) e) = Set.delete (var) $ freeVariables e
+freeVariables (Core.Lam (var,_ty) e)           = Set.delete (var) $ freeVariables e
 freeVariables (Core.Let (Core.Nonrec def) e)   = freeVariables (Core.Let (Core.Rec [def]) e)
 freeVariables (Core.Let (Core.Rec defs) e)     = Set.unions (freeVariables e : (map (freeVariables . vdefExp) defs)) `Set.difference` bound
     where bound = Set.fromList (map vdefName defs)
@@ -233,15 +234,20 @@ bindDefs :: [Vdef] -> M a -> M a
 bindDefs [] = id
 bindDefs (x:xs) = bindDef x . bindDefs xs
 
+newUnique :: M Int
+newUnique = do u <- get
+               put $! u+1
+               return u
+
 {-
 lookupType :: Variable -> M Ty
 lookupType var = asks (Map.findWithDefault defaultVal var)
     where defaultVal = error $ "Grin.SimpleCore.lookupType: couldn't find type for: " ++ show var
 -}
 
-splitExp (Core.Lam (Core.Vb b) exp) = let (args,body) = splitExp exp
-                                      in (fst b:args, body)
-splitExp (Core.Lam _ exp) = splitExp exp
+splitExp (Core.Lam b exp) = let (args,body) = splitExp exp
+                                in (fst b:args, body)
+splitExp (Core.Lamt _ exp) = splitExp exp
 splitExp exp = ([], exp)
 
 

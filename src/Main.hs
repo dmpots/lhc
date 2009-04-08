@@ -54,7 +54,7 @@ build doEval files
          hPutStrLn stderr "Removing dead code..."
          evaluate reduced
          if doEval
-            then do print ((eval grin "main:Main.main"))
+            then do print =<< eval grin "main:Main.main"
             else do hPutStrLn stderr "Printing grin..."
                     print (ppGrin reduced)
 

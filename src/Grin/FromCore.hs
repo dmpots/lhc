@@ -127,6 +127,11 @@ lazyExpression simplExp
                         Just n  -> do v <- newVariable
                                       r <- loop  (v:acc) a
                                       return $ Store (Node name (FunctionNode n) []) :>>= Variable v :-> r
+{-             loop acc (App a b@App{})
+                 = do e <- strictExpression b
+                      v <- newVariable
+                      r <- loop (v:acc) a
+                      return $ e :>>= Variable v :-> r-}
              loop acc (App a b)
                  = do e <- lazyExpression b
                       v <- newVariable
@@ -201,7 +206,7 @@ fn f = eval f >>= \v -> apply v fibs
 -}
 
 update bind fn args arity
-    = Application (Builtin $ fromString "update") [Variable bind, Node fn (ConstructorNode (arity-length args)) (map Variable args)]
+    = Application (Builtin $ fromString "update") [Variable bind, Node fn (FunctionNode (arity-length args)) (map Variable args)]
 eval v = Application (Builtin $ fromString "eval") [v]
 apply a b = Application (Builtin $ fromString "apply") [a,b]
 applyCell a b = Store (Node (Builtin $ fromString "apply") (FunctionNode 0) [a,b])
@@ -257,7 +262,8 @@ bindVariable :: Variable -> (Renamed -> M a) -> M a
 bindVariable var fn
     = do u <- newUnique
          let renamed = Aliased u var
-         local (\env -> env{scope = Map.insert var renamed (scope env)}) (fn renamed)
+         local (\env -> env{scope = Map.insertWith errMsg var renamed (scope env)}) (fn renamed)
+    where errMsg = error $ "Grin.FromCore.bindVariable: duplicate variable: " ++ show var
 
 bindVariables :: [Variable] -> ([Renamed] -> M a) -> M a
 bindVariables vs fn

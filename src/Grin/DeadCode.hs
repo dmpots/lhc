@@ -26,6 +26,11 @@ removeDeadCode entryPoints grin
           nameMap = Map.fromList [ (name, funcDefName def) | def@FuncDef{funcDefName = Aliased _ name} <- grinFunctions grin ]
           findFunc name = Map.findWithDefault (error $ "couldn't find function: " ++ show name) name funcMap
 
+showBuiltins :: Grin -> Grin
+showBuiltins grin
+    = let builtins = Set.toList $ Set.unions (map (Set.filter isBuiltin . defDependencies) (grinFunctions grin))
+      in trace (show builtins) grin
+
 defDependencies :: FuncDef -> Set.Set Renamed
 defDependencies def = dependencies (funcDefBody def) `Set.difference` Set.fromList (funcDefArgs def)
 

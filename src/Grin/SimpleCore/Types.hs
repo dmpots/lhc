@@ -73,6 +73,7 @@ instance Traverse Core.Exp where
         Core.App a b -> return Core.App `ap` fn a `ap` fn b
         Core.Appt a t -> return Core.Appt `ap` fn a `ap` return t
         Core.Lam b e -> return (Core.Lam b) `ap` fn e
+        Core.Lamt b e -> return (Core.Lamt b) `ap` fn e
         Core.Let vdefg e -> return Core.Let `ap` return vdefg `ap` fn e
         Core.Case e bind ty alts
           -> let mapAlt (Core.Acon qual tbinds vbinds e)

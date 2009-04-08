@@ -51,7 +51,7 @@ ppExpression (Fetch v)
 ppExpression (Application fn args)
     = hsep (pretty fn:map ppValue args)
 ppExpression (Store v)
-    = text "store" <+> parens (ppValue v)
+    = text "store" <+> (ppValue v)
 ppExpression (a :>>= Empty :-> c)
     = ppExpression a <$$>
       ppExpression c
@@ -63,8 +63,8 @@ ppAlt (value :-> exp) = ppValue value <$$>
                         indent 2 (text "->" <+> align (ppBeginExpression exp))
 
 ppValue (Node name nodeType args)
-    = hsep (ppNodeType nodeType name : map ppValue args)
-ppValue (Hole size) = text "@hole" <+> hsep (replicate size (char '_'))
+    = parens (hsep (ppNodeType nodeType name : map ppValue args))
+ppValue (Hole size) = parens (text "@hole" <+> hsep (replicate size (char '_')))
 ppValue Empty = text "()"
 ppValue (Lit lit) = ppLit lit
 ppValue (Variable variable) = pretty variable
