@@ -1,0 +1,42 @@
+cabal-version:       >= 1.6
+name:                lhc
+version:             0.1
+synopsis:            LHC Haskell Compiler
+description:
+  lhc is a haskell compiler which aims to produce the most efficient programs possible via whole
+  program analysis and other optimizations.
+Tested-With:         GHC == 6.10.1
+category:            Compiler
+license:             BSD3
+license-file:        COPYING
+author:              David Himmelstrup
+maintainer:          lhc@projects.haskell.org
+homepage:            http://lhc.seize.it/
+build-type:          Simple
+                     
+flag hpc
+  default:            False
+flag threaded
+  default:            False
+flag lhc-regress
+  default:            False
+
+Executable lhc
+ main-is:             Main.hs
+ Hs-Source-Dirs:      src
+ ghc-prof-options:    -auto-all
+ Extensions:          
+ build-depends:       base, mtl, bytestring, containers, ansi-wl-pprint, binary,
+                      digest, bytestring-trie, core >=0.5, filepath, directory,
+                      derive, unix
+
+ ghc-options:         -fwarn-unused-imports -fwarn-missing-signatures
+ if impl(ghc >= 6.10)
+  build-depends:      base >= 4 && < 5
+ else
+  build-depends:      base >= 3 && < 4
+  Extensions:         PatternSignatures
+ if flag(hpc)
+  ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
+ if flag(threaded)
+  ghc-options:        -threaded
