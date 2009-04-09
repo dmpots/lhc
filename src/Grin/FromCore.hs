@@ -127,11 +127,6 @@ lazyExpression simplExp
                         Just n  -> do v <- newVariable
                                       r <- loop  (v:acc) a
                                       return $ Store (Node name (FunctionNode n) []) :>>= Variable v :-> r
-{-             loop acc (App a b@App{})
-                 = do e <- strictExpression b
-                      v <- newVariable
-                      r <- loop (v:acc) a
-                      return $ e :>>= Variable v :-> r-}
              loop acc (App a b)
                  = do e <- lazyExpression b
                       v <- newVariable
