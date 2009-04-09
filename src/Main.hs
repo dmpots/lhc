@@ -22,41 +22,50 @@ main = do args <- getArgs
             [] -> error "No arguments!"
             ["libcheck"]      -> error "TODO"
             ("install":files) -> mapM_ installCoreFile files
-            ("build":files)   -> build False files
-            ("eval":files)    -> build True files
+            ("build":files)   -> build Build files
+            ("eval":files)    -> build Eval files
+            ("compile":files) -> build Compile files
+            ["execute",file]  -> execute file
 
 
 installCoreFile :: FilePath -> IO ()
 installCoreFile path
     = do inp <- L.readFile path
-         hPutStr stderr $ "Parsing " ++ path ++ "..."
+         --hPutStr stderr $ "Parsing " ++ path ++ "..."
          hFlush stdout
          case Core.parseModule "file" inp of
            Left errs -> hPutStrLn stderr "errors: " >> print errs
-           Right mod  -> do hPutStrLn stderr " done"
+           Right mod  -> do --hPutStrLn stderr " done"
                             dataDir <- getAppUserDataDirectory "lhc"
                             let smod = coreToSimpleCore mod
                             createDirectoryIfMissing False (dataDir </> modulePackage smod)
                             encodeFile (dataDir </> modulePackage smod </> moduleName smod) smod
 
-build :: Bool -> [FilePath] -> IO ()
-build doEval files
-    = do hPutStrLn stderr "Parsing core files..."
+data Action = Build | Eval | Compile
+
+build :: Action -> [FilePath] -> IO ()
+build action files
+    = do --hPutStrLn stderr "Parsing core files..."
          smods <- mapM parseCore files
-         hPutStrLn stderr "Tracking core dependencies..."
+         --hPutStrLn stderr "Tracking core dependencies..."
          allSmods <- loadDependencies smods
          let tdefs = concatMap moduleTypes allSmods
              defs = concatMap moduleDefs allSmods
          let grin = coreToGrin tdefs defs
              reduced = removeDeadCode ["main:Main.main"] grin
-         hPutStrLn stderr "Translating to grin..."
+         --hPutStrLn stderr "Translating to grin..."
          evaluate grin
-         hPutStrLn stderr "Removing dead code..."
+         --hPutStrLn stderr "Removing dead code..."
          evaluate reduced
-         if doEval
-            then do print =<< eval grin "main:Main.main"
-            else do hPutStrLn stderr "Printing grin..."
-                    print (ppGrin reduced)
+         case action of
+           Build -> print (ppGrin reduced)
+           Eval  -> print =<< eval grin "main:Main.main"
+           Compile -> L.putStr (encode reduced)
+
+execute :: FilePath -> IO ()
+execute path
+    = do grin <- decodeFile path
+         print =<< eval grin "main:Main.main"
 
 loadDependencies :: [SimpleModule] -> IO [SimpleModule]
 loadDependencies smods
