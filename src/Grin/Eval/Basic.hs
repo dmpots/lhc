@@ -104,10 +104,23 @@ callFunction (Builtin fnName) [a,b] | fnName == fromString ">=#"
          if a >= b
             then return $ Node true (ConstructorNode 0) []
             else return $ Node false (ConstructorNode 0) []
+callFunction (Builtin fnName) [a,b] | fnName == fromString "<=#"
+    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
+         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
+         if a <= b
+            then return $ Node true (ConstructorNode 0) []
+            else return $ Node false (ConstructorNode 0) []
+callFunction (Builtin fnName) [Lit (Lint a)] | fnName == fromString "chr#"
+    = return $ Lit (Lchar $ chr $ fromIntegral a)
 callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "+#"
     = return $ Lit (Lint (a+b))
 callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "-#"
     = return $ Lit (Lint (a-b))
+callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "remInt#"
+    = do --liftIO $ putStrLn $ "rem: " ++ show (a,b)
+         return $ Lit (Lint (a `rem` b))
+callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "quotInt#"
+    = do return $ Lit (Lint (a `quot` b))
 callFunction (Builtin fnName) [a,b] | fnName == fromString "-#"
     = do Lit (Lint a') <- runEvalPrimitive a
          Lit (Lint b') <- runEvalPrimitive b
