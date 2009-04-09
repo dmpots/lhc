@@ -99,9 +99,12 @@ expToSimpleExp (Core.Lamt _ e) = expToSimpleExp e
 expToSimpleExp exp@(Core.Lam (var,ty) _)
     = let def     = Vdef { vdefLocal = False
                          , vdefName  = var
-                         , vdefType  = error "unknown type"
+                         , vdefType  = Core.Tvar $ error "unknown type" -- Urk.
                          , vdefExp   = exp }
       in expToSimpleExp (Core.Let (Core.Nonrec def) (Core.Var (vdefName def)))
+expToSimpleExp (Core.Let (Core.Nonrec def) e) | defIsStrictPrimitive def
+    = bindVariable (vdefName def) $
+      return (LetStrict (qualToCompact (vdefName def))) `ap` expToSimpleExp (vdefExp def) `ap` expToSimpleExp e
 expToSimpleExp (Core.Let (Core.Nonrec def) e)
     = bindDef def $
       do (name, toplevelName, args, arity) <- lambdaLift def
@@ -119,6 +122,11 @@ expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv
 expToSimpleExp (Core.Label label)             = return $ Label label
 expToSimpleExp (Core.Note note e)             = return (Note note) `ap` expToSimpleExp e
 
+
+defIsStrictPrimitive def
+    = case vdefType def of
+        Core.Tcon (pkg, mod, _ident) -> pkg == L.pack "ghczmprim" && mod == L.pack "GHCziPrim"
+        _ -> False
 
 altToSimpleAlt (Core.Acon con _tbinds vbinds e) = let bs = map fst vbinds
                                                   in return (Acon (qualToCompact con) (map qualToCompact bs)) `ap` bindVariables bs (expToSimpleExp e)

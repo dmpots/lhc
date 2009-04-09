@@ -149,6 +149,11 @@ lazyExpression simplExp
             args' <- mapM lookupVariable args
             e' <- lazyExpression e
             return $ Store (Node func' (FunctionNode (arity-length args)) (map Variable args')) :>>= Variable bind' :-> e'
+       LetStrict bind fn e ->
+         bindVariable bind $ \bind' ->
+         do fn' <- strictExpression fn
+            e' <- strictExpression e
+            return $ fn' :>>= Variable bind' :-> e'
        ap@App{} ->
          let loop acc (App a (Var b))
                  = do name <- lookupVariable b

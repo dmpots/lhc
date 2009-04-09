@@ -34,6 +34,7 @@ data SimpleExp
     | App SimpleExp SimpleExp
     | Let CompactString CompactString [CompactString] Int SimpleExp
     | LetRec [(CompactString, CompactString, [CompactString], Int)] SimpleExp
+    | LetStrict CompactString SimpleExp SimpleExp
     | Case SimpleExp CompactString [Alt] (Maybe SimpleExp)
     | External String String
     | DynExternal String
