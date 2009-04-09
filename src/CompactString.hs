@@ -1,8 +1,10 @@
+{-# LANGUAGE BangPatterns #-}
 module CompactString
     ( CompactString
     , fromString
     , fromByteString
     , fromLazyByteString
+    , append
     , qualToCompact
     ) where
 
@@ -51,6 +53,10 @@ instance Ord CompactString where
 {-# NOINLINE globalTable #-}
 globalTable :: IORef (Trie.Trie CompactString)
 globalTable = unsafePerformIO (newIORef Trie.empty)
+
+append :: CompactString -> CompactString -> CompactString
+append !a !b
+    = fromByteString (csString a `S.append` csString b)
 
 fromString :: String -> CompactString
 fromString = fromByteString . S.pack
