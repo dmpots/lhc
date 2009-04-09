@@ -23,9 +23,9 @@ import Debug.Trace
 eval :: Grin -> String -> IO EvalValue
 eval grin entry
     = runEval grin $
-      do ptr <- storeValue =<< callFunction renamedEntry []
+      do ptr <- storeValue =<< runEvalPrimitive =<< lookupVariable renamedEntry
          callFunction (Builtin $ fromString "apply") [HeapPointer ptr, Empty]
-    where renamedEntry = case [ renamed | FuncDef{funcDefName = renamed@(Aliased _ name)} <- grinFunctions grin, name == fromString entry ] of
+    where renamedEntry = case [ renamed | CAF{cafName = renamed@(Aliased _ name)} <- grinCAFs grin, name == fromString entry ] of
                            []       -> error $ "Grin.Eval.Basic.evaluate: couldn't find entry point: " ++ entry
                            (name:_) -> name
 
@@ -49,8 +49,10 @@ type Eval a = StateT EvalState (ReaderT Scope IO) a
 
 runEval :: Grin -> Eval a -> IO a
 runEval grin fn
-    = runReaderT (evalStateT fn initState) emptyScope
-    where emptyScope = Map.empty
+    = runReaderT (evalStateT withCAFs initState) emptyScope
+    where withCAFs = do values <- mapM (\v -> storeValue =<< toEvalValue v) (map cafValue (grinCAFs grin))
+                        bindValues (zip (map cafName (grinCAFs grin)) (map HeapPointer values)) fn
+          emptyScope = Map.empty
           initState = EvalState { stateFunctions = Map.fromList [ (funcDefName def, def) | def <- grinFunctions grin ]
                                 , stateNodes     = Map.fromList [ (name, node) | node@NodeDef{nodeName = Aliased _ name} <- grinNodes grin ]
                                 , stateHeap      = Map.empty
@@ -112,6 +114,8 @@ callFunction (Builtin fnName) [a,b] | fnName == fromString "<=#"
             else return $ Node false (ConstructorNode 0) []
 callFunction (Builtin fnName) [Lit (Lint a)] | fnName == fromString "chr#"
     = return $ Lit (Lchar $ chr $ fromIntegral a)
+callFunction (Builtin fnName) [Lit (Lint a)] | fnName == fromString "negateInt#"
+    = return $ Lit (Lint $ negate a)
 callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "+#"
     = return $ Lit (Lint (a+b))
 callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "-#"
@@ -122,6 +126,10 @@ callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString
 callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "quotInt#"
     = do return $ Lit (Lint (a `quot` b))
 callFunction (Builtin fnName) [a,b] | fnName == fromString "-#"
+    = do Lit (Lint a') <- runEvalPrimitive a
+         Lit (Lint b') <- runEvalPrimitive b
+         return (Lit (Lint (a'-b')))
+callFunction (Builtin fnName) [a,b] | fnName == fromString "+#"
     = do Lit (Lint a') <- runEvalPrimitive a
          Lit (Lint b') <- runEvalPrimitive b
          return (Lit (Lint (a'+b')))
@@ -257,7 +265,9 @@ runCase val alts = error $ "runCase: " ++ (show (val,length alts))
 
 
 
-runEvalPrimitive (HeapPointer ptr) = runEvalPrimitive =<< fetch ptr
+runEvalPrimitive (HeapPointer ptr) = do reduced <- runEvalPrimitive =<< fetch ptr
+                                        updateValue ptr reduced
+                                        return reduced
 runEvalPrimitive (Node fn (FunctionNode 0) args) = callFunction fn args
 runEvalPrimitive val = return val
 

@@ -17,9 +17,15 @@ import Control.Monad  (ap)
 --   The nodes referred to by the functions are a subset of the nodes in 'grinNodes'.
 data Grin
     = Grin { grinNodes     :: [NodeDef]
+           , grinCAFs      :: [CAF]
            , grinFunctions :: [FuncDef]
            , grinUnique    :: Int
            }
+
+data CAF
+    = CAF { cafName  :: Renamed
+          , cafValue :: Value
+          }
 
 data FuncDef
     = FuncDef { funcDefName :: Renamed
@@ -91,6 +97,7 @@ data Value
 $(derive makeBinary ''NodeType)
 $(derive makeBinary ''Renamed)
 $(derive makeBinary ''Value)
+$(derive makeBinary ''CAF)
 $(derive makeBinary ''FuncDef)
 $(derive makeBinary ''NodeDef)
 $(derive makeBinary ''Expression)

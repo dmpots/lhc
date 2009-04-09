@@ -32,9 +32,13 @@ type M a = ReaderT Env (State Int) a
 coreToGrin :: [Core.Tdef] -> [SimpleDef] -> (Grin)
 coreToGrin tdefs defs
     = let gen = tdefsToNodes tdefs $ \nodes ->
-                defsToFuncs defs $ \funcs ->
+                let (defs',cafs) = splitCAFs defs in
+                bindCAFs cafs $
+                defsToFuncs defs' $ \funcs ->
+                defsToCAFs cafs $ \cafs' ->
                 get >>= \u ->
                 return (Grin { grinNodes     = nodes
+                             , grinCAFs      = cafs'
                              , grinFunctions = funcs
                              , grinUnique    = u
                              })
@@ -72,6 +76,33 @@ cdefName :: Core.Cdef -> CompactString
 cdefName (Core.Constr qual _ _) = qualToCompact qual
 cdefArity :: Core.Cdef -> Int
 cdefArity (Core.Constr _ _ tys) = length tys
+
+splitCAFs :: [SimpleDef] -> ([SimpleDef], [(Variable,Variable)])
+splitCAFs []     = ([],[])
+splitCAFs (x:xs)
+    = let (defs,cafs) = splitCAFs xs
+      in if simpleDefArity x == 0
+            then let cafName = mkCAFName (simpleDefName x)
+                 in ( x{simpleDefName = cafName}:defs
+                    , (simpleDefName x, cafName):cafs)
+            else (x:defs,cafs)
+
+mkCAFName name = name `CompactString.append` fromString "_caf"
+
+defsToCAFs :: [(Variable,Variable)] -> ([CAF] -> M a) -> M a
+defsToCAFs vs fn
+    = do cafs <- mapM defToCAF vs
+         fn cafs
+
+defToCAF :: (Variable,Variable) -> M CAF
+defToCAF (varName, fnName)
+    = do var <- lookupVariable varName
+         fn <- lookupVariable fnName
+         return $ CAF { cafName = var
+                      , cafValue = Node fn (FunctionNode 0) [] }
+
+bindCAFs :: [(Variable,Variable)] -> M a -> M a
+bindCAFs vs fn = bindVariables (map fst vs) $ \_ -> fn
 
 defsToFuncs :: [SimpleDef] -> ([FuncDef] -> M a) -> M a
 defsToFuncs sdefs fn

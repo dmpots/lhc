@@ -10,6 +10,8 @@ ppGrin :: Grin -> Doc
 ppGrin grin
     = dullblue (text "Nodes:") <$$>
       vsep (map ppNodeDef (grinNodes grin)) <$$>
+      dullblue (text "CAFs:") <$$>
+      vsep (map ppCAF (grinCAFs grin)) <$$>
       dullblue (text "Functions:") <$$>
       vsep (map ppFuncDef (grinFunctions grin))
 
@@ -30,6 +32,10 @@ instance Pretty Renamed where
     pretty (Anonymous n)   = char 'x' <> pretty n
     pretty (Builtin p)     = char '@' <> pretty p
     pretty (External e)    = parens (text "foreign" <+> text e)
+
+ppCAF :: CAF -> Doc
+ppCAF (CAF name value)
+    = pretty name <+> equals <+> ppValue value
 
 ppFuncDef :: FuncDef -> Doc
 ppFuncDef (FuncDef name args body)
