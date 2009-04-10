@@ -9,7 +9,9 @@ import Control.Monad.State
 import Control.Monad.Reader
 
 
-type Scope = Map.Map Renamed EvalValue
+data Scope
+    = Scope { localScope   :: Map.Map Renamed EvalValue
+            , globalScope  :: Map.Map Renamed EvalValue }
 type HeapPointer = Int
 type Heap = Map.Map HeapPointer EvalValue
 data EvalValue

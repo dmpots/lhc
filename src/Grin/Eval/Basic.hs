@@ -45,8 +45,8 @@ runEval :: Grin -> Eval a -> IO a
 runEval grin fn
     = runReaderT (evalStateT (unEval withCAFs) initState) emptyScope
     where withCAFs = do values <- mapM (\v -> storeValue =<< toEvalValue v) (map cafValue (grinCAFs grin))
-                        bindValues (zip (map cafName (grinCAFs grin)) (map HeapPointer values)) fn
-          emptyScope = Map.empty
+                        bindCafValues (zip (map cafName (grinCAFs grin)) (map HeapPointer values)) fn
+          emptyScope = Scope Map.empty Map.empty
           initState = EvalState { stateFunctions = Map.fromList [ (funcDefName def, def) | def <- grinFunctions grin ]
                                 , stateNodes     = Map.fromList [ (name, node) | node@NodeDef{nodeName = Aliased _ name} <- grinNodes grin ]
                                 , stateHeap      = Map.empty
@@ -105,7 +105,7 @@ callFunction (External name) args
 callFunction fnName args
     = do fn <- lookupFunction fnName
          --liftIO $ putStrLn $ "Entering: " ++ show fnName ++ " " ++ unwords (map show args)
-         ret <- runFunction fn args
+         ret <- clearLocalScope $ runFunction fn args
          --liftIO $ putStrLn $ "Returning: " ++ show fnName ++ ", value: " ++ show ret
          return ret
 
@@ -185,11 +185,22 @@ bindLambdas ((a,b):xs) = bindLambda a b . bindLambdas xs
 
 bindValue :: Renamed -> EvalValue -> Eval a -> Eval a
 bindValue variable value
-    = local (Map.insert variable value)
+    = local (\scope -> scope{localScope = Map.insert variable value (localScope scope)})
+
+bindCafValue :: Renamed -> EvalValue -> Eval a -> Eval a
+bindCafValue variable value
+    = local (\scope -> scope{globalScope = Map.insert variable value (globalScope scope)})
 
 bindValues :: [(Renamed, EvalValue)] -> Eval a -> Eval a
 bindValues [] = id
 bindValues ((variable,value):xs) = bindValue variable value . bindValues xs
+
+bindCafValues :: [(Renamed, EvalValue)] -> Eval a -> Eval a
+bindCafValues [] = id
+bindCafValues ((variable,value):xs) = bindCafValue variable value . bindCafValues xs
+
+clearLocalScope :: Eval a -> Eval a
+clearLocalScope = local $ \scope -> scope{localScope = Map.empty}
 
 lookupFunction :: Renamed -> Eval FuncDef
 lookupFunction name = gets $ \st -> Map.findWithDefault errMsg name (stateFunctions st)
@@ -197,7 +208,9 @@ lookupFunction name = gets $ \st -> Map.findWithDefault errMsg name (stateFuncti
 
 lookupVariable :: Renamed -> Eval EvalValue
 lookupVariable variable
-    = asks $ Map.findWithDefault errMsg variable
+    = asks $ \scope -> case Map.lookup variable (localScope scope) `mplus` Map.lookup variable (globalScope scope) of
+                         Nothing -> errMsg
+                         Just v  -> v
     where errMsg = error $ "Grin.Eval.Basic.lookupVariable: couldn't find variable: " ++ show variable
 
 lookupNode :: CompactString -> Eval Renamed
