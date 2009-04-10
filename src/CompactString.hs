@@ -20,13 +20,14 @@ import Data.Digest.CRC32
 import Data.Binary
 import Data.Char
 import Text.PrettyPrint.ANSI.Leijen
+import Control.Monad (liftM2)
 
 data CompactString = CompactString { csString :: S.ByteString
                                    , csHash   :: Word32 }
 
 instance Binary CompactString where
-    put = put . csString
-    get = fmap fromByteString get
+    put cs = put (csString cs) >> put (csHash cs)
+    get = liftM2 CompactString get get
 
 instance Pretty CompactString where
     pretty = pretty . S.unpack . csString
