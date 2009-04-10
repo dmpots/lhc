@@ -120,7 +120,8 @@ runTestCase cfg tc
             (\_ -> removeDirectoryRecursive testDir) $ \_ -> checkFail $ withTimeout $
     do let args = [ "eval"
                   , testCasePath tc `replaceExtension` "hcr" ] ++
-                  cfgLHCOptions cfg
+                  cfgLHCOptions cfg ++
+                  testCaseArgs tc
            ghcArgs = ["-D__LHC__","-fforce-recomp","-fext-core","-O2","-c",testCasePath tc]
        when (cfgVerbose cfg >= 4) $ putStrLn $ unwords ("ghc":ghcArgs)
        (ret,out,err) <- execProcess "ghc" ghcArgs B.empty
