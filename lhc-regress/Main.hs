@@ -118,12 +118,11 @@ runTestCase :: Config -> TestCase -> IO TestResult
 runTestCase cfg tc
   = bracket (createDirectoryIfMissing True testDir)
             (\_ -> removeDirectoryRecursive testDir) $ \_ -> checkFail $ withTimeout $
-    do let args = [ "-o", progName
-                  , "--ho-dir", testDir
-                  , "-flint"
-                  , testCasePath tc ] ++
+    do let args = [ "eval"
+                  , testCasePath tc `replaceExtension` "hcr" ] ++
                   cfgLHCOptions cfg
        when (cfgVerbose cfg >= 4) $ putStrLn $ unwords (cfgLHCPath cfg:args)
+       execProcess "ghc" (["-fext-core","-O2","-c",testCasePath tc]) B.empty
        (ret,out,err) <- execProcess (cfgLHCPath cfg) args B.empty
        case ret of
          ExitFailure c -> return $ CompileError $ unlines $ ["lhc failed with: " ++ show c, B.unpack err]

@@ -40,3 +40,13 @@ Executable lhc
   ghc-options:        -fhpc -hisuf hpc_hi -osuf hpc_o
  if flag(threaded)
   ghc-options:        -threaded
+
+Executable lhc-regress
+  if flag(lhc-regress)
+    Buildable:      True
+  else
+    Buildable:      False
+  main-is:          Main.hs
+  hs-source-dirs:   lhc-regress/
+  build-depends:    base >= 3, process, extensible-exceptions
+
