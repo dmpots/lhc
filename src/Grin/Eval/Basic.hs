@@ -1,4 +1,7 @@
-module Grin.Eval.Basic where
+module Grin.Eval.Basic
+    ( eval
+    , EvalValue(..)
+    ) where
 
 import CompactString
 import Grin.Types hiding (Value(..))
@@ -6,7 +9,6 @@ import qualified Grin.Types as Grin
 import Grin.Pretty
 import Grin.Eval.Types
 
-import Control.Monad (ap)
 import Control.Monad.State
 import Control.Monad.Reader
 import qualified Data.Map as Map
@@ -21,8 +23,6 @@ import System.Posix (Fd(..), fdWrite)
 
 import Foreign.LibFFI
 import System.Posix.DynamicLinker
-
-import Debug.Trace
 
 eval :: Grin -> String -> IO EvalValue
 eval grin entry
@@ -138,23 +138,19 @@ callFunction (Builtin fnName) [ptr, val,realWorld] | fnName == fromString "write
 callFunction (Builtin fnName) [realWorld] | fnName == fromString "newMVar#"
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          ptr <- storeValue Empty
-         --trace ("new mvar at: " ++ show ptr) $ return ()
          return $ Node node (ConstructorNode 0) [realWorld, HeapPointer ptr]
 callFunction (Builtin fnName) [mvar,realWorld] | fnName == fromString "takeMVar#"
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          HeapPointer ptr <- return mvar
          val <- fetch ptr
-         --trace ("Reading mvar: " ++ show (ptr,val)) $ return ()
          return $ Node node (ConstructorNode 0) [realWorld, val]
 callFunction (Builtin fnName) [mvar,val,realWorld] | fnName == fromString "putMVar#"
     = do HeapPointer ptr <- return mvar
          updateValue ptr val
-         --trace ("updating mvar: " ++ show (ptr,val)) $ return ()
          return $ realWorld
 callFunction (Builtin fnName) [mvar,val] | fnName == fromString "update"
     = do HeapPointer ptr <- return mvar
          updateValue ptr val
-         --trace ("updating var: " ++ show (ptr,val)) $ return ()
          return $ Empty
 callFunction (Builtin fnName) [Lit (Lint intVal)] | fnName == fromString "narrow32Int#"
     = return $ Lit (Lint intVal)
@@ -221,7 +217,7 @@ runExpression (Store v)
 runExpression (Application fn args)
     = callFunction fn =<< mapM toEvalValue args
 runExpression (Case val alts)
-    = do val' <- {- trace ("Case for: " ++ show (ppValue val)) $ -} toEvalValue val
+    = do val' <- toEvalValue val
          runCase val' alts
 runExpression e = error $ "Unhandled expression: " ++ (show (ppExpression e))
 
@@ -248,7 +244,7 @@ runCase val [Grin.Variable x :-> e]
 runCase val alts = error $ "runCase: " ++ (show (val,length alts))
 
 
-
+runEvalPrimitive :: EvalValue -> Eval EvalValue
 runEvalPrimitive (HeapPointer ptr) = do reduced <- runEvalPrimitive =<< fetch ptr
                                         updateValue ptr reduced
                                         return reduced
@@ -261,7 +257,6 @@ storeValue val
          let newFree = stateFree st + 1
          put st{stateFree = newFree
                ,stateHeap = Map.insert (stateFree st) val (stateHeap st)}
-         {- trace ("Storing value at: " ++ show (stateFree st, val)) $ -}
          return (stateFree st)
 
 updateValue :: HeapPointer -> EvalValue -> Eval ()

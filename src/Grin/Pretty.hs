@@ -1,7 +1,9 @@
-module Grin.Pretty where
+module Grin.Pretty
+    ( ppGrin
+    , ppExpression
+    ) where
 
 import Grin.Types
-import CompactString
 
 import Text.PrettyPrint.ANSI.Leijen
 

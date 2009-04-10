@@ -1,9 +1,10 @@
-module Grin.DeadCode where
+module Grin.DeadCode
+    ( removeDeadCode
+    ) where
 
 import CompactString
 import Grin.Types
 
-import Debug.Trace
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
@@ -31,10 +32,6 @@ removeDeadCode entryPoints grin
                     Map.fromList [ (name, cafName caf) | caf@CAF{cafName = Aliased _ name} <- grinCAFs grin]
           findFunc name = Map.findWithDefault (error $ "couldn't find function: " ++ show name) name funcMap
 
-showBuiltins :: Grin -> Grin
-showBuiltins grin
-    = let builtins = Set.toList $ Set.unions (map (Set.filter isBuiltin . defDependencies) (grinFunctions grin))
-      in trace (show builtins) grin
 
 defDependencies :: FuncDef -> Set.Set Renamed
 defDependencies def = dependencies (funcDefBody def) `Set.difference` Set.fromList (funcDefArgs def)
@@ -52,8 +49,10 @@ dependencies (Store v)
     = valueBound v
 dependencies (Unit v) = valueBound v
 
+lambda :: Lambda -> Set.Set Renamed
 lambda (v :-> e) = dependencies e `Set.difference` valueBound v
 
+valueBound :: Value -> Set.Set Renamed
 valueBound (Node name _type args) = Set.insert name $ Set.unions (map valueBound args)
 valueBound Lit{}                  = Set.empty
 valueBound (Variable v)           = Set.singleton v

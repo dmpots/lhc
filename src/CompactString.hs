@@ -17,7 +17,6 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import System.IO.Unsafe
 
 import Data.Digest.CRC32
-import Data.Word
 import Data.Binary
 import Data.Char
 import Text.PrettyPrint.ANSI.Leijen
@@ -74,6 +73,7 @@ fromByteString str
                      in (Trie.insert str cs trie, cs)
           Just cs -> (trie,cs)
 
+qualToCompact :: (L.ByteString, L.ByteString, L.ByteString) -> CompactString
 qualToCompact (pkg,mod,ident)
     | L.null pkg && L.null mod = fromLazyByteString $ zDecodeByteString ident
     | otherwise                = fromLazyByteString (L.concat [zDecodeByteString pkg

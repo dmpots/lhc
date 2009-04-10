@@ -76,6 +76,8 @@ data Renamed = Aliased Int CompactString
              | External String
     deriving (Show,Read,Eq,Ord)
 
+isAliased, isBuiltin, isExternal :: Renamed -> Bool
+
 isAliased Aliased{} = True
 isAliased _ = False
 

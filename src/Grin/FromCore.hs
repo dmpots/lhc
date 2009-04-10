@@ -6,20 +6,15 @@ module Grin.FromCore
 import CompactString
 import qualified Language.Core  as Core
 import Grin.Types      as Grin
-import Grin.Pretty
 import Grin.SimpleCore as Simple
-import Traverse
 
 import Data.List
 import qualified Data.ByteString.Lazy.Char8 as L
-import Control.Monad.Writer
 import Control.Monad.State
 import Control.Monad.Reader
 
-import qualified Data.Set as Set
 import qualified Data.Map as Map
 
-import Debug.Trace
 
 data Env
     = Env { scope :: Map.Map Variable Renamed
@@ -239,7 +234,6 @@ fn f = eval f >>= \v -> apply v fibs
 update bind fn args arity
     = Application (Builtin $ fromString "update") [Variable bind, Node fn (FunctionNode (arity-length args)) (map Variable args)]
 eval v = Application (Builtin $ fromString "eval") [v]
-apply a b = Application (Builtin $ fromString "apply") [a,b]
 applyCell a b = Store (Node (Builtin $ fromString "apply") (FunctionNode 0) [a,b])
 
 -- Translate a Core alternative to a Grin alternative

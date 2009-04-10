@@ -16,14 +16,13 @@ module Grin.SimpleCore
   , coreToSimpleCore
   ) where
 
-import Grin.Types (Variable,NodeType(..))
+import Grin.Types (Variable)
 import Grin.SimpleCore.Types
-import Language.Core (Ty,Vbind,Tdef,Vdef(..))
+import Language.Core (Ty,Tdef,Vdef(..))
 import qualified Language.Core as Core
 
 import CompactString
 
-import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.ByteString.Lazy.Char8 as L
 import Control.Monad.RWS
@@ -31,8 +30,6 @@ import Data.List
 import Data.Maybe
 
 import Traverse
-
-import Debug.Trace
 
 {-
 The data structures for the simplified core is similar to plain core with a few exceptions:
@@ -61,6 +58,7 @@ coreToSimpleCore (Core.Module (pkgname,modname) tdefs vdefs)
                              , currentModule = (pkgname, modname) }
 
 
+coreDeps :: [Tdef] -> [Vdef] -> [(String, String)]
 coreDeps tdefs vdefs
     = let free = Set.toList $ freeVariables (Core.Let (Core.Rec vdefs) (Core.Label "end"))
       in nub [ (L.unpack pkg, L.unpack mod) | (pkg,mod,_ident) <- free ]
@@ -114,8 +112,7 @@ expToSimpleExp (Core.Let (Core.Rec defs) e)
 expToSimpleExp (Core.Case e bind ty alts)     = bindVariable (fst bind) $
                                                 do e' <- expToSimpleExp e
                                                    alts' <- mapM altToSimpleAlt alts
-                                                   let (mbDefault, alts'') = splitDefault alts'
-                                                   return $ Case e' (qualToCompact $ fst bind) alts' Nothing -- mbDefault
+                                                   return $ Case e' (qualToCompact $ fst bind) alts' Nothing
 expToSimpleExp (Core.Cast e _ty) = expToSimpleExp e
 expToSimpleExp (Core.External target conv ty) = return $ External target conv
 expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv
@@ -123,29 +120,23 @@ expToSimpleExp (Core.Label label)             = return $ Label label
 expToSimpleExp (Core.Note note e)             = return (Note note) `ap` expToSimpleExp e
 
 
+-- FIXME: This function is incomplete.
+defIsStrictPrimitive :: Vdef -> Bool
 defIsStrictPrimitive def
     = case vdefType def of
         Core.Tcon (pkg, mod, _ident) -> pkg == L.pack "ghczmprim" && mod == L.pack "GHCziPrim"
         _ -> False
 
+altToSimpleAlt :: Core.Alt -> M Alt
 altToSimpleAlt (Core.Acon con _tbinds vbinds e) = let bs = map fst vbinds
                                                   in return (Acon (qualToCompact con) (map qualToCompact bs)) `ap` bindVariables bs (expToSimpleExp e)
 altToSimpleAlt (Core.Alit lit e)                = return (Alit $ fromCoreLit lit) `ap` expToSimpleExp e
 altToSimpleAlt (Core.Adefault e)                = return Adefault `ap` expToSimpleExp e
 
 
-collectApps (Core.App a b) = let (fn,args) = collectApps a
-                        in (fn,args ++ [b])
-collectApps e = (e,[])
 
 
-splitDefault [] = (Nothing, [])
-splitDefault (Adefault e:xs) = let (_,rest) = splitDefault xs
-                               in (Just e, rest)
-splitDefault (x:xs) = let (mbDefault,rest) = splitDefault xs
-                      in (mbDefault, x:rest)
-
-
+fromCoreLit :: Core.Lit -> Lit
 fromCoreLit (Core.Lint int _ty)           = Lint int
 fromCoreLit (Core.Lrational rational _ty) = Lrational rational
 fromCoreLit (Core.Lchar char _ty)         = Lchar char
@@ -184,6 +175,7 @@ lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
                 , length realArgs )
 
 
+noType :: Core.Ty
 noType = error "Urk, types shouldn't be needed"
 
 freeVariables :: Core.Exp -> Set.Set (Core.Qual Core.Id)
@@ -197,6 +189,7 @@ freeVariables (Core.Case e (var,_ty) _ alts)
     = freeVariables e `Set.union` Set.delete (var) (Set.unions (map freeVariablesAlt alts))
 freeVariables e = tsum freeVariables e
 
+freeVariablesAlt :: Core.Alt -> Set.Set (Core.Qual Core.Id)
 freeVariablesAlt (Core.Acon _con _tbinds vbinds e)
     = freeVariables e `Set.difference` Set.fromList [ (var) | (var, _ty) <- vbinds ]
 freeVariablesAlt (Core.Alit _lit e)
@@ -204,25 +197,6 @@ freeVariablesAlt (Core.Alit _lit e)
 freeVariablesAlt (Core.Adefault e)
     = freeVariables e
 
-{-
-references :: Core.Exp -> Set.Set (Core.Qual Core.Id)
-references (Core.Var qual)                  = Set.singleton qual
-references (Core.Dcon qual)                 = Set.singleton qual
-references (Core.Lam (Core.Vb (var,_ty)) e) = Set.delete (var) $ references e
-references (Core.Let (Core.Nonrec def) e)   = references (Core.Let (Core.Rec [def]) e)
-references (Core.Let (Core.Rec defs) e)     = Set.unions (references e : (map (references . vdefExp) defs)) `Set.difference` bound
-    where bound = Set.fromList (map vdefName defs)
-references (Core.Case e (var,_ty) _ alts)
-    = references e `Set.union` Set.delete (var) (Set.unions (map referencesAlt alts))
-references e = tsum references e
-
-referencesAlt (Core.Acon _con _tbinds vbinds e)
-    = references e `Set.difference` Set.fromList [ (var) | (var, _ty) <- vbinds ]
-referencesAlt (Core.Alit _lit e)
-    = references e
-referencesAlt (Core.Adefault e)
-    = referencesAlt e
--}
 
 
 
@@ -247,12 +221,8 @@ newUnique = do u <- get
                put $! u+1
                return u
 
-{-
-lookupType :: Variable -> M Ty
-lookupType var = asks (Map.findWithDefault defaultVal var)
-    where defaultVal = error $ "Grin.SimpleCore.lookupType: couldn't find type for: " ++ show var
--}
 
+splitExp :: Core.Exp -> ([Core.Qual Core.Id], Core.Exp)
 splitExp (Core.Lam b exp) = let (args,body) = splitExp exp
                                 in (fst b:args, body)
 splitExp (Core.Lamt _ exp) = splitExp exp
