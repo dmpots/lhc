@@ -15,7 +15,7 @@ import Foreign.Ptr
 import Foreign.Marshal.Alloc
 import Foreign.C
 import Foreign.Storable
-import Data.Char; import Data.Word
+import Data.Char; import Data.Word; import Data.Bits
 
 newtype IntArg = IntArg Int
 newtype CharArg = CharArg Char
@@ -37,7 +37,7 @@ runPrimitive name args
 allPrimitives :: Map.Map CompactString Primitive
 allPrimitives = Map.fromList [ (fromString (primName prim), prim) | prim <- prims ]
     where prims = [ equal, gt, lt, gte, lte
-                  , plus, minus
+                  , plus, minus, remInt, quotInt, addIntC
                   , chrPrim
                   , indexCharOffAddr
                   , writeCharArray
@@ -47,7 +47,7 @@ allPrimitives = Map.fromList [ (fromString (primName prim), prim) | prim <- prim
                   , newPinnedByteArray
                   , updatePrim, evalPrim, applyPrim
                   , newMutVar, writeMutVar, readMutVar
-                  , narrow32Int, int2Word
+                  , narrow32Int, int2Word, negateInt
                   , newMVar, putMVar, takeMVar
                   , mkWeak]
 
@@ -67,6 +67,16 @@ plus :: Primitive
 plus = mkPrimitive "+#" $ binIntOp (+)
 minus :: Primitive
 minus = mkPrimitive "-#" $ binIntOp (-)
+remInt :: Primitive
+remInt = mkPrimitive "remInt#" $ binIntOp rem
+quotInt :: Primitive
+quotInt = mkPrimitive "quotInt#" $ binIntOp quot
+addIntC :: Primitive
+addIntC = mkPrimitive "addIntC#" $ \(IntArg a) (IntArg b) ->
+          let c = fromIntegral a + fromIntegral b
+              o = c `shiftR` bitSize (0::Int)
+          in returnT (Lit (Lint c)) (Lit (Lint o))
+
 
 chrPrim :: Primitive
 chrPrim
@@ -182,6 +192,10 @@ int2Word :: Primitive
 int2Word
     = mkPrimitive "int2Word#" $ \(IntArg i) -> return (fromInt i) :: Eval EvalValue
 
+negateInt :: Primitive
+negateInt
+    = mkPrimitive "negateInt#" $ \(IntArg i) -> return (fromInt (negate i)) :: Eval EvalValue
+
 
 
 
@@ -202,10 +216,13 @@ fromPointer ptr = Lit (Lint $ fromIntegral (minusPtr ptr nullPtr))
 fromInt :: Int -> EvalValue
 fromInt i = Lit (Lint (fromIntegral i))
 
-returnIO :: EvalValue -> Eval EvalValue
-returnIO val
+returnT :: EvalValue -> EvalValue -> Eval EvalValue
+returnT a b
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         return $ Node node (ConstructorNode 0) [realWorld, val]
+         return $ Node node (ConstructorNode 0) [a, b]
+
+returnIO :: EvalValue -> Eval EvalValue
+returnIO  = returnT realWorld
 
 trueNode :: Eval EvalValue
 trueNode
