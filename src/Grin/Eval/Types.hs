@@ -17,6 +17,7 @@ data EvalValue
     | Lit Lit
     | HeapPointer HeapPointer
     | Hole Int
+    | Array [EvalValue]
     | Empty
       deriving (Show,Eq,Ord)
 data EvalState

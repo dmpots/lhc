@@ -19,6 +19,7 @@ import Data.Char; import Data.Word; import Data.Bits
 
 newtype IntArg = IntArg Int
 newtype CharArg = CharArg Char
+newtype ArrayArg = ArrayArg [EvalValue]
 newtype AnyArg = AnyArg EvalValue
 newtype PtrArg = PtrArg (Ptr ())
 newtype HeapArg = HeapArg HeapPointer
@@ -37,15 +38,16 @@ runPrimitive name args
 allPrimitives :: Map.Map CompactString Primitive
 allPrimitives = Map.fromList [ (fromString (primName prim), prim) | prim <- prims ]
     where prims = [ equal, gt, lt, gte, lte
-                  , plus, minus, remInt, quotInt, addIntC
+                  , plus, minus, times, remInt, quotInt, addIntC
                   , chrPrim
                   , indexCharOffAddr
                   , writeCharArray
                   , noDuplicate
-                  , realWorldPrim
-                  , catchPrim, blockAsyncExceptions
+                  , realWorldPrim, myThreadIdPrim
+                  , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
                   , newPinnedByteArray
                   , updatePrim, evalPrim, applyPrim
+                  , newArray, readArray, writeArray
                   , newMutVar, writeMutVar, readMutVar
                   , narrow32Int, int2Word, negateInt
                   , newMVar, putMVar, takeMVar
@@ -67,6 +69,8 @@ plus :: Primitive
 plus = mkPrimitive "+#" $ binIntOp (+)
 minus :: Primitive
 minus = mkPrimitive "-#" $ binIntOp (-)
+times :: Primitive
+times = mkPrimitive "*#" $ binIntOp (*)
 remInt :: Primitive
 remInt = mkPrimitive "remInt#" $ binIntOp rem
 quotInt :: Primitive
@@ -104,6 +108,11 @@ noDuplicate = mkPrimitive "noDuplicate#" $ \RealWorld -> return realWorld :: Eva
 realWorldPrim :: Primitive
 realWorldPrim = mkPrimitive "realWorld#" $ (return realWorld :: Eval EvalValue)
 
+myThreadIdPrim :: Primitive
+myThreadIdPrim
+    = mkPrimitive "myThreadId#" $ \RealWorld ->
+      returnIO (Lit (Lint 0))
+
 catchPrim :: Primitive
 catchPrim
     = mkPrimitive "catch#" $ \(AnyArg fn) (AnyArg handler) RealWorld ->
@@ -112,6 +121,11 @@ catchPrim
 blockAsyncExceptions :: Primitive
 blockAsyncExceptions
     = mkPrimitive "blockAsyncExceptions#" $ \(AnyArg fn) RealWorld ->
+      callFunction (Builtin $ fromString "apply") [fn, realWorld]
+
+unblockAsyncExceptions :: Primitive
+unblockAsyncExceptions
+    = mkPrimitive "unblockAsyncExceptions#" $ \(AnyArg fn) RealWorld ->
       callFunction (Builtin $ fromString "apply") [fn, realWorld]
 
 -- |Create a mutable byte array that the GC guarantees not to move.
@@ -142,6 +156,26 @@ applyPrim
            Node nodeName (FunctionNode n) args -> return $ Node nodeName (FunctionNode (n-1)) (args ++ [arg])
            _ -> error $ "weird apply: " ++ (show fn)
 
+
+newArray :: Primitive
+newArray
+    = mkPrimitive "newArray#" $ \(IntArg len) (AnyArg elt) RealWorld ->
+      do ptr <- storeValue (Array $ replicate len elt)
+         returnIO (HeapPointer ptr)
+
+readArray :: Primitive
+readArray
+    = mkPrimitive "readArray#" $ \(HeapArg ptr) (IntArg idx) RealWorld ->
+      do Array arr <- fetch ptr
+         returnIO $ arr!!idx
+
+writeArray :: Primitive
+writeArray
+    = mkPrimitive "writeArray#" $ \(HeapArg ptr) (IntArg idx) (AnyArg val) RealWorld ->
+      do Array arr <- fetch ptr
+         let (before,after) = splitAt idx arr
+         updateValue ptr (Array (before ++ [val] ++ drop 1 after))
+         return realWorld
 
 newMutVar, writeMutVar, readMutVar :: Primitive
 -- |Create @MutVar\#@ with specified initial value in specified state thread.
@@ -277,6 +311,9 @@ instance FromArg IntArg where
 instance FromArg CharArg where
     fromArg (Lit (Lchar c)) = return (CharArg c)
     fromArg v               = error $ "Grin.Eval.Primitives.fromArg: Expected char: " ++ show v
+instance FromArg ArrayArg where
+    fromArg (Array arr) = return (ArrayArg arr)
+    fromArg v           = error $ "Grin.Eval.Primitives.fromArg: Expected array: " ++ show v
 instance FromArg HeapArg where
     fromArg (HeapPointer ptr) = return (HeapArg ptr)
     fromArg v                 = error $ "Grin.Eval.Primitives.fromArg: Expected heap pointer: " ++ show v

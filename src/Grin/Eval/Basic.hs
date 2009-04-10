@@ -78,6 +78,9 @@ callFunction (External "fdReady") [fd,write,msecs,isSock,realWorld]
 callFunction (External "rtsSupportsBoundThreads") [realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
+callFunction (External "stg_sig_install") [signo, actioncode, ptr, realWorld]
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 0)]
 
 -- If we don't recognize the function, try loading it through the linker.
 callFunction (External name) args

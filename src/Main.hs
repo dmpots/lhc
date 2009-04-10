@@ -53,14 +53,14 @@ build action files
          let tdefs = concatMap moduleTypes allSmods
              defs = concatMap moduleDefs allSmods
          let grin = coreToGrin tdefs defs
-             reduced = removeDeadCode ["main:Main.main"] grin
+             reduced = removeDeadCode ["main::Main.main"] grin
          --hPutStrLn stderr "Translating to grin..."
          evaluate grin
          --hPutStrLn stderr "Removing dead code..."
          evaluate reduced
          case action of
            Build -> print (ppGrin reduced)
-           Eval  -> print =<< eval grin "main:Main.main"
+           Eval  -> eval grin "main::Main.main" >> return ()
            Compile -> do lhc <- findExecutable "lhc"
                          putStrLn $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
                          L.putStr (encode reduced)
