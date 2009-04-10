@@ -16,6 +16,7 @@ import Grin.FromCore
 import Grin.Pretty
 import Grin.DeadCode
 import Grin.Eval.Basic
+import Grin.Optimize
 
 main :: IO ()
 main = do args <- getArgs
@@ -54,16 +55,17 @@ build action file args
              defs = concatMap moduleDefs allSmods
          let grin = coreToGrin tdefs defs
              reduced = removeDeadCode ["main::Main.main"] grin
+             opt = simpleOptimize reduced
          --hPutStrLn stderr "Translating to grin..."
          evaluate grin
          --hPutStrLn stderr "Removing dead code..."
-         evaluate reduced
+         evaluate opt
          case action of
-           Build -> print (ppGrin reduced)
-           Eval  -> eval grin "main::Main.main" args >> return ()
+           Build -> print (ppGrin opt)
+           Eval  -> eval opt "main::Main.main" args >> return ()
            Compile -> do lhc <- findExecutable "lhc"
                          putStrLn $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
-                         L.putStr (encode reduced)
+                         L.putStr (encode opt)
 
 execute :: FilePath -> [String] -> IO ()
 execute path args

@@ -52,6 +52,7 @@ data Type
     = PtrType
     | WordType
     | NodeType
+    deriving (Eq)
 
 data Lambda = Value :-> Expression
 
@@ -93,7 +94,7 @@ data Value
     | Variable Renamed
     | Hole Int
     | Empty
-    deriving (Show,Read)
+    deriving (Show,Read,Eq)
 
 
 $(derive makeBinary ''NodeType)
