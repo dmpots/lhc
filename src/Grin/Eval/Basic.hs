@@ -19,9 +19,11 @@ import Control.Monad.State
 import Control.Monad.Reader
 import qualified Data.Map as Map
 import Foreign.Ptr
-import Foreign.Marshal.Utils (copyBytes)
+import Foreign.Marshal
 import Data.Char
+import Foreign.C
 import Foreign.C.String
+import Foreign.Storable
 import System.Posix (Fd(..), fdWrite)
 
 import Foreign.LibFFI
@@ -81,6 +83,13 @@ callFunction (External "rtsSupportsBoundThreads") [realWorld]
 callFunction (External "stg_sig_install") [signo, actioncode, ptr, realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 0)]
+callFunction (External "getProgArgv") [Lit (Lint argcPtr), Lit (Lint argvPtr), realWorld]
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(# #)")
+         let args = ["lhc","2010"]
+         liftIO $ poke (nullPtr `plusPtr` fromIntegral argcPtr) (fromIntegral (length args) :: CInt)
+         cs <- liftIO $ newArray =<< mapM newCString args
+         liftIO $ poke (nullPtr `plusPtr` fromIntegral argvPtr) cs
+         return $ Node node (ConstructorNode 0) [realWorld]
 
 -- If we don't recognize the function, try loading it through the linker.
 callFunction (External name) args

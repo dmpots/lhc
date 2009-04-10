@@ -15,7 +15,7 @@ import Foreign.Ptr
 import Foreign.Marshal.Alloc
 import Foreign.C
 import Foreign.Storable
-import Data.Char; import Data.Word; import Data.Bits
+import Data.Char; import Data.Word; import Data.Bits; import Data.Int
 
 newtype IntArg = IntArg Int
 newtype CharArg = CharArg Char
@@ -41,15 +41,18 @@ allPrimitives = Map.fromList [ (fromString (primName prim), prim) | prim <- prim
                   , plus, minus, times, remInt, quotInt, addIntC
                   , chrPrim, ordPrim
                   , indexCharOffAddr
+                  , readInt32OffAddr, readInt8OffAddr, readAddrOffAddr
                   , writeCharArray
+                  , plusAddr, touch
                   , noDuplicate
                   , realWorldPrim, myThreadIdPrim
                   , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
-                  , newPinnedByteArray
+                  , newPinnedByteArray, newAlignedPinnedByteArray
+                  , unsafeFreezeByteArray, byteArrayContents
                   , updatePrim, evalPrim, applyPrim
                   , newArray, readArray, writeArray
                   , newMutVar, writeMutVar, readMutVar
-                  , narrow32Int, int2Word, negateInt
+                  , narrow8Word, narrow32Int, int2Word, word2Int, negateInt
                   , newMVar, putMVar, takeMVar
                   , mkWeak]
 
@@ -107,6 +110,24 @@ indexCharOffAddr
       do c <- liftIO $ peekByteOff ptr nth :: Eval Word8
          return (Lit (Lchar (chr (fromIntegral c))))
 
+readInt32OffAddr :: Primitive
+readInt32OffAddr
+    = mkPrimitive "readInt32OffAddr#" $ \(PtrArg ptr) (IntArg nth) RealWorld ->
+      do i <- liftIO $ peekElemOff (castPtr ptr) nth
+         returnIO $ fromInt (fromIntegral (i::Int32))
+
+readInt8OffAddr :: Primitive
+readInt8OffAddr
+    = mkPrimitive "readInt8OffAddr#" $ \(PtrArg ptr) (IntArg nth) RealWorld ->
+      do i <- liftIO $ peekElemOff (castPtr ptr) nth
+         returnIO $ fromInt (fromIntegral (i::Int8))
+
+readAddrOffAddr :: Primitive
+readAddrOffAddr
+    = mkPrimitive "readAddrOffAddr#" $ \(PtrArg ptr) (IntArg nth) RealWorld ->
+      do p <- liftIO $ peekElemOff (castPtr ptr) nth
+         returnIO $ fromPointer p
+
 -- |Write 8-bit character; offset in bytes.
 writeCharArray :: Primitive
 writeCharArray
@@ -114,6 +135,15 @@ writeCharArray
       do liftIO $ poke (ptr `plusPtr` offset) (fromIntegral (ord c) :: Word8)
          return realWorld :: Eval EvalValue
 
+plusAddr :: Primitive
+plusAddr
+    = mkPrimitive "plusAddr#" $ \(PtrArg ptr) (IntArg offset) ->
+      return (fromPointer (ptr `plusPtr` offset)) :: Eval EvalValue
+
+touch :: Primitive
+touch
+    = mkPrimitive "touch#" $ \(AnyArg _) RealWorld ->
+      return realWorld :: Eval EvalValue
 
 noDuplicate :: Primitive
 noDuplicate = mkPrimitive "noDuplicate#" $ \RealWorld -> return realWorld :: Eval EvalValue
@@ -147,6 +177,22 @@ newPinnedByteArray
     = mkPrimitive "newPinnedByteArray#" $ \(IntArg size) RealWorld ->
       do ptr <- liftIO $ mallocBytes size
          returnIO (fromPointer ptr)
+
+newAlignedPinnedByteArray :: Primitive
+newAlignedPinnedByteArray
+    = mkPrimitive "newAlignedPinnedByteArray#" $ \(IntArg size) (IntArg alignment) RealWorld ->
+      do ptr <- liftIO $ mallocBytes (size + alignment)
+         returnIO (fromPointer $ alignPtr ptr alignment)
+
+unsafeFreezeByteArray :: Primitive
+unsafeFreezeByteArray
+    = mkPrimitive "unsafeFreezeByteArray#" $ \(PtrArg ptr) RealWorld ->
+      returnIO (fromPointer ptr)
+
+byteArrayContents :: Primitive
+byteArrayContents
+    = mkPrimitive "byteArrayContents#" $ \(PtrArg ptr) ->
+      return (fromPointer ptr) :: Eval EvalValue
 
 updatePrim :: Primitive
 updatePrim
@@ -235,9 +281,17 @@ narrow32Int :: Primitive
 narrow32Int
     = mkPrimitive "narrow32Int#" $ \(IntArg i) -> return (fromInt i) :: Eval EvalValue
 
+narrow8Word :: Primitive
+narrow8Word
+    = mkPrimitive "narrow8Word#" $ \(IntArg i) -> return (fromInt i) :: Eval EvalValue
+
 int2Word :: Primitive
 int2Word
     = mkPrimitive "int2Word#" $ \(IntArg i) -> return (fromInt i) :: Eval EvalValue
+
+word2Int :: Primitive
+word2Int
+    = mkPrimitive "word2Int#" $ \(IntArg i) -> return (fromInt i) :: Eval EvalValue
 
 negateInt :: Primitive
 negateInt

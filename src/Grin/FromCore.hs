@@ -45,7 +45,7 @@ tdefsToNodes tdefs fn
       bindVariables unboxedNames $ \tuples ->
       markArities (zip unboxedNames [1..]) $
       do nodes <- mapM cdefToNode cdefs
-         let unboxedTuples = flip map (zip tuples  [1..10]) $ \(tuple,n) -> NodeDef tuple (ConstructorNode 0) (replicate n PtrType)
+         let unboxedTuples = flip map (zip tuples  [1..]) $ \(tuple,n) -> NodeDef tuple (ConstructorNode 0) (replicate n PtrType)
          fn (unboxedTuples ++ nodes)
     where cdefs = tdefsToCdefs tdefs
           unboxedNames = [ qualToCompact (L.pack "ghczmprim"
