@@ -23,10 +23,10 @@ main = do args <- getArgs
             [] -> error "No arguments!"
             ["libcheck"]      -> error "TODO"
             ("install":files) -> mapM_ installCoreFile files
-            ("build":files)   -> build Build files
-            ("eval":files)    -> build Eval files
-            ("compile":files) -> build Compile files
-            ["execute",file]  -> execute file
+            ("build":file:args)   -> build Build file args
+            ("eval":file:args)    -> build Eval file args
+            ("compile":file:args) -> build Compile file args
+            ("execute":file:args)  -> execute file args
 
 
 installCoreFile :: FilePath -> IO ()
@@ -44,10 +44,10 @@ installCoreFile path
 
 data Action = Build | Eval | Compile
 
-build :: Action -> [FilePath] -> IO ()
-build action files
+build :: Action -> FilePath -> [String] -> IO ()
+build action file args
     = do --hPutStrLn stderr "Parsing core files..."
-         smods <- mapM parseCore files
+         smods <- mapM parseCore [file]
          --hPutStrLn stderr "Tracking core dependencies..."
          allSmods <- loadDependencies smods
          let tdefs = concatMap moduleTypes allSmods
@@ -60,16 +60,16 @@ build action files
          evaluate reduced
          case action of
            Build -> print (ppGrin reduced)
-           Eval  -> eval grin "main::Main.main" >> return ()
+           Eval  -> eval grin "main::Main.main" args >> return ()
            Compile -> do lhc <- findExecutable "lhc"
                          putStrLn $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
                          L.putStr (encode reduced)
 
-execute :: FilePath -> IO ()
-execute path
+execute :: FilePath -> [String] -> IO ()
+execute path args
     = do inp <- L.readFile path
          let grin = decode (dropHashes inp)
-         eval grin "main::Main.main"
+         eval grin "main::Main.main" args
          return ()
     where dropHashes inp | L.pack "#" `L.isPrefixOf` inp = L.unlines (drop 1 (L.lines inp))
                          | otherwise = inp

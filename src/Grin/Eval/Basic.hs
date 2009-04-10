@@ -29,10 +29,11 @@ import System.Posix (Fd(..), fdWrite)
 import Foreign.LibFFI
 import System.Posix.DynamicLinker
 
-eval :: Grin -> String -> IO EvalValue
-eval grin entry
+eval :: Grin -> String -> [String] -> IO EvalValue
+eval grin entry commandArgs
     = runEval grin $
-      do ptr <- storeValue =<< runEvalPrimitive =<< lookupVariable renamedEntry
+      do setCommandArgs ("lhc":commandArgs)
+         ptr <- storeValue =<< runEvalPrimitive =<< lookupVariable renamedEntry
          callFunction (Builtin $ fromString "apply") [HeapPointer ptr, Empty]
     where renamedEntry = case [ renamed | CAF{cafName = renamed@(Aliased _ name)} <- grinCAFs grin, name == fromString entry ] of
                            []       -> error $ "Grin.Eval.Basic.evaluate: couldn't find entry point: " ++ entry
@@ -49,7 +50,8 @@ runEval grin fn
           initState = EvalState { stateFunctions = Map.fromList [ (funcDefName def, def) | def <- grinFunctions grin ]
                                 , stateNodes     = Map.fromList [ (name, node) | node@NodeDef{nodeName = Aliased _ name} <- grinNodes grin ]
                                 , stateHeap      = Map.empty
-                                , stateFree      = 0 }
+                                , stateFree      = 0
+                                , stateArgs      = ["lhc"] }
 
 callFunction :: Renamed -> [EvalValue] -> Eval EvalValue
 callFunction (Builtin fnName) args = runPrimitive fnName args
@@ -85,7 +87,7 @@ callFunction (External "stg_sig_install") [signo, actioncode, ptr, realWorld]
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 0)]
 callFunction (External "getProgArgv") [Lit (Lint argcPtr), Lit (Lint argvPtr), realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(# #)")
-         let args = ["lhc","2010"]
+         args <- getCommandArgs
          liftIO $ poke (nullPtr `plusPtr` fromIntegral argcPtr) (fromIntegral (length args) :: CInt)
          cs <- liftIO $ newArray =<< mapM newCString args
          liftIO $ poke (nullPtr `plusPtr` fromIntegral argvPtr) cs
@@ -207,6 +209,12 @@ fetch :: HeapPointer -> Eval EvalValue
 fetch ptr
     = gets $ \st -> Map.findWithDefault errMsg ptr (stateHeap st)
     where errMsg = error $ "Grin.Eval.Basic.fetch: couldn't find heap value for: " ++ show ptr
+
+setCommandArgs :: [String] -> Eval ()
+setCommandArgs args = modify $ \st -> st{stateArgs = args}
+
+getCommandArgs :: Eval [String]
+getCommandArgs = gets stateArgs
 
 toEvalValue :: Grin.Value -> Eval EvalValue
 toEvalValue (Grin.Node name ty args) = return (Node name ty) `ap` (mapM toEvalValue args)

@@ -24,7 +24,8 @@ data EvalState
     = EvalState { stateFunctions :: Map.Map Renamed FuncDef
                 , stateNodes     :: Map.Map CompactString NodeDef
                 , stateHeap      :: Heap
-                , stateFree      :: HeapPointer }
+                , stateFree      :: HeapPointer
+                , stateArgs      :: [String] }
 newtype Eval a = Eval {unEval :: StateT EvalState (ReaderT Scope IO) a}
     deriving (MonadState EvalState, MonadReader Scope, MonadIO, Monad)
 
