@@ -1,15 +1,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Grin.Optimize
-    ( simpleOptimize
+module Grin.Optimize.Simple
+    ( optimize
     ) where
 
 import Grin.Types
-import Grin.Pretty
 
 import Control.Monad.Reader
 import qualified Data.Map as Map
 
-import Debug.Trace
 
 
 newtype Opt a = Opt {unOpt :: Reader Subst a}
@@ -17,8 +15,8 @@ newtype Opt a = Opt {unOpt :: Reader Subst a}
 type Subst = Map.Map Renamed Value
 
 
-simpleOptimize :: Grin -> Grin
-simpleOptimize grin
+optimize :: Grin -> Grin
+optimize grin
     = grin{ grinFunctions = map simpleFuncDef (grinFunctions grin)}
 
 

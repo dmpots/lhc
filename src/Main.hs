@@ -16,7 +16,7 @@ import Grin.FromCore
 import Grin.Pretty
 import Grin.DeadCode
 import Grin.Eval.Basic
-import Grin.Optimize
+import qualified Grin.Optimize.Simple as Simple
 
 main :: IO ()
 main = do args <- getArgs
@@ -55,7 +55,7 @@ build action file args
              defs = concatMap moduleDefs allSmods
          let grin = coreToGrin tdefs defs
              reduced = removeDeadCode ["main::Main.main"] grin
-             opt = simpleOptimize reduced
+             opt = Simple.optimize reduced
          --hPutStrLn stderr "Translating to grin..."
          evaluate grin
          --hPutStrLn stderr "Removing dead code..."
