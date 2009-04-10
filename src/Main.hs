@@ -33,11 +33,11 @@ main = do args <- getArgs
 installCoreFile :: FilePath -> IO ()
 installCoreFile path
     = do inp <- L.readFile path
-         --hPutStr stderr $ "Parsing " ++ path ++ "..."
+         hPutStr stderr $ "Parsing " ++ path ++ "..."
          hFlush stdout
          case Core.parseModule "file" inp of
            Left errs -> hPutStrLn stderr "errors: " >> print errs
-           Right mod  -> do --hPutStrLn stderr " done"
+           Right mod  -> do hPutStrLn stderr " done"
                             dataDir <- getAppUserDataDirectory "lhc"
                             let smod = coreToSimpleCore mod
                             createDirectoryIfMissing False (dataDir </> modulePackage smod)
