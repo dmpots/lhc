@@ -37,7 +37,7 @@ runPrimitive name args
 
 allPrimitives :: Map.Map CompactString Primitive
 allPrimitives = Map.fromList [ (fromString (primName prim), prim) | prim <- prims ]
-    where prims = [ equal, gt, lt, gte, lte
+    where prims = [ equal, gt, lt, gte, lte, gtChar, geChar
                   , plus, minus, times, remInt, quotInt, addIntC
                   , chrPrim
                   , indexCharOffAddr
@@ -64,6 +64,11 @@ gt    = mkPrimitive ">#" $ binOp (>)
 lt    = mkPrimitive "<#" $ binOp (<)
 gte   = mkPrimitive ">=#" $ binOp (>=)
 lte   = mkPrimitive "<=#" $ binOp (<=)
+
+gtChar :: Primitive
+gtChar = mkPrimitive "gtChar#" $ binOp (>)
+geChar :: Primitive
+geChar = mkPrimitive "geChar#" $ binOp (>=)
 
 plus :: Primitive
 plus = mkPrimitive "+#" $ binIntOp (+)
