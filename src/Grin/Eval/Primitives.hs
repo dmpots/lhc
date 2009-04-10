@@ -1,11 +1,13 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Grin.Eval.Primitives
     ( runPrimitive
+    , runEvalPrimitive
     ) where
 
 import CompactString
 import Grin.Types hiding (Value(..))
 import Grin.Eval.Types
+import Grin.Eval.Basic ( callFunction, storeValue, updateValue, fetch, lookupNode )
 
 import qualified Data.Map as Map
 import Control.Monad.State
@@ -41,8 +43,9 @@ allPrimitives = Map.fromList [ (fromString (primName prim), prim) | prim <- prim
                   , writeCharArray
                   , noDuplicate
                   , realWorldPrim
+                  , catchPrim, blockAsyncExceptions
                   , newPinnedByteArray
-                  , updatePrim
+                  , updatePrim, evalPrim, applyPrim
                   , newMutVar, writeMutVar, readMutVar
                   , narrow32Int, int2Word
                   , newMVar, putMVar, takeMVar
@@ -91,6 +94,16 @@ noDuplicate = mkPrimitive "noDuplicate#" $ \RealWorld -> return realWorld :: Eva
 realWorldPrim :: Primitive
 realWorldPrim = mkPrimitive "realWorld#" $ (return realWorld :: Eval EvalValue)
 
+catchPrim :: Primitive
+catchPrim
+    = mkPrimitive "catch#" $ \(AnyArg fn) (AnyArg handler) RealWorld ->
+      callFunction (Builtin $ fromString "apply") [fn, realWorld]
+
+blockAsyncExceptions :: Primitive
+blockAsyncExceptions
+    = mkPrimitive "blockAsyncExceptions#" $ \(AnyArg fn) RealWorld ->
+      callFunction (Builtin $ fromString "apply") [fn, realWorld]
+
 -- |Create a mutable byte array that the GC guarantees not to move.
 newPinnedByteArray :: Primitive
 newPinnedByteArray
@@ -103,6 +116,22 @@ updatePrim
     = mkPrimitive "update" $ \(HeapArg ptr) (AnyArg val) ->
       do updateValue ptr val
          return Empty
+
+evalPrim :: Primitive
+evalPrim
+    = mkPrimitive "eval" $ \(AnyArg arg) ->
+      runEvalPrimitive arg
+
+applyPrim :: Primitive
+applyPrim
+    = mkPrimitive "apply" $ \(AnyArg fnPtr) (AnyArg arg) ->
+      do fn <- runEvalPrimitive fnPtr
+         case fn of
+           Node nodeName (FunctionNode 1) args -> callFunction nodeName (args ++ [arg])
+           Node nodeName (FunctionNode 0) args -> error $ "apply: over application?"
+           Node nodeName (FunctionNode n) args -> return $ Node nodeName (FunctionNode (n-1)) (args ++ [arg])
+           _ -> error $ "weird apply: " ++ (show fn)
+
 
 newMutVar, writeMutVar, readMutVar :: Primitive
 -- |Create @MutVar\#@ with specified initial value in specified state thread.
@@ -158,6 +187,14 @@ int2Word
 
 
 -- Primitive helpers
+
+runEvalPrimitive :: EvalValue -> Eval EvalValue
+runEvalPrimitive (HeapPointer ptr) = do reduced <- runEvalPrimitive =<< fetch ptr
+                                        updateValue ptr reduced
+                                        return reduced
+runEvalPrimitive (Node fn (FunctionNode 0) args) = callFunction fn args
+runEvalPrimitive val = return val
+
 
 fromPointer :: Ptr a -> EvalValue
 fromPointer ptr = Lit (Lint $ fromIntegral (minusPtr ptr nullPtr))
@@ -240,27 +277,4 @@ mkPrimitive name fn
 
 
 
-
-
-
-lookupNode :: CompactString -> Eval Renamed
-lookupNode name
-    = gets $ \st -> nodeName $ Map.findWithDefault errMsg name (stateNodes st)
-    where errMsg = error $ "Couldn't find node: " ++ show name
-
-storeValue :: EvalValue -> Eval HeapPointer
-storeValue val
-    = do st <- get
-         let newFree = stateFree st + 1
-         put st{stateFree = newFree
-               ,stateHeap = Map.insert (stateFree st) val (stateHeap st)}
-         return (stateFree st)
-updateValue :: HeapPointer -> EvalValue -> Eval ()
-updateValue ptr val
-    = modify $ \st -> st{stateHeap = Map.alter fn ptr (stateHeap st)}
-    where fn _ = Just val
-fetch :: HeapPointer -> Eval EvalValue
-fetch ptr
-    = gets $ \st -> Map.findWithDefault errMsg ptr (stateHeap st)
-    where errMsg = error $ "Grin.Eval.Basic.fetch: couldn't find heap value for: " ++ show ptr
 

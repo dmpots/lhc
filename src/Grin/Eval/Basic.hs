@@ -1,6 +1,11 @@
 module Grin.Eval.Basic
     ( eval
     , EvalValue(..)
+    , callFunction
+    , storeValue
+    , updateValue
+    , fetch
+    , lookupNode
     ) where
 
 import CompactString
@@ -8,17 +13,14 @@ import Grin.Types hiding (Value(..))
 import qualified Grin.Types as Grin
 import Grin.Pretty
 import Grin.Eval.Types
-import Grin.Eval.Primitives
+import {-# SOURCE #-} Grin.Eval.Primitives
 
 import Control.Monad.State
 import Control.Monad.Reader
 import qualified Data.Map as Map
 import Foreign.Ptr
-import Foreign.Marshal.Alloc
 import Foreign.Marshal.Utils (copyBytes)
-import Foreign.Storable
 import Data.Char
-import Data.Word
 import Foreign.C.String
 import System.Posix (Fd(..), fdWrite)
 
@@ -48,19 +50,6 @@ runEval grin fn
                                 , stateFree      = 0 }
 
 callFunction :: Renamed -> [EvalValue] -> Eval EvalValue
-callFunction (Builtin fnName) [arg] | fnName == fromString "eval"
-    = runEvalPrimitive arg
-callFunction (Builtin fnName) [fnPtr,arg] | fnName == fromString "apply"
-    = do fn <- runEvalPrimitive fnPtr
-         case fn of
-           Node nodeName (FunctionNode 1) args -> callFunction nodeName (args ++ [arg])
-           Node nodeName (FunctionNode 0) args -> error $ "apply: over application?"
-           Node nodeName (FunctionNode n) args -> return $ Node nodeName (FunctionNode (n-1)) (args ++ [arg])
-           _ -> error $ "apply: " ++ (show fn)
-callFunction (Builtin fnName) [fn, handler, realWorld] | fnName == fromString "catch#"
-    = callFunction (Builtin $ fromString "apply") [fn, realWorld]
-callFunction (Builtin fnName) [fn, realWorld] | fnName == fromString "blockAsyncExceptions#"
-    = callFunction (Builtin $ fromString "apply") [fn, realWorld]
 callFunction (Builtin fnName) args = runPrimitive fnName args
 
 
@@ -89,6 +78,7 @@ callFunction (External "fdReady") [fd,write,msecs,isSock,realWorld]
 callFunction (External "rtsSupportsBoundThreads") [realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
+
 callFunction (External name) args
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          fnPtr <- liftIO $ dlsym Default name
@@ -147,13 +137,6 @@ runCase val [Grin.Variable x :-> e]
     = bindValue x val (runExpression e)
 runCase val alts = error $ "runCase: " ++ (show (val,length alts))
 
-
-runEvalPrimitive :: EvalValue -> Eval EvalValue
-runEvalPrimitive (HeapPointer ptr) = do reduced <- runEvalPrimitive =<< fetch ptr
-                                        updateValue ptr reduced
-                                        return reduced
-runEvalPrimitive (Node fn (FunctionNode 0) args) = callFunction fn args
-runEvalPrimitive val = return val
 
 storeValue :: EvalValue -> Eval HeapPointer
 storeValue val
