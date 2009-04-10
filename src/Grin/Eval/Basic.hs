@@ -78,6 +78,8 @@ callFunction (Builtin fnName) [] | fnName == fromString "realWorld#"
     = return Empty
 callFunction (Builtin fnName) [int] | fnName == fromString "int2Word#"
     = return int
+callFunction (Builtin fnName) [int] | fnName == fromString "word2Int#"
+    = return int
 callFunction (Builtin fnName) [addr,Lit (Lint nth)] | fnName == fromString "indexCharOffAddr#"
     = do case addr of
            Lit (Lstring str) -> return (Lit (Lchar ((str++"\x0")!!fromIntegral nth)))
@@ -97,7 +99,7 @@ callFunction (Builtin fnName) [a,b] | fnName == fromString ">#"
 callFunction (Builtin fnName) [a,b] | fnName == fromString "<#"
     = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
          false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
-         if a > b
+         if a < b
             then return $ Node true (ConstructorNode 0) []
             else return $ Node false (ConstructorNode 0) []
 callFunction (Builtin fnName) [a,b] | fnName == fromString ">=#"
@@ -125,14 +127,6 @@ callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString
          return $ Lit (Lint (a `rem` b))
 callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "quotInt#"
     = do return $ Lit (Lint (a `quot` b))
-callFunction (Builtin fnName) [a,b] | fnName == fromString "-#"
-    = do Lit (Lint a') <- runEvalPrimitive a
-         Lit (Lint b') <- runEvalPrimitive b
-         return (Lit (Lint (a'-b')))
-callFunction (Builtin fnName) [a,b] | fnName == fromString "+#"
-    = do Lit (Lint a') <- runEvalPrimitive a
-         Lit (Lint b') <- runEvalPrimitive b
-         return (Lit (Lint (a'+b')))
 callFunction (Builtin fnName) [Lit (Lint ptr), Lit (Lint offset),Lit (Lchar c),realWorld] | fnName == fromString "writeCharArray#"
     = do liftIO $ poke (nullPtr `plusPtr` (fromIntegral $ ptr + offset)) (fromIntegral (ord c) :: Word8)
          --liftIO $ putStrLn $ "writeCharArray: " ++ show c
@@ -174,9 +168,8 @@ callFunction (Builtin fnName) [mvar,val] | fnName == fromString "update"
          updateValue ptr val
          --trace ("updating var: " ++ show (ptr,val)) $ return ()
          return $ Empty
-callFunction (Builtin fnName) [intVal] | fnName == fromString "narrow32Int#"
-    = do Lit (Lint val) <- runEvalPrimitive intVal
-         return $ Lit (Lint val)
+callFunction (Builtin fnName) [Lit (Lint intVal)] | fnName == fromString "narrow32Int#"
+    = return $ Lit (Lint intVal)
 callFunction (Builtin fnName) [exp,realWorld] | fnName == fromString "raiseIO#"
     = do val <- runEvalPrimitive exp
          error $ "RaiseIO: " ++ show val
@@ -213,7 +206,7 @@ callFunction (External "rtsSupportsBoundThreads") [realWorld]
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
 callFunction fnName args
     = do fn <- lookupFunction fnName
-         --liftIO $ putStrLn $ "Entering: " ++ show fnName
+         --liftIO $ putStrLn $ "Entering: " ++ show fnName ++ " " ++ unwords (map show args)
          ret <- runFunction fn args
          --liftIO $ putStrLn $ "Returning: " ++ show fnName ++ ", value: " ++ show ret
          return ret
