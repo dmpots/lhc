@@ -26,7 +26,7 @@ removeDeadCode entryPoints grin
                     `Map.union`
                     Map.fromList [ (nodeName node, Set.empty) | node <- grinNodes grin ]
                     `Map.union`
-                    Map.fromList [ (cafName caf, valueBound (cafValue caf)) | caf <- grinCAFs grin ]
+                    Map.fromList [ (cafName caf, valueDependencies (cafValue caf)) | caf <- grinCAFs grin ]
           nameMap = Map.fromList [ (name, funcDefName def) | def@FuncDef{funcDefName = Aliased _ name} <- grinFunctions grin ]
                     `Map.union`
                     Map.fromList [ (name, cafName caf) | caf@CAF{cafName = Aliased _ name} <- grinCAFs grin]
@@ -40,22 +40,26 @@ dependencies :: Expression -> Set.Set Renamed
 dependencies (exp :>>= lam)
     = dependencies exp `Set.union` lambda lam
 dependencies (Application fn args)
-    = Set.insert fn $ Set.unions (map valueBound args)
+    = Set.insert fn $ Set.unions (map valueDependencies args)
 dependencies (Case v alts)
-    = Set.unions (valueBound v : map lambda alts)
+    = Set.unions (valueDependencies v : map lambda alts)
 dependencies (Fetch v)
     = error "Urk?"
 dependencies (Store v)
-    = valueBound v
-dependencies (Unit v) = valueBound v
+    = valueDependencies v
+dependencies (Unit v) = valueDependencies v
 
 lambda :: Lambda -> Set.Set Renamed
-lambda (v :-> e) = dependencies e `Set.difference` valueBound v
+lambda (v :-> e) = (valueDependencies v `Set.union` dependencies e) `Set.difference` valueBound v
 
 valueBound :: Value -> Set.Set Renamed
-valueBound (Node name _type args) = Set.insert name $ Set.unions (map valueBound args)
+valueBound (Node name _type args) = Set.unions (map valueBound args)
 valueBound Lit{}                  = Set.empty
 valueBound (Variable v)           = Set.singleton v
 valueBound Hole{}                 = Set.empty
 valueBound Empty                  = Set.empty
 
+valueDependencies :: Value -> Set.Set Renamed
+valueDependencies (Node name _type args) = Set.insert name $ Set.unions (map valueDependencies args)
+valueDependencies (Variable v) = Set.singleton v
+valueDependencies _ = Set.empty
