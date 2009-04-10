@@ -1,4 +1,4 @@
-{-# OPTIONS_LHC -fcpp #-}
+{-# LANGUAGE CPP #-}
 
 #ifdef __LHC__
 main = putStrLn "in lhc"
