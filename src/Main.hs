@@ -69,7 +69,7 @@ execute :: FilePath -> IO ()
 execute path
     = do inp <- L.readFile path
          let grin = decode (dropHashes inp)
-         eval grin "main:Main.main"
+         eval grin "main::Main.main"
          return ()
     where dropHashes inp | L.pack "#" `L.isPrefixOf` inp = L.unlines (drop 1 (L.lines inp))
                          | otherwise = inp
