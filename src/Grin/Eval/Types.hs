@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Grin.Eval.Types where
 
 import CompactString
@@ -23,5 +24,6 @@ data EvalState
                 , stateNodes     :: Map.Map CompactString NodeDef
                 , stateHeap      :: Heap
                 , stateFree      :: HeapPointer }
-type Eval a = StateT EvalState (ReaderT Scope IO) a
+newtype Eval a = Eval {unEval :: StateT EvalState (ReaderT Scope IO) a}
+    deriving (MonadState EvalState, MonadReader Scope, MonadIO, Monad)
 

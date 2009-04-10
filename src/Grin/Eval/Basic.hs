@@ -8,6 +8,7 @@ import Grin.Types hiding (Value(..))
 import qualified Grin.Types as Grin
 import Grin.Pretty
 import Grin.Eval.Types
+import Grin.Eval.Primitives
 
 import Control.Monad.State
 import Control.Monad.Reader
@@ -37,7 +38,7 @@ eval grin entry
 
 runEval :: Grin -> Eval a -> IO a
 runEval grin fn
-    = runReaderT (evalStateT withCAFs initState) emptyScope
+    = runReaderT (evalStateT (unEval withCAFs) initState) emptyScope
     where withCAFs = do values <- mapM (\v -> storeValue =<< toEvalValue v) (map cafValue (grinCAFs grin))
                         bindValues (zip (map cafName (grinCAFs grin)) (map HeapPointer values)) fn
           emptyScope = Map.empty
@@ -60,106 +61,9 @@ callFunction (Builtin fnName) [fn, handler, realWorld] | fnName == fromString "c
     = callFunction (Builtin $ fromString "apply") [fn, realWorld]
 callFunction (Builtin fnName) [fn, realWorld] | fnName == fromString "blockAsyncExceptions#"
     = callFunction (Builtin $ fromString "apply") [fn, realWorld]
-callFunction (Builtin fnName) [realWorld] | fnName == fromString "noDuplicate#"
-    = return $ realWorld
-callFunction (Builtin fnName) [] | fnName == fromString "realWorld#"
-    = return Empty
-callFunction (Builtin fnName) [int] | fnName == fromString "int2Word#"
-    = return int
-callFunction (Builtin fnName) [int] | fnName == fromString "word2Int#"
-    = return int
-callFunction (Builtin fnName) [addr,Lit (Lint nth)] | fnName == fromString "indexCharOffAddr#"
-    = do case addr of
-           Lit (Lstring str) -> return (Lit (Lchar ((str++"\x0")!!fromIntegral nth)))
-           _ -> error $ "indexCharOffAddr#: " ++ show addr
-callFunction (Builtin fnName) [a,b] | fnName == fromString "==#"
-    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
-         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
-         if a == b
-            then return $ Node true (ConstructorNode 0) []
-            else return $ Node false (ConstructorNode 0) []
-callFunction (Builtin fnName) [a,b] | fnName == fromString ">#"
-    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
-         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
-         if a > b
-            then return $ Node true (ConstructorNode 0) []
-            else return $ Node false (ConstructorNode 0) []
-callFunction (Builtin fnName) [a,b] | fnName == fromString "<#"
-    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
-         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
-         if a < b
-            then return $ Node true (ConstructorNode 0) []
-            else return $ Node false (ConstructorNode 0) []
-callFunction (Builtin fnName) [a,b] | fnName == fromString ">=#"
-    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
-         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
-         if a >= b
-            then return $ Node true (ConstructorNode 0) []
-            else return $ Node false (ConstructorNode 0) []
-callFunction (Builtin fnName) [a,b] | fnName == fromString "<=#"
-    = do true <- lookupNode (fromString "ghc-prim:GHC.Bool.True")
-         false <- lookupNode (fromString "ghc-prim:GHC.Bool.False")
-         if a <= b
-            then return $ Node true (ConstructorNode 0) []
-            else return $ Node false (ConstructorNode 0) []
-callFunction (Builtin fnName) [Lit (Lint a)] | fnName == fromString "chr#"
-    = return $ Lit (Lchar $ chr $ fromIntegral a)
-callFunction (Builtin fnName) [Lit (Lint a)] | fnName == fromString "negateInt#"
-    = return $ Lit (Lint $ negate a)
-callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "+#"
-    = return $ Lit (Lint (a+b))
-callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "-#"
-    = return $ Lit (Lint (a-b))
-callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "remInt#"
-    = do --liftIO $ putStrLn $ "rem: " ++ show (a,b)
-         return $ Lit (Lint (a `rem` b))
-callFunction (Builtin fnName) [Lit (Lint a),Lit (Lint b)] | fnName == fromString "quotInt#"
-    = do return $ Lit (Lint (a `quot` b))
-callFunction (Builtin fnName) [Lit (Lint ptr), Lit (Lint offset),Lit (Lchar c),realWorld] | fnName == fromString "writeCharArray#"
-    = do liftIO $ poke (nullPtr `plusPtr` (fromIntegral $ ptr + offset)) (fromIntegral (ord c) :: Word8)
-         --liftIO $ putStrLn $ "writeCharArray: " ++ show c
-         return realWorld
-callFunction (Builtin fnName) [Lit (Lint size), realWorld] | fnName == fromString "newPinnedByteArray#"
-    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         ptr <- liftIO $ mallocBytes (fromIntegral size)
-         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint $ fromIntegral $ minusPtr ptr nullPtr)]
-callFunction (Builtin fnName) [val, realWorld] | fnName == fromString "newMutVar#"
-    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         ptr <- storeValue val
-         return $ Node node (ConstructorNode 0) [realWorld, HeapPointer ptr]
-callFunction (Builtin fnName) [ptr, realWorld] | fnName == fromString "readMutVar#"
-    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         return $ Node node (ConstructorNode 0) [realWorld, ptr]
-callFunction (Builtin fnName) [ptr, val,realWorld] | fnName == fromString "writeMutVar#"
-    = do --liftIO $ putStrLn $ "writeMutVar: " ++ show (ptr,val)
-         HeapPointer hpPtr <- return ptr
-         updateValue hpPtr val
-         return $ realWorld
-callFunction (Builtin fnName) [realWorld] | fnName == fromString "newMVar#"
-    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         ptr <- storeValue Empty
-         return $ Node node (ConstructorNode 0) [realWorld, HeapPointer ptr]
-callFunction (Builtin fnName) [mvar,realWorld] | fnName == fromString "takeMVar#"
-    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         HeapPointer ptr <- return mvar
-         val <- fetch ptr
-         return $ Node node (ConstructorNode 0) [realWorld, val]
-callFunction (Builtin fnName) [mvar,val,realWorld] | fnName == fromString "putMVar#"
-    = do HeapPointer ptr <- return mvar
-         updateValue ptr val
-         return $ realWorld
-callFunction (Builtin fnName) [mvar,val] | fnName == fromString "update"
-    = do HeapPointer ptr <- return mvar
-         updateValue ptr val
-         return $ Empty
-callFunction (Builtin fnName) [Lit (Lint intVal)] | fnName == fromString "narrow32Int#"
-    = return $ Lit (Lint intVal)
-callFunction (Builtin fnName) [exp,realWorld] | fnName == fromString "raiseIO#"
-    = do val <- runEvalPrimitive exp
-         error $ "RaiseIO: " ++ show val
-callFunction (Builtin fnName) [key,val,finalizer,realWorld] | fnName == fromString "mkWeak#"
-    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         return $ Node node (ConstructorNode 0) [realWorld, Empty]
+callFunction (Builtin fnName) args = runPrimitive fnName args
+
+
 callFunction (External "__hscore_memcpy_dst_off") [Lit (Lint dst),Lit (Lint off),Lit (Lint src),Lit (Lint size), realWorld]
     = do let dstPtr = nullPtr `plusPtr` (fromIntegral (dst+off))
              srcPtr = nullPtr `plusPtr` (fromIntegral src)
