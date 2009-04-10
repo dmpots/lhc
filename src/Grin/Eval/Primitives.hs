@@ -70,17 +70,20 @@ chrPrim
     = mkPrimitive "chr#" $ \(IntArg i) ->
       return $ Lit $ Lchar (chr i) :: Eval EvalValue
 
+-- |Reads 8-bit character; offset in bytes.
 indexCharOffAddr :: Primitive
 indexCharOffAddr
     = mkPrimitive "indexCharOffAddr#" $ \(PtrArg ptr) (IntArg nth) ->
       do c <- liftIO $ peekByteOff ptr nth :: Eval Word8
          return (Lit (Lchar (chr (fromIntegral c))))
 
+-- |Write 8-bit character; offset in bytes.
 writeCharArray :: Primitive
 writeCharArray
     = mkPrimitive "writeCharArray#" $ \(PtrArg ptr) (IntArg offset) (CharArg c) RealWorld ->
       do liftIO $ poke (ptr `plusPtr` offset) (fromIntegral (ord c) :: Word8)
          return realWorld :: Eval EvalValue
+
 
 noDuplicate :: Primitive
 noDuplicate = mkPrimitive "noDuplicate#" $ \RealWorld -> return realWorld :: Eval EvalValue
@@ -88,6 +91,7 @@ noDuplicate = mkPrimitive "noDuplicate#" $ \RealWorld -> return realWorld :: Eva
 realWorldPrim :: Primitive
 realWorldPrim = mkPrimitive "realWorld#" $ (return realWorld :: Eval EvalValue)
 
+-- |Create a mutable byte array that the GC guarantees not to move.
 newPinnedByteArray :: Primitive
 newPinnedByteArray
     = mkPrimitive "newPinnedByteArray#" $ \(IntArg size) RealWorld ->
@@ -101,16 +105,19 @@ updatePrim
          return Empty
 
 newMutVar, writeMutVar, readMutVar :: Primitive
+-- |Create @MutVar\#@ with specified initial value in specified state thread.
 newMutVar
     = mkPrimitive "newMutVar#" $ \(AnyArg val) RealWorld ->
       do ptr <- storeValue val
          returnIO (HeapPointer ptr)
 
+-- |Write contents of @MutVar\#@.
 writeMutVar
     = mkPrimitive "writeMutVar#" $ \(HeapArg ptr) (AnyArg val) RealWorld ->
       do updateValue ptr val
          return realWorld
 
+-- |Read contents of @MutVar\#@. Result is not yet evaluated.
 readMutVar
     = mkPrimitive "readMutVar#" $ \(AnyArg ptr) RealWorld ->
       do returnIO ptr
