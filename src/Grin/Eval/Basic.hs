@@ -4,6 +4,7 @@ import CompactString
 import Grin.Types hiding (Value(..))
 import qualified Grin.Types as Grin
 import Grin.Pretty
+import Grin.Eval.Types
 
 import Control.Monad (ap)
 import Control.Monad.State
@@ -33,22 +34,6 @@ eval grin entry
                            (name:_) -> name
 
 
-type Scope = Map.Map Renamed EvalValue
-type HeapPointer = Int
-type Heap = Map.Map HeapPointer EvalValue
-data EvalValue
-    = Node Renamed NodeType [EvalValue]
-    | Lit Lit
-    | HeapPointer HeapPointer
-    | Hole Int
-    | Empty
-      deriving (Show,Eq,Ord)
-data EvalState
-    = EvalState { stateFunctions :: Map.Map Renamed FuncDef
-                , stateNodes     :: Map.Map CompactString NodeDef
-                , stateHeap      :: Heap
-                , stateFree      :: HeapPointer }
-type Eval a = StateT EvalState (ReaderT Scope IO) a
 
 runEval :: Grin -> Eval a -> IO a
 runEval grin fn
