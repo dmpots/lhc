@@ -37,9 +37,9 @@ runPrimitive name args
 
 allPrimitives :: Map.Map CompactString Primitive
 allPrimitives = Map.fromList [ (fromString (primName prim), prim) | prim <- prims ]
-    where prims = [ equal, gt, lt, gte, lte, gtChar, geChar
+    where prims = [ equal, gt, lt, gte, lte, gtChar, geChar, ltChar, leChar
                   , plus, minus, times, remInt, quotInt, addIntC
-                  , chrPrim
+                  , chrPrim, ordPrim
                   , indexCharOffAddr
                   , writeCharArray
                   , noDuplicate
@@ -69,6 +69,10 @@ gtChar :: Primitive
 gtChar = mkPrimitive "gtChar#" $ binOp (>)
 geChar :: Primitive
 geChar = mkPrimitive "geChar#" $ binOp (>=)
+ltChar :: Primitive
+ltChar = mkPrimitive "ltChar#" $ binOp (<)
+leChar :: Primitive
+leChar = mkPrimitive "leChar#" $ binOp (<=)
 
 plus :: Primitive
 plus = mkPrimitive "+#" $ binIntOp (+)
@@ -91,6 +95,10 @@ chrPrim :: Primitive
 chrPrim
     = mkPrimitive "chr#" $ \(IntArg i) ->
       return $ Lit $ Lchar (chr i) :: Eval EvalValue
+ordPrim :: Primitive
+ordPrim
+    = mkPrimitive "ord#" $ \(CharArg c) ->
+      return $ Lit $ Lint (fromIntegral $ ord c) :: Eval EvalValue
 
 -- |Reads 8-bit character; offset in bytes.
 indexCharOffAddr :: Primitive
