@@ -18,6 +18,9 @@ import Data.Word
 import Foreign.C.String
 import System.Posix (Fd(..), fdWrite)
 
+import Foreign.LibFFI
+import System.Posix.DynamicLinker
+
 import Debug.Trace
 
 eval :: Grin -> String -> IO EvalValue
@@ -195,15 +198,18 @@ callFunction (External "__hscore_get_errno") [realWorld]
 callFunction (External "__hscore_bufsiz") [realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 512)]
-callFunction (External "isatty") [fd,realWorld]
-    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-         return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
 callFunction (External "fdReady") [fd,write,msecs,isSock,realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
 callFunction (External "rtsSupportsBoundThreads") [realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
+callFunction (External name) args
+    = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
+         fnPtr <- liftIO $ dlsym Default name
+         let toCArg (Lit (Lint i)) = argCInt (fromIntegral i)
+         ret <- liftIO $ callFFI fnPtr retCInt (map toCArg $ init args)
+         return $ Node node (ConstructorNode 0) [last args, Lit (Lint (fromIntegral ret))]
 callFunction fnName args
     = do fn <- lookupFunction fnName
          --liftIO $ putStrLn $ "Entering: " ++ show fnName ++ " " ++ unwords (map show args)

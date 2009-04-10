@@ -28,7 +28,7 @@ Executable lhc
  Extensions:          
  build-depends:       base, mtl, bytestring, containers, ansi-wl-pprint, binary,
                       digest, bytestring-trie, core >=0.5, filepath, directory,
-                      derive, unix
+                      derive, unix, libffi
 
  ghc-options:         -fwarn-unused-imports -fwarn-missing-signatures
  if impl(ghc >= 6.10)
