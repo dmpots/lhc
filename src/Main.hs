@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import System.IO
 import qualified Data.Set as Set
 import Data.Binary
+import Data.Maybe
 
 import qualified Language.Core as Core
 import Grin.SimpleCore
@@ -60,12 +61,17 @@ build action files
          case action of
            Build -> print (ppGrin reduced)
            Eval  -> print =<< eval grin "main:Main.main"
-           Compile -> L.putStr (encode reduced)
+           Compile -> do lhc <- findExecutable "lhc"
+                         putStrLn $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
+                         L.putStr (encode reduced)
 
 execute :: FilePath -> IO ()
 execute path
-    = do grin <- decodeFile path
+    = do inp <- L.readFile path
+         let grin = decode (dropHashes inp)
          print =<< eval grin "main:Main.main"
+    where dropHashes inp | L.pack "#" `L.isPrefixOf` inp = L.unlines (drop 1 (L.lines inp))
+                         | otherwise = inp
 
 loadDependencies :: [SimpleModule] -> IO [SimpleModule]
 loadDependencies smods
