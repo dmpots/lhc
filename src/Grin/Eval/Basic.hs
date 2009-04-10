@@ -52,7 +52,7 @@ runEval grin fn
 callFunction :: Renamed -> [EvalValue] -> Eval EvalValue
 callFunction (Builtin fnName) args = runPrimitive fnName args
 
-
+-- These functions are defined in the base library. I'm not sure how to deal with this properly.
 callFunction (External "__hscore_memcpy_dst_off") [Lit (Lint dst),Lit (Lint off),Lit (Lint src),Lit (Lint size), realWorld]
     = do let dstPtr = nullPtr `plusPtr` (fromIntegral (dst+off))
              srcPtr = nullPtr `plusPtr` (fromIntegral src)
@@ -79,12 +79,15 @@ callFunction (External "rtsSupportsBoundThreads") [realWorld]
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          return $ Node node (ConstructorNode 0) [realWorld, Lit (Lint 1)]
 
+-- If we don't recognize the function, try loading it through the linker.
 callFunction (External name) args
     = do node <- lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
          fnPtr <- liftIO $ dlsym Default name
          let toCArg (Lit (Lint i)) = argCInt (fromIntegral i)
          ret <- liftIO $ callFFI fnPtr retCInt (map toCArg $ init args)
          return $ Node node (ConstructorNode 0) [last args, Lit (Lint (fromIntegral ret))]
+
+-- It if isn't a Builtin or External then it must be a local GRIN function. Call it!
 callFunction fnName args
     = do fn <- lookupFunction fnName
          --liftIO $ putStrLn $ "Entering: " ++ show fnName ++ " " ++ unwords (map show args)
