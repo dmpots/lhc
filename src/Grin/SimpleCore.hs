@@ -117,7 +117,7 @@ expToSimpleExp (Core.Cast e _ty) = expToSimpleExp e
 expToSimpleExp (Core.External target conv ty) = return $ External target conv
 expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv
 expToSimpleExp (Core.Label label)             = return $ Label label
-expToSimpleExp (Core.Note note e)             = return (Note note) `ap` expToSimpleExp e
+expToSimpleExp (Core.Note note e)             = {- return (Note note) `ap` -} expToSimpleExp e
 
 
 -- FIXME: This function is incomplete.
@@ -226,6 +226,7 @@ splitExp :: Core.Exp -> ([Core.Qual Core.Id], Core.Exp)
 splitExp (Core.Lam b exp) = let (args,body) = splitExp exp
                                 in (fst b:args, body)
 splitExp (Core.Lamt _ exp) = splitExp exp
+splitExp (Core.Note _ exp) = splitExp exp
 splitExp exp = ([], exp)
 
 
