@@ -25,9 +25,9 @@ ppType PtrType  = blue (text "*")
 ppType WordType = white (text "#")
 
 ppNodeType (ConstructorNode 0) name  = char 'C' <> pretty name
-ppNodeType (ConstructorNode n) name  = char 'P' <> pretty name <> char '_' <> int n
+ppNodeType (ConstructorNode n) name  = char 'P' <> int n <> pretty name
 ppNodeType (FunctionNode 0) name = char 'F' <> pretty name
-ppNodeType (FunctionNode n) name = char 'P' <> pretty name <> char '_' <> int n
+ppNodeType (FunctionNode n) name = char 'P' <> int n <> pretty name
 
 instance Pretty Renamed where
     pretty (Aliased n var) = pretty var -- <> char '_' <> pretty n
