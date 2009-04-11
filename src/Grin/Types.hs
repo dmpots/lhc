@@ -65,7 +65,6 @@ data Expression
                   , expArgs     :: [Value] }
     | Case        { expValue    :: Value
                   , expAlts     :: [Lambda] }
-    | Fetch       Variable
     | Store       Value
     | Unit        Value
 

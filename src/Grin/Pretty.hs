@@ -54,8 +54,6 @@ ppExpression (Unit value) = text "unit" <+> ppValue value
 ppExpression (Case value alts)
     = text "case" <+> ppValue value <+> text "of" <$$>
       indent 2 (vsep (map ppAlt alts))
-ppExpression (Fetch v)
-    = text "fetch" <+> pretty v
 ppExpression (Application fn args)
     = hsep (pretty fn:map ppValue args)
 ppExpression (Store v)

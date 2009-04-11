@@ -43,8 +43,6 @@ dependencies (Application fn args)
     = Set.insert fn $ Set.unions (map valueDependencies args)
 dependencies (Case v alts)
     = Set.unions (valueDependencies v : map lambda alts)
-dependencies (Fetch v)
-    = error "Urk?"
 dependencies (Store v)
     = valueDependencies v
 dependencies (Unit v) = valueDependencies v
