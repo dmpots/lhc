@@ -117,6 +117,12 @@ defToFunc sdef
 lazyExpression :: SimpleExp -> M Expression
 lazyExpression simplExp
     = case simplExp of
+       Simple.Case exp binding [Simple.Adefault cond] _ ->
+         bindVariable binding $ \renamed ->
+           do e <- strictExpression exp
+              cond' <- lazyExpression cond
+              let v = Variable renamed
+              return $ e :>>= v :-> cond'
        Simple.Case exp binding alts mbDefault ->
          bindVariable binding $ \renamed ->
            do e <- strictExpression exp
