@@ -147,7 +147,7 @@ lazyExpression simplExp
        LetStrict bind fn e ->
          bindVariable bind $ \bind' ->
          do fn' <- strictExpression fn
-            e' <- strictExpression e
+            e' <- lazyExpression e
             return $ fn' :>>= Variable bind' :-> e'
        ap@App{} ->
          let loop acc (App a (Var b))
@@ -200,14 +200,14 @@ lazyExpression simplExp
          bindVariables binds $ \binds' ->
          do funcs' <- mapM lookupVariable funcs
             args'  <- mapM (mapM lookupVariable) args
-            e' <- strictExpression e
+            e' <- lazyExpression e
             let holes = foldr (\(bind,arity) b -> Store (Hole arity) :>>= Variable bind :-> b ) updates (zip binds' arities)
                 updates = foldr (\(bind,fn,args,arity) b ->
                                  update bind fn args arity :>>=
                                  Empty :-> b ) e' (zip4 binds' funcs' args' arities)
             return holes
        Note _ e ->
-          strictExpression e
+          lazyExpression e
 --       Label str -> error $ "label: " ++ str
        Simple.External fn conv -> return $ Unit $ Variable $ Grin.External fn
 --       DynExternal fn   -> error $ "dynexternal: " ++ fn
