@@ -1,33 +1,51 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeSynonymInstances, GeneralizedNewtypeDeriving #-}
 module Grin.Eval.Types where
 
+import Grin.Types hiding (Value(..))
+import qualified Grin.Types as Grin
+
+import qualified Data.Map as Map
+import Control.Monad.Reader
+
 import CompactString
-import Grin.Types
+import Grin.Types hiding (Value(..))
 
 import qualified Data.Map as Map
 import Control.Monad.State
-import Control.Monad.Reader
+import Data.Char; import Data.Int
 
 
-data Scope
-    = Scope { localScope   :: Map.Map Renamed EvalValue
-            , globalScope  :: Map.Map Renamed EvalValue }
+
+
 type HeapPointer = Int
 type Heap = Map.Map HeapPointer EvalValue
 data EvalValue
-    = Node Renamed NodeType [EvalValue]
+    = CNode Renamed Int [EvalValue]
+    | FNode CompFunction Int [EvalValue]
     | Lit Lit
     | HeapPointer HeapPointer
     | Hole Int
     | Array [EvalValue]
     | Empty
       deriving (Show,Eq,Ord)
+
+type LocalScope = Map.Map Renamed EvalValue
+data GlobalScope = GlobalScope { globalCAFs  :: Map.Map Renamed HeapPointer
+                               , globalNodes :: Map.Map CompactString NodeDef
+                               , globalFuncs :: Map.Map Renamed CompFunction }
+
+type CompFunction = [EvalValue] -> CompExpression
+instance Eq CompFunction where _ == _ = False
+instance Ord CompFunction where _ `compare` _ = LT
+instance Show CompFunction where show _ = "function"
 data EvalState
-    = EvalState { stateFunctions :: Map.Map Renamed FuncDef
-                , stateNodes     :: Map.Map CompactString NodeDef
-                , stateHeap      :: Heap
+    = EvalState { stateHeap      :: Heap
                 , stateFree      :: HeapPointer
                 , stateArgs      :: [String] }
-newtype Eval a = Eval {unEval :: StateT EvalState (ReaderT Scope IO) a}
-    deriving (MonadState EvalState, MonadReader Scope, MonadIO, Monad)
+newtype Comp a = CompExpression { unExpression :: StateT EvalState (ReaderT LocalScope IO) a }
+    deriving (MonadState EvalState, MonadReader LocalScope, MonadIO, Monad)
+
+type CompExpression = Comp EvalValue
+type CompValue = Comp EvalValue
+type Gen a = GlobalScope -> a
 

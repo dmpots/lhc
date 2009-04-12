@@ -3,7 +3,6 @@ module Main where
 import System.Directory
 import System.FilePath
 import System.Environment
-import Control.Exception
 import qualified Data.ByteString.Lazy.Char8 as L
 import System.IO
 import qualified Data.Set as Set
@@ -15,7 +14,7 @@ import Grin.SimpleCore
 import Grin.FromCore
 import Grin.Pretty
 import Grin.DeadCode
-import Grin.Eval.Basic
+import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
 
 main :: IO ()
@@ -56,22 +55,24 @@ build action file args
          let grin = coreToGrin tdefs defs
              reduced = removeDeadCode ["main::Main.main"] grin
              opt = Simple.optimize reduced
-         --hPutStrLn stderr "Translating to grin..."
-         evaluate grin
-         --hPutStrLn stderr "Removing dead code..."
-         evaluate opt
          case action of
            Build -> print (ppGrin opt)
-           Eval  -> eval opt "main::Main.main" args >> return ()
-           Compile -> do lhc <- findExecutable "lhc"
-                         putStrLn $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
-                         L.putStr (encode opt)
+           Eval  -> Compile.runGrin opt "main::Main.main" args >> return ()
+           Compile -> do let target = replaceExtension file "lhc"
+                             grinTarget = replaceExtension file "grin"
+                         writeFile grinTarget (show $ ppGrin opt)
+                         lhc <- findExecutable "lhc"
+                         L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
+                                                        , encode opt ]
+                         perm <- getPermissions target
+                         setPermissions target perm{executable = True}
 
 execute :: FilePath -> [String] -> IO ()
 execute path args
     = do inp <- L.readFile path
          let grin = decode (dropHashes inp)
-         eval grin "main::Main.main" args
+         --eval grin "main::Main.main" args
+         Compile.runGrin grin "main::Main.main" args
          return ()
     where dropHashes inp | L.pack "#" `L.isPrefixOf` inp = L.unlines (drop 1 (L.lines inp))
                          | otherwise = inp
