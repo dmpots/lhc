@@ -152,7 +152,6 @@ TODO/BUGS:
   CONVERSION code uses literal 0 as overloaded
 
 -}
-{-# OPTIONS_LHC -N #-}
 module Main where
 --cleaned of \t , [ \t]$ , .\{80,\} ,
 -- \(let\|where\|do\|of\)[ ] such that the layout following them extends
@@ -235,7 +234,7 @@ import Prelude (minBound, maxBound)
 -- and it's as good as (fromInteger . toInteger)
 import qualified Prelude as Misc (fromIntegral)
 -- SPECIALIZE for this type
-import Prelude as N (Integer, Int)
+import qualified Prelude as N (Integer, Int)
 
 -- ****** instances, newtype imports ********
 
@@ -2178,17 +2177,17 @@ quotRem10 =
 --inconsistent with Haskell98.  That however makes it sometimes fail
 --with QuickCheck :-)
 instance Class.Read Integer where
-  Class.readsPrec _ = readSigned readDec
+  readsPrec _ = readSigned readDec
 
 --INTERESTING? same as hugs and haskell98 report:
 indexError :: a
 indexError = Error.error "Ix.index: Index out of range."
 
 instance Class.Ix Integer where
-  Class.range (l,h) = enumFromTo l h
-  Class.inRange (l,h) i = l <= i && i <= h
+  range (l,h) = enumFromTo l h
+  inRange (l,h) i = l <= i && i <= h
 
-  Class.index (l,h) i = if l <= i && i <= h
+  index (l,h) i = if l <= i && i <= h
                      then intFromInteger (i - l)
                      else indexError
   --INTERESTING?
