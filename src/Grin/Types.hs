@@ -46,7 +46,7 @@ data NodeDef
 data NodeType
     = ConstructorNode Int
     | FunctionNode Int    -- Function node with number of 'missing' arguments.
-    deriving (Show,Read,Eq,Ord)
+    deriving (Show,Eq,Ord)
 
 data Type
     = PtrType
@@ -74,7 +74,7 @@ data Renamed = Aliased Int CompactString
              | Anonymous Int
              | Builtin CompactString
              | External String
-    deriving (Show,Read,Eq,Ord)
+    deriving (Show,Eq,Ord)
 
 isAliased, isBuiltin, isExternal :: Renamed -> Bool
 
@@ -93,7 +93,7 @@ data Value
     | Variable Renamed
     | Hole Int
     | Empty
-    deriving (Show,Read,Eq)
+    deriving (Show,Eq)
 
 
 $(derive makeBinary ''NodeType)

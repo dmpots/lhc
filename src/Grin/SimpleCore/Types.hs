@@ -16,13 +16,12 @@ data SimpleModule
                    , moduleTypes   :: [Tdef]
                    , moduleDefs    :: [SimpleDef]
                    , moduleDeps    :: [(String,String)] -- List of (pkg,module)
-                   } deriving (Show,Read)
+                   }
 
 data SimpleDef
     = SimpleDef { simpleDefName :: CompactString
                 , simpleDefArgs :: [CompactString]
                 , simpleDefBody :: SimpleExp }
-    deriving (Show,Read)
 simpleDefArity :: SimpleDef -> Int
 simpleDefArity = length . simpleDefArgs
 
@@ -40,20 +39,18 @@ data SimpleExp
     | DynExternal String
     | Label String
     | Note String SimpleExp
-      deriving (Show,Read)
 
 data Alt
     = Acon CompactString [CompactString] SimpleExp
     | Alit Lit SimpleExp
     | Adefault SimpleExp
-    deriving (Show,Read)
 
 data Lit
     = Lint Integer
     | Lrational Rational
     | Lchar Char
     | Lstring String
-    deriving (Show,Read,Eq,Ord)
+    deriving (Show,Eq,Ord)
 
 $(derive makeBinary ''Alt)
 $(derive makeBinary ''Lit)
