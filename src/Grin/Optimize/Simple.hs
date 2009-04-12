@@ -51,7 +51,6 @@ simpleExpression (Case val alts)
     = do val' <- simpleValue val
          alts' <- mapM simpleLambda alts
          return $ Case val' alts'
-simpleExpression e = return e
 
 
 simpleLambda :: Lambda -> Opt Lambda
