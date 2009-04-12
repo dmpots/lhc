@@ -21,7 +21,7 @@ type HeapPointer = Int
 type Heap = Map.Map HeapPointer EvalValue
 data EvalValue
     = CNode Renamed Int [EvalValue]
-    | FNode CompFunction Int [EvalValue]
+    | FNode Renamed CompFunction Int [EvalValue]
     | Lit Lit
     | HeapPointer HeapPointer
     | Hole Int
@@ -41,8 +41,8 @@ instance Show CompFunction where show _ = "function"
 data EvalState
     = EvalState { stateHeap      :: Heap
                 , stateFree      :: HeapPointer
-                , stateArgs      :: [String] }
-newtype Comp a = CompExpression { unExpression :: StateT EvalState (ReaderT LocalScope IO) a }
+                , stateArgs      :: [String] } deriving Show
+newtype Comp a = CompExpression { unComp :: StateT EvalState (ReaderT LocalScope IO) a }
     deriving (MonadState EvalState, MonadReader LocalScope, MonadIO, Monad)
 
 type CompExpression = Comp EvalValue

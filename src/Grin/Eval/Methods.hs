@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Grin.Eval.Methods where
 
 import CompactString
@@ -8,6 +9,12 @@ import Grin.Eval.Types
 import qualified Data.Map as Map
 import Control.Monad.State
 import Control.Monad.Reader
+import Control.Exception
+import Data.Typeable
+import Prelude hiding (catch)
+
+data GrinException = GrinException EvalState HeapPointer deriving (Typeable,Show)
+instance Exception GrinException
 
 
 setCommandArgs :: [String] -> Comp ()
@@ -34,6 +41,7 @@ storeValue val
          let newFree = stateFree st + 1
          put st{stateFree = newFree
                   ,stateHeap = Map.insert (stateFree st) val (stateHeap st)}
+         --liftIO $ putStrLn $ "Store value: " ++ unwords [show (stateFree st), show val]
          return (stateFree st)
 
 updateValue :: HeapPointer -> EvalValue -> Comp ()
@@ -55,3 +63,8 @@ lookupNode name globalScope
         Just node -> nodeName node
         Nothing   -> error $ "Grin.Eval.Compile.lookupNode: couldn't find node: " ++ show name
 
+
+catchComp :: Comp a -> (EvalValue ->Comp a) -> Comp a
+catchComp fn handler
+    = CompExpression $ StateT $ \st -> ReaderT $ \r -> runReaderT (runStateT (unComp fn) st) r `catch` \(GrinException st' ptr) ->
+                                                       runReaderT (runStateT (unComp (handler (HeapPointer ptr))) st') r

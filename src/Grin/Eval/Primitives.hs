@@ -16,6 +16,7 @@ import Grin.Eval.Types
 
 import qualified Data.Map as Map
 import Control.Monad.State
+import Control.Exception
 import Foreign.Ptr
 import Foreign.Marshal.Alloc
 import Foreign.C
@@ -87,6 +88,7 @@ data RealWorld = RealWorld
 
 data Primitive = Primitive { primName :: String, primHandle :: ([EvalValue] -> CompExpression) }
 
+
 -- Primitive handlers
 
 listPrimitives :: GlobalScope -> [(Renamed, CompFunction)]
@@ -103,7 +105,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , writeCharArray
                      , plusAddr, touch
                      , noDuplicate
-                     , realWorldPrim, myThreadIdPrim
+                     , realWorldPrim, myThreadIdPrim, raisePrim
                      , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
                      , newPinnedByteArray, newAlignedPinnedByteArray
                      , unsafeFreezeByteArray, byteArrayContents
@@ -204,11 +206,19 @@ myThreadIdPrim
          return $ \RealWorld ->
                      noScope $ return (mkNode tNode [realWorld, Lit (Lint 0)])
 
+raisePrim
+    = mkPrimitive "raise#" $
+      return $ \(HeapArg ptr) ->
+               do st <- get
+                  liftIO $ throwIO (GrinException st ptr) :: CompValue
+
 catchPrim
     = mkPrimitive "catch#" $
       do apply <- lookupFunction (Builtin $ fromString "apply")
          return $ \(AnyArg fn) (AnyArg handler) RealWorld ->
-                     apply [fn, realWorld]
+                  apply [fn, realWorld] `catchComp` \val ->
+                  do v <- apply [handler, val]
+                     apply [v, realWorld]
 
 blockAsyncExceptions
     = mkPrimitive "blockAsyncExceptions#" $
@@ -260,9 +270,11 @@ applyPrim
     = mkPrimitive "apply" $ return $ \(AnyArg fnPtr) (AnyArg arg) ->
       do fn <- runEvalPrimitive fnPtr
          case fn of
-              FNode fn 1 args -> fn (args ++ [arg])
-              FNode fn 0 args -> error $ "apply: over application?"
-              FNode fn n args -> return $ FNode fn (n-1) (args ++ [arg])
+              FNode name fn 1 args -> fn (args ++ [arg])
+              FNode name fn 0 args -> error $ "apply: over application?"
+              FNode name fn n args -> return $ FNode name fn (n-1) (args ++ [arg])
+              CNode name 0 args -> error $ "apply: over application?"
+              CNode name n args -> return $ CNode name (n-1) (args ++ [arg])
               _ -> error $ "weird apply: " ++ (show fn)
 
 newArrayPrim
@@ -373,8 +385,9 @@ noScope fn = liftIO fn
 runEvalPrimitive :: EvalValue -> CompValue
 runEvalPrimitive (HeapPointer ptr)
     = worker =<< fetch ptr
-    where worker orig@(FNode fn 0 args)
-              = do reduced <- fn args
+    where worker orig@(FNode name fn 0 args)
+              = do --liftIO $ putStrLn $ "Running: " ++ show name ++ " " ++ show args
+                   reduced <- fn args
                    updateValue ptr reduced
                    return reduced
           worker val = return val
@@ -435,7 +448,7 @@ instance FromArg AnyArg where
 instance FromArg RealWorld where
     fromArg Empty = return RealWorld
     --fromArg (Node (Builtin name) (FunctionNode 0) []) | name == fromString "realWorld#" = return RealWorld
-    fromArg (FNode _ 0 []) = return RealWorld
+    fromArg (FNode _ _ 0 []) = return RealWorld
     fromArg v     = error $ "Grin.Eval.Primitives.fromArg: Expected realWorld: " ++ show v
 instance FromArg IntArg where
     fromArg (Lit (Lint i)) = return (IntArg $ fromIntegral i)

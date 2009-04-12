@@ -42,7 +42,7 @@ runGrin grin entry commandArgs
                            (name:_) -> name
 
 runComp comp
-    = runReaderT (evalStateT (unExpression comp) initState) Map.empty
+    = runReaderT (evalStateT (unComp comp) initState) Map.empty
     where initState = EvalState { stateHeap = Map.empty
                                 , stateFree = 0
                                 , stateArgs = ["lhc"] }
@@ -75,7 +75,7 @@ compExpression (Application name args)
     = do fn <- lookupFunction name
          args' <- mapM compValue args
          return $ do args'' <- mapM id args'
-                     --liftIO $ putStrLn $ "Running: " ++ show name
+                     --liftIO $ putStrLn $ "Running: " ++ show name ++ " " ++ show args ++ " " ++ show args''
                      fn args''
 compExpression (Unit value)
     = compValue value
@@ -100,7 +100,7 @@ compValue (Grin.Node name (Grin.FunctionNode n) args)
     = do fn <- lookupFunction name
          args' <- mapM compValue args
          return $ do args'' <- mapM id args'
-                     return $ FNode fn n args''
+                     return $ FNode name fn n args''
 compValue (Grin.Variable v) = lookupVariable v
 compValue Grin.Empty        = return $ return Empty
 compValue (Grin.Lit lit)    = return $ return $ Lit lit
