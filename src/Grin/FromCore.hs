@@ -156,15 +156,7 @@ lazyExpression simplExp
             e' <- lazyExpression e
             return $ fn' :>>= Variable bind' :-> e'
        ap@App{} ->
-         let loop acc (App a (Var b))
-                 = do name <- lookupVariable b
-                      mbArity <- findArity b
-                      case mbArity of
-                        Nothing -> loop (name:acc) a
-                        Just n  -> do v <- newVariable
-                                      r <- loop  (v:acc) a
-                                      return $ Store (Node name (FunctionNode n) []) :>>= Variable v :-> r
-             loop acc (App a b)
+         let loop acc (App a b)
                  = do e <- lazyExpression b
                       v <- newVariable
                       r <- loop (v:acc) a
@@ -259,8 +251,8 @@ alternative (Alit lit e)
 
 strictExpression :: SimpleExp -> M Expression
 strictExpression e
-    = do v <- newVariable
-         r <- lazyExpression e
+    = do r <- lazyExpression e
+         v <- newVariable
          return $ r :>>= Variable v :-> eval (Variable v)
 
 {-
