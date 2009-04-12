@@ -1,7 +1,4 @@
-
-
 import System
-
 
 main :: IO ()
 main = do
