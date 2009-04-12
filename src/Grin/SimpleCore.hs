@@ -95,11 +95,12 @@ expToSimpleExp (Core.Appt a _) = expToSimpleExp a
 expToSimpleExp (Core.Lamt _ e) = expToSimpleExp e
 -- We remove lambdas by translating them to let expressions.
 expToSimpleExp exp@(Core.Lam (var,ty) _)
-    = let def     = Vdef { vdefLocal = False
-                         , vdefName  = var
-                         , vdefType  = Core.Tvar $ error "unknown type" -- Urk.
-                         , vdefExp   = exp }
-      in expToSimpleExp (Core.Let (Core.Nonrec def) (Core.Var (vdefName def)))
+    = do newVar <- uniqueQual var
+         let def     = Vdef { vdefLocal = False
+                            , vdefName  = newVar
+                            , vdefType  = Core.Tvar $ error "unknown type" -- Urk.
+                            , vdefExp   = exp }
+         expToSimpleExp (Core.Let (Core.Nonrec def) (Core.Var newVar))
 expToSimpleExp (Core.Let (Core.Nonrec def) e) | defIsStrictPrimitive def
     = bindVariable (vdefName def) $
       return (LetStrict (qualToCompact (vdefName def))) `ap` expToSimpleExp (vdefExp def) `ap` expToSimpleExp e
@@ -162,15 +163,25 @@ lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
     = do (pkg,mod) <- asks currentModule
          scope <- asks currentScope
          unique <- newUnique
-         let lambdaScope = Set.toList $ freeVariables exp `Set.intersection` scope
+         let allFreeVars = freeVariables exp `Set.intersection` scope
+             isRecursive = vdefName vdef `Set.member` allFreeVars
+             lambdaScope = Set.toList $ if isCAF then allFreeVars else Set.delete (vdefName vdef) allFreeVars
              (args,body) = splitExp exp
+             isCAF = null args
              realArgs = map qualToCompact (lambdaScope ++ args)
-             toplevelName = qualToCompact (pkg,mod,L.pack "@lifted@_" `L.append` ident `L.append` L.pack (show unique))
+             toplevelName = (pkg,mod,L.pack "@lifted@_" `L.append` ident `L.append` L.pack (show unique))
+             selfDef = Core.Case (foldl Core.App (Core.Var toplevelName) (map Core.Var lambdaScope))
+                                 (vdefName vdef,vdefType vdef)
+                                 (vdefType vdef)
+                                 [Core.Adefault body]
 
-         bindVariables (lambdaScope ++ args) $ vdefToSimpleDef' toplevelName realArgs body
+         bindVariables (lambdaScope ++ args) $
+           if isCAF || not isRecursive
+             then vdefToSimpleDef' (qualToCompact toplevelName) realArgs body
+             else vdefToSimpleDef' (qualToCompact toplevelName) realArgs selfDef
 
          return ( qualToCompact (vdefName vdef)
-                , toplevelName
+                , qualToCompact toplevelName
                 , map qualToCompact lambdaScope
                 , length realArgs )
 
@@ -220,6 +231,11 @@ newUnique :: M Int
 newUnique = do u <- get
                put $! u+1
                return u
+
+uniqueQual :: Core.Qual Core.Id -> M (Core.Qual Core.Id)
+uniqueQual (pkg,mod,ident)
+    = do u <- newUnique
+         return (pkg, mod, ident `L.append` L.pack (show u))
 
 
 splitExp :: Core.Exp -> ([Core.Qual Core.Id], Core.Exp)
