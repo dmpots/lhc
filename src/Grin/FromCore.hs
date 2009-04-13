@@ -101,9 +101,10 @@ lazyExpression simplExp
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
            do e <- strictExpression exp
+              v <- newVariable
               alts' <- mapM alternative alts
-              let v = Variable renamed
-              return $ e :>>= v :-> Grin.Case v alts'
+              let bind = Variable renamed
+              return $ e :>>= v :-> Store v :>>= bind :-> Grin.Case v alts'
        Simple.Primitive p ->
          return $ Unit (Node (Builtin p) (FunctionNode 0) [])
        Var var ->
@@ -135,35 +136,35 @@ lazyExpression simplExp
                  = do e <- lazyExpression b
                       v <- newVariable
                       r <- loop (v:acc) a
-                      return $ e :>>= Variable v :-> r
+                      return $ e :>>= v :-> r
              loop acc (Simple.Primitive p)
-                 = return $ Application (Builtin p) (map Variable acc)
+                 = return $ Application (Builtin p) acc
              loop acc (Simple.External fn conv)
-                 = return $ Application (Grin.External fn) (map Variable acc)
+                 = return $ Application (Grin.External fn) acc
              loop acc (Var var)
                  = do name <- lookupVariable var
                       mbArity <- findArity var
                       case mbArity of
-                        Nothing -> mkApply acc name
+                        Nothing -> mkApply acc (Variable name)
                         Just n  -> do let (now,later) = splitAt n acc
                                       v <- newVariable
                                       ap <- mkApply later v
-                                      return $ Store (Node name (FunctionNode (n-length now)) (map Variable now)) :>>= Variable v :-> ap
+                                      return $ Store (Node name (FunctionNode (n-length now)) now) :>>= v :-> ap
              loop acc (Dcon con)
                  = do name <- lookupVariable con
                       Just n <- findArity con
-                      return $ Store (Node name (ConstructorNode (n-length acc)) (map Variable acc))
+                      return $ Store (Node name (ConstructorNode (n-length acc)) acc)
              loop acc e
                  = do e' <- strictExpression e
                       v  <- newVariable
                       app <- mkApply acc v
-                      return (e' :>>= Variable v :-> app)
+                      return (e' :>>= v :-> app)
              mkApply [] v
-                 = return (Unit (Variable v))
+                 = return (Unit v)
              mkApply (x:xs) v
                  = do v' <- newVariable
                       r <- mkApply xs v'
-                      return $ applyCell (Variable v) (Variable x) :>>= Variable v' :-> r
+                      return $ applyCell v x :>>= v' :-> r
          in loop [] ap
        LetRec defs e ->
          let binds = [ bind | (bind,_,_,_) <- defs ]
@@ -219,7 +220,7 @@ alternative (Acon con bs e)
 alternative (Adefault e)
     = do e' <- lazyExpression e
          v <- newVariable
-         return $ Variable v :-> e'
+         return $ v :-> e'
 alternative (Alit lit e)
     = do e' <- lazyExpression e
          return $ Grin.Lit lit :-> e'
@@ -228,7 +229,7 @@ strictExpression :: SimpleExp -> M Expression
 strictExpression e
     = do r <- lazyExpression e
          v <- newVariable
-         return $ r :>>= Variable v :-> eval (Variable v)
+         return $ r :>>= v :-> eval v
 
 {-
 let a = 1:b
@@ -295,9 +296,9 @@ findArity :: Variable -> M (Maybe Int)
 findArity var
     = asks $ \env -> Map.lookup var (arities env)
 
-newVariable :: M Renamed
+newVariable :: M Value
 newVariable = do u <- newUnique
-                 return (Anonymous u)
+                 return (Variable (Anonymous u))
 
 newUnique :: M Int
 newUnique = do u <- get
