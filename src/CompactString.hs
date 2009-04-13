@@ -83,7 +83,6 @@ qualToCompact (pkg,mod,ident)
                                                               , L.pack "."
                                                               , zDecodeByteString ident])
 
-
 -- Stolen from GHC. (C) The University of Glasgow.
 zDecodeByteString :: L.ByteString -> L.ByteString
 zDecodeByteString = L.pack . zDecodeString . L.unpack

@@ -1,19 +1,21 @@
-module Main where
+module Main (main) where
 
 import System.Directory
 import System.FilePath
 import System.Environment
 import qualified Data.ByteString.Lazy.Char8 as L
 import System.IO
-import qualified Data.Set as Set
+import qualified Data.Map as Map
 import Data.Binary
 import Data.Maybe
+import Control.Monad
 
+import CompactString
 import qualified Language.Core as Core
 import Grin.SimpleCore
 import Grin.FromCore
 import Grin.Pretty
-import Grin.DeadCode
+import qualified Grin.SimpleCore.DeadCode as Simple
 import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
 
@@ -46,15 +48,24 @@ data Action = Build | Eval | Compile
 
 build :: Action -> FilePath -> [String] -> IO ()
 build action file args
-    = do --hPutStrLn stderr "Parsing core files..."
-         smods <- mapM parseCore [file]
-         --hPutStrLn stderr "Tracking core dependencies..."
-         allSmods <- loadDependencies smods
-         let tdefs = concatMap moduleTypes allSmods
-             defs = concatMap moduleDefs allSmods
-         let grin = coreToGrin tdefs defs
-             reduced = removeDeadCode ["main::Main.main"] grin
-             opt = Simple.optimize reduced
+    = do mod <- parseCore file
+         libs <- loadAllLibraries
+         let primModule = SimpleModule { modulePackage = "ghczmprim"
+                                       , moduleName    = "GHCziPrim"
+                                       , moduleTypes   = [SimpleType (fromString "ghc-prim:GHC.Prim.(# #)") 1
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,#)") 2
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,#)") 3
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,#)") 4
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,#)") 5
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,#)") 6
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,#)") 7
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,#)") 8]
+                                       , moduleDefs    = [] }
+         let allModules = Map.insert (modulePackage primModule, moduleName primModule) primModule $
+                          Map.insert (modulePackage mod, moduleName mod) mod libs
+             (tdefs, defs) = Simple.removeDeadCode [("main","Main")]  ["main::Main.main"] allModules
+             grin = coreToGrin tdefs defs
+             opt = Simple.optimize grin
          case action of
            Build -> print (ppGrin opt)
            Eval  -> Compile.runGrin opt "main::Main.main" args >> return ()
@@ -67,6 +78,7 @@ build action file args
                          perm <- getPermissions target
                          setPermissions target perm{executable = True}
 
+
 execute :: FilePath -> [String] -> IO ()
 execute path args
     = do inp <- L.readFile path
@@ -77,22 +89,17 @@ execute path args
     where dropHashes inp | L.pack "#" `L.isPrefixOf` inp = L.unlines (drop 1 (L.lines inp))
                          | otherwise = inp
 
-loadDependencies :: [SimpleModule] -> IO [SimpleModule]
-loadDependencies smods
-    = do let deps = Set.fromList $ concatMap moduleDeps smods
-             have = Set.fromList $ ("ghczmprim","GHCziPrim"):[ (modulePackage mod, moduleName mod) | mod <- smods ]
-             new  = Set.toList (deps `Set.difference` have)
-         --putStrLn $ "New dependencies: " ++ show new
-         if null new
-            then return smods
-            else do newMods <- mapM (uncurry loadLibraryModule) new
-                    loadDependencies (smods ++ newMods)
 
-loadLibraryModule :: String -> String -> IO SimpleModule
-loadLibraryModule packageName moduleName
+loadAllLibraries :: IO (Map.Map ModuleIdent SimpleModule)
+loadAllLibraries
     = do dataDir <- getAppUserDataDirectory "lhc"
-         let file = dataDir </> packageName </> moduleName
-         decodeFile file
+         packages <- getDirectoryContents dataDir
+         smods <- forM (filter (`notElem` [".",".."]) packages) $ \package ->
+                  do modules <- getDirectoryContents (dataDir </> package)
+                     forM (filter (`notElem` [".",".."]) modules) $ \mod ->
+                       do smod <- decodeFile (dataDir </> package </> mod)
+                          return ((package,mod),smod)
+         return $ Map.fromList [ (ident, mod) | (ident,mod) <- concat smods ]
 
 
 parseCore :: FilePath -> IO SimpleModule

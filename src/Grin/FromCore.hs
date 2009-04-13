@@ -4,12 +4,10 @@ module Grin.FromCore
     ) where
 
 import CompactString
-import qualified Language.Core  as Core
 import Grin.Types      as Grin
 import Grin.SimpleCore as Simple
 
 import Data.List
-import qualified Data.ByteString.Lazy.Char8 as L
 import Control.Monad.State
 import Control.Monad.Reader
 
@@ -24,7 +22,7 @@ emptyEnv = Env Map.empty Map.empty
 
 type M a = ReaderT Env (State Int) a
 
-coreToGrin :: [Core.Tdef] -> [SimpleDef] -> (Grin)
+coreToGrin :: [SimpleType] -> [SimpleDef] -> (Grin)
 coreToGrin tdefs defs
     = let gen = tdefsToNodes tdefs $ \nodes ->
                 let (defs',cafs) = splitCAFs defs in
@@ -39,38 +37,17 @@ coreToGrin tdefs defs
                              })
       in evalState (runReaderT gen emptyEnv) 0
 
-tdefsToNodes :: [Core.Tdef] -> ([NodeDef] -> M a) -> M a
+tdefsToNodes :: [SimpleType] -> ([NodeDef] -> M a) -> M a
 tdefsToNodes tdefs fn
-    = bindCdefs cdefs $
-      bindVariables unboxedNames $ \tuples ->
-      markArities (zip unboxedNames [1..]) $
-      do nodes <- mapM cdefToNode cdefs
-         let unboxedTuples = flip map (zip tuples  [1..]) $ \(tuple,n) -> NodeDef tuple (ConstructorNode 0) (replicate n PtrType)
-         fn (unboxedTuples ++ nodes)
-    where cdefs = tdefsToCdefs tdefs
-          unboxedNames = [ qualToCompact (L.pack "ghczmprim"
-                                         ,L.pack "GHCziPrim"
-                                         ,L.pack $ "Z"++show n++"H") | n <- [1..10]]
+    = bindVariables (map simpleTypeName tdefs) $ \_ ->
+      markArities [ (simpleTypeName t, simpleTypeArity t) | t <- tdefs ] $
+      fn =<< mapM tdefToNode tdefs
 
-tdefsToCdefs :: [Core.Tdef] -> [Core.Cdef]
-tdefsToCdefs tdefs
-    = concatMap tdefToCdefs tdefs
+tdefToNode :: SimpleType -> M NodeDef
+tdefToNode stype
+    = do name <- lookupVariable (simpleTypeName stype)
+         return (NodeDef name (ConstructorNode 0) (replicate (simpleTypeArity stype) PtrType))
 
-tdefToCdefs :: Core.Tdef -> [Core.Cdef]
-tdefToCdefs (Core.Data _qual _tbinds cdefs)
-    = cdefs
-tdefToCdefs Core.Newtype{} = []
-
--- FIXME: Check for scoping and primitive types.
-cdefToNode :: Core.Cdef -> M NodeDef
-cdefToNode (Core.Constr qual _tbinds tys)
-    = do name <- lookupVariable (qualToCompact qual)
-         return (NodeDef name (ConstructorNode 0) (map (const PtrType) tys))
-
-cdefName :: Core.Cdef -> CompactString
-cdefName (Core.Constr qual _ _) = qualToCompact qual
-cdefArity :: Core.Cdef -> Int
-cdefArity (Core.Constr _ _ tys) = length tys
 
 splitCAFs :: [SimpleDef] -> ([SimpleDef], [(Variable,Variable)])
 splitCAFs []     = ([],[])
@@ -117,13 +94,13 @@ defToFunc sdef
 lazyExpression :: SimpleExp -> M Expression
 lazyExpression simplExp
     = case simplExp of
-       Simple.Case exp binding [Simple.Adefault cond] _ ->
+       Simple.Case exp binding [Simple.Adefault cond] ->
          bindVariable binding $ \renamed ->
            do e <- strictExpression exp
               cond' <- lazyExpression cond
               let v = Variable renamed
               return $ e :>>= v :-> cond'
-       Simple.Case exp binding alts mbDefault ->
+       Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
            do e <- strictExpression exp
               alts' <- mapM alternative alts
@@ -307,15 +284,6 @@ bindSimpleDef sdef fn
 bindSimpleDefs :: [SimpleDef] -> M a -> M a
 bindSimpleDefs [] = id
 bindSimpleDefs (x:xs) = bindSimpleDef x . bindSimpleDefs xs
-
-bindCdef :: Core.Cdef -> M a -> M a
-bindCdef cdef fn
-    = bindVariable (cdefName cdef) $ \_ ->
-      markArity (cdefName cdef) (cdefArity cdef) fn
-
-bindCdefs :: [Core.Cdef] -> M a -> M a
-bindCdefs [] = id
-bindCdefs (x:xs) = bindCdef x . bindCdefs xs
 
 markArity :: Variable -> Int -> M a -> M a
 markArity var arity

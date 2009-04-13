@@ -3,7 +3,6 @@ module Grin.SimpleCore.Types where
 
 import CompactString
 import Traverse
-import Language.Core (Tdef(..),Cdef(..),Kind(..),Ty(..))
 import qualified Language.Core as Core
 import Control.Monad
 
@@ -13,15 +12,24 @@ import Data.DeriveTH
 data SimpleModule
     = SimpleModule { modulePackage :: String
                    , moduleName    :: String
-                   , moduleTypes   :: [Tdef]
+                   , moduleTypes   :: [SimpleType]
                    , moduleDefs    :: [SimpleDef]
-                   , moduleDeps    :: [(String,String)] -- List of (pkg,module)
                    }
+
+type ModuleIdent = (String,String)
+moduleIdent mod = (modulePackage mod, moduleName mod)
+
+data SimpleType
+    = SimpleType { simpleTypeName  :: CompactString
+                 , simpleTypeArity :: Int
+                 }
 
 data SimpleDef
     = SimpleDef { simpleDefName :: CompactString
                 , simpleDefArgs :: [CompactString]
-                , simpleDefBody :: SimpleExp }
+                , simpleDefBody :: SimpleExp
+                , simpleDefDeps :: [(String,String)]
+                }
 simpleDefArity :: SimpleDef -> Int
 simpleDefArity = length . simpleDefArgs
 
@@ -34,7 +42,7 @@ data SimpleExp
     | Let CompactString CompactString [CompactString] Int SimpleExp
     | LetRec [(CompactString, CompactString, [CompactString], Int)] SimpleExp
     | LetStrict CompactString SimpleExp SimpleExp
-    | Case SimpleExp CompactString [Alt] (Maybe SimpleExp)
+    | Case SimpleExp CompactString [Alt]
     | External String String
     | DynExternal String
     | Label String
@@ -56,10 +64,7 @@ $(derive makeBinary ''Alt)
 $(derive makeBinary ''Lit)
 $(derive makeBinary ''SimpleExp)
 $(derive makeBinary ''SimpleDef)
-$(derive makeBinary ''Tdef)
-$(derive makeBinary ''Ty)
-$(derive makeBinary ''Kind)
-$(derive makeBinary ''Cdef)
+$(derive makeBinary ''SimpleType)
 $(derive makeBinary ''SimpleModule)
 
 

@@ -8,6 +8,9 @@ We do
 -}
 module Grin.SimpleCore
   ( SimpleModule(..)
+  , ModuleIdent
+  , moduleIdent
+  , SimpleType(..)
   , SimpleDef(..)
   , SimpleExp(..)
   , simpleDefArity
@@ -27,7 +30,6 @@ import qualified Data.Set as Set
 import qualified Data.ByteString.Lazy.Char8 as L
 import Control.Monad.RWS
 import Data.List
-import Data.Maybe
 
 import Traverse
 
@@ -50,19 +52,31 @@ coreToSimpleCore (Core.Module (pkgname,modname) tdefs vdefs)
     = let (_, simpleDefs) = execRWS (mapM_ vdefToSimpleDef allDefs) emptyScope 0
       in SimpleModule { modulePackage = L.unpack pkgname
                       , moduleName    = L.unpack modname
-                      , moduleTypes   = tdefs
-                      , moduleDefs    = simpleDefs
-                      , moduleDeps    = coreDeps tdefs allDefs }
+                      , moduleTypes   = concatMap tdefToSimpleTypes tdefs
+                      , moduleDefs    = simpleDefs }
     where allDefs = concatMap (\x -> case x of Core.Nonrec d -> [d]; Core.Rec ds -> ds) vdefs
           emptyScope = Scope { currentScope  = Set.empty
                              , currentModule = (pkgname, modname) }
 
+tdefToSimpleTypes :: Core.Tdef -> [SimpleType]
+tdefToSimpleTypes (Core.Data _ _ cdefs) = map cdefToSimpleType cdefs
+tdefToSimpleTypes (Core.Newtype{}) = []
 
-coreDeps :: [Tdef] -> [Vdef] -> [(String, String)]
-coreDeps tdefs vdefs
-    = let free = Set.toList $ freeVariables (Core.Let (Core.Rec vdefs) (Core.Label "end"))
-      in nub [ (L.unpack pkg, L.unpack mod) | (pkg,mod,_ident) <- free ]
+cdefToSimpleType :: Core.Cdef -> SimpleType
+cdefToSimpleType (Core.Constr qual _ tys) = SimpleType { simpleTypeName = qualToCompact qual
+                                                       , simpleTypeArity = length tys }
 
+sdefDeps :: Core.Exp -> [(String, String)]
+sdefDeps exp
+    = let free = Set.toList $ freeVariables exp
+      in nub [ (L.unpack pkg, L.unpack mod)
+             | qual@(pkg,mod,_ident) <- free
+             , not (L.null pkg)
+             , not (L.null mod) ]
+
+
+isPrimitiveQual (pkg,mod,_ident)
+    = pkg == L.pack "ghczmprim" && mod == L.pack "GHCziPrim"
 
 
 
@@ -82,7 +96,8 @@ vdefToSimpleDef' name args body
     = do body' <- expToSimpleExp body
          tell [SimpleDef { simpleDefName = name
                          , simpleDefArgs = args
-                         , simpleDefBody = body' }]
+                         , simpleDefBody = body'
+                         , simpleDefDeps = sdefDeps body }]
 
 expToSimpleExp :: Core.Exp -> M SimpleExp
 expToSimpleExp (Core.Var (pkg,mod,ident)) | pkg == L.pack "ghczmprim" && mod == L.pack "GHCziPrim"
@@ -113,7 +128,7 @@ expToSimpleExp (Core.Let (Core.Rec defs) e)
 expToSimpleExp (Core.Case e bind ty alts)     = bindVariable (fst bind) $
                                                 do e' <- expToSimpleExp e
                                                    alts' <- mapM altToSimpleAlt alts
-                                                   return $ Case e' (qualToCompact $ fst bind) alts' Nothing
+                                                   return $ Case e' (qualToCompact $ fst bind) alts'
 expToSimpleExp (Core.Cast e _ty) = expToSimpleExp e
 expToSimpleExp (Core.External target conv ty) = return $ External target conv
 expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv
@@ -125,7 +140,7 @@ expToSimpleExp (Core.Note note e)             = {- return (Note note) `ap` -} ex
 defIsStrictPrimitive :: Vdef -> Bool
 defIsStrictPrimitive def
     = case vdefType def of
-        Core.Tcon (pkg, mod, _ident) -> pkg == L.pack "ghczmprim" && mod == L.pack "GHCziPrim"
+        Core.Tcon con -> isPrimitiveQual con
         _ -> False
 
 altToSimpleAlt :: Core.Alt -> M Alt
@@ -157,6 +172,19 @@ let a = let_a b
 
 We have to do this because functions are represented with tags instead of
 function pointers.
+
+
+
+fn n = if n == 0 then [] else Cons (ptr!!n) (fn (n+1))
+
+let_fn ptr n = let_s fn = let_fn ptr
+               in x + fn 0
+
+
+a = x : a
+
+let_a a x = : x a
+
 -}
 lambdaLift :: Core.Vdef -> M (CompactString, CompactString, [Variable], Int)
 lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
@@ -201,8 +229,8 @@ freeVariables (Core.Case e (var,_ty) _ alts)
 freeVariables e = tsum freeVariables e
 
 freeVariablesAlt :: Core.Alt -> Set.Set (Core.Qual Core.Id)
-freeVariablesAlt (Core.Acon _con _tbinds vbinds e)
-    = freeVariables e `Set.difference` Set.fromList [ (var) | (var, _ty) <- vbinds ]
+freeVariablesAlt (Core.Acon con _tbinds vbinds e)
+    = Set.insert con $ freeVariables e `Set.difference` Set.fromList [ (var) | (var, _ty) <- vbinds ]
 freeVariablesAlt (Core.Alit _lit e)
     = freeVariables e
 freeVariablesAlt (Core.Adefault e)

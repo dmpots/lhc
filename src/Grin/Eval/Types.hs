@@ -16,7 +16,6 @@ import Data.Char; import Data.Int
 
 
 
-
 type HeapPointer = Int
 type Heap = Map.Map HeapPointer EvalValue
 data EvalValue
