@@ -22,18 +22,16 @@ emptyEnv = Env Map.empty Map.empty
 
 type M a = ReaderT Env (State Int) a
 
-coreToGrin :: [SimpleType] -> [SimpleDef] -> (Grin)
+coreToGrin :: [SimpleType] -> [SimpleDef] -> Grin
 coreToGrin tdefs defs
     = let gen = tdefsToNodes tdefs $ \nodes ->
                 let (defs',cafs) = splitCAFs defs in
                 bindCAFs cafs $
                 defsToFuncs defs' $ \funcs ->
                 defsToCAFs cafs $ \cafs' ->
-                get >>= \u ->
                 return (Grin { grinNodes     = nodes
                              , grinCAFs      = cafs'
                              , grinFunctions = funcs
-                             , grinUnique    = u
                              })
       in evalState (runReaderT gen emptyEnv) 0
 
