@@ -105,7 +105,8 @@ expToSimpleExp (Core.Var (pkg,mod,ident)) | pkg == L.pack "ghczmprim" && mod == 
 expToSimpleExp (Core.Var var)  = return $ Var (qualToCompact var)
 expToSimpleExp (Core.Dcon con) = return $ Dcon (qualToCompact con)
 expToSimpleExp (Core.Lit lit)  = return $ Lit $ fromCoreLit lit
-expToSimpleExp (Core.App a b)  = return App `ap` expToSimpleExp a `ap` expToSimpleExp b
+expToSimpleExp e@Core.App{}    = let (f,args) = collectApps e
+                                 in return App `ap` expToSimpleExp f `ap` mapM expToSimpleExp args
 expToSimpleExp (Core.Appt a _) = expToSimpleExp a
 expToSimpleExp (Core.Lamt _ e) = expToSimpleExp e
 -- We remove lambdas by translating them to let expressions.
@@ -128,10 +129,11 @@ expToSimpleExp (Core.Let (Core.Rec defs) e)
 expToSimpleExp (Core.Case e bind ty [Core.Adefault cond]) | typeIsStrictPrimitive (snd bind)
     = bindVariable (fst bind) $
       return (LetStrict (qualToCompact (fst bind))) `ap` expToSimpleExp e `ap` expToSimpleExp cond
-expToSimpleExp (Core.Case e bind ty alts)     = bindVariable (fst bind) $
-                                                do e' <- expToSimpleExp e
-                                                   alts' <- mapM altToSimpleAlt alts
-                                                   return $ Case e' (qualToCompact $ fst bind) alts'
+expToSimpleExp (Core.Case e bind ty alts)
+    = bindVariable (fst bind) $
+      do e' <- expToSimpleExp e
+         alts' <- mapM altToSimpleAlt alts
+         return $ Case e' (qualToCompact $ fst bind) alts'
 expToSimpleExp (Core.Cast e _ty) = expToSimpleExp e
 expToSimpleExp (Core.External target conv ty) = return $ External target conv
 expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv
@@ -282,7 +284,16 @@ splitExp (Core.Note _ exp) = splitExp exp
 splitExp exp = ([], exp)
 
 
-
+collectApps ::Core.Exp -> (Core.Exp, [Core.Exp])
+collectApps = worker []
+    where worker acc (Core.App a b)
+              = worker (b:acc) a
+          worker acc (Core.Appt a t)
+              = worker acc a
+          worker acc (Core.Note _ a)
+              = worker acc a
+          worker acc a
+              = (a,acc)
 
 
 

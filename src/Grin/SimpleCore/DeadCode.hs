@@ -48,7 +48,7 @@ dependencies (Var var) = Set.singleton var
 dependencies Primitive{}= Set.empty
 dependencies (Dcon var) = Set.singleton var
 dependencies Lit{} = Set.empty
-dependencies (App a b) = dependencies a `Set.union` dependencies b
+dependencies (App a args) = Set.unions (dependencies a : map dependencies args)
 dependencies (Let var toplevel _ _ e)
     = Set.delete var $ Set.insert toplevel $ dependencies e
 dependencies (LetRec defs e)

@@ -38,7 +38,7 @@ data SimpleExp
     | Primitive CompactString
     | Dcon CompactString
     | Lit Lit
-    | App SimpleExp SimpleExp
+    | App SimpleExp [SimpleExp]
     | Let CompactString CompactString [CompactString] Int SimpleExp
     | LetRec [(CompactString, CompactString, [CompactString], Int)] SimpleExp
     | LetStrict CompactString SimpleExp SimpleExp

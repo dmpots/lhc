@@ -92,12 +92,12 @@ defToFunc sdef
 lazyExpression :: SimpleExp -> M Expression
 lazyExpression simplExp
     = case simplExp of
-       Simple.Case exp binding [Simple.Adefault cond] ->
+       Simple.Case exp binding alts | simpleExpIsPrimitive exp ->
          bindVariable binding $ \renamed ->
            do e <- lazyExpression exp
-              cond' <- lazyExpression cond
+              alts' <- mapM alternative alts
               let bind = Variable renamed
-              return $ e :>>= bind :-> Application (Builtin $ fromString "eval") [bind] :>>= Empty :-> cond'
+              return $ e :>>= bind :-> Grin.Case bind alts'
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
            do e <- lazyExpression exp
@@ -131,41 +131,38 @@ lazyExpression simplExp
          do fn' <- strictExpression fn
             e' <- lazyExpression e
             return $ fn' :>>= Variable bind' :-> e'
-       ap@App{} ->
-         let loop acc (App a b)
-                 = do e <- lazyExpression b
+       App fn args ->
+         let process acc [] = call (reverse acc)
+             process acc (x:xs)
+                 = do e <- lazyExpression x
                       v <- newVariable
-                      r <- loop (v:acc) a
+                      r <- process (v:acc) xs
                       return $ e :>>= v :-> r
-             loop acc (Simple.Primitive p)
-                 = return $ Application (Builtin p) acc
-             loop acc (Simple.External fn conv)
-                 = return $ Application (Grin.External fn) acc
-             loop acc (Var var)
-                 = do name <- lookupVariable var
-                      mbArity <- findArity var
-                      case mbArity of
-                        Nothing -> mkApply acc (Variable name)
-                        Just n  -> do let (now,later) = splitAt n acc
-                                      v <- newVariable
-                                      ap <- mkApply later v
-                                      return $ Store (Node name (FunctionNode (n-length now)) now) :>>= v :-> ap
-             loop acc (Dcon con)
-                 = do name <- lookupVariable con
-                      Just n <- findArity con
-                      return $ Store (Node name (ConstructorNode (n-length acc)) acc)
-             loop acc e
-                 = do e' <- strictExpression e
-                      v  <- newVariable
-                      app <- mkApply acc v
-                      return (e' :>>= v :-> app)
+             call vs = case fn of
+                         Simple.Primitive p  -> return $ Application (Builtin p) vs
+                         Simple.External e _ -> return $ Application (Grin.External e) vs
+                         Var var -> do name <- lookupVariable var
+                                       mbArity <- findArity var
+                                       case mbArity of
+                                         Nothing -> mkApply vs (Variable name)
+                                         Just n  -> do let (now,later) = splitAt n vs
+                                                       v <- newVariable
+                                                       ap <- mkApply later v
+                                                       return $ Store (Node name (FunctionNode (n-length now)) now) :>>= v :-> ap
+                         Dcon con -> do name <- lookupVariable con
+                                        Just n <- findArity con
+                                        return $ Store (Node name (ConstructorNode (n-length vs)) vs)
+                         e -> do e' <- strictExpression e
+                                 v  <- newVariable
+                                 app <- mkApply vs v
+                                 return (e' :>>= v :-> app)
              mkApply [] v
                  = return (Unit v)
              mkApply (x:xs) v
                  = do v' <- newVariable
                       r <- mkApply xs v'
                       return $ applyCell v x :>>= v' :-> r
-         in loop [] ap
+         in process [] args
        LetRec defs e ->
          let binds = [ bind | (bind,_,_,_) <- defs ]
              funcs = [ func | (_,func,_,_) <- defs ]
@@ -226,10 +223,22 @@ alternative (Alit lit e)
          return $ Grin.Lit lit :-> e'
 
 strictExpression :: SimpleExp -> M Expression
+strictExpression e | simpleExpIsPrimitive e
+    = lazyExpression e
 strictExpression e
     = do r <- lazyExpression e
          v <- newVariable
          return $ r :>>= v :-> eval v
+
+
+simpleExpIsPrimitive :: SimpleExp -> Bool
+simpleExpIsPrimitive (App Simple.Primitive{} _)
+    = True
+simpleExpIsPrimitive (App Simple.External{} _)
+    = True
+simpleExpIsPrimitive Simple.Lit{} = True
+simpleExpIsPrimitive _
+    = False
 
 {-
 let a = 1:b

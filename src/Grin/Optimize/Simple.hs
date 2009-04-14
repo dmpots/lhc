@@ -47,6 +47,9 @@ simpleExpression (Store v)
          return $ Store v'
 simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
+simpleExpression (Case val [cond :-> e])
+    = do e' <- simpleExpressionDeep e
+         return $ Unit val :>>= cond :-> e'
 simpleExpression (Case val alts)
     = do val' <- simpleValue val
          alts' <- mapM simpleLambda alts
