@@ -29,7 +29,7 @@ runGrin grin entry commandArgs
                                     , globalNodes = Map.fromList nodes
                                     , globalFuncs = Map.fromList (funcs ++ prims) }
           cafs = zip (map cafName (grinCAFs grin)) [0..]
-          nodes = [ (name, node) | node@NodeDef{nodeName=Aliased _ name} <- grinNodes grin ]
+          nodes = [ (name, node) | node <- grinNodes grin, Just name <- [alias (nodeName node)] ]
           funcs = [ (funcDefName def, compFuncDef def globalScope) | def <- grinFunctions grin ]
           prims = listPrimitives globalScope
           apply = lookupFunction (Builtin $ fromString "apply") globalScope
@@ -37,7 +37,7 @@ runGrin grin entry commandArgs
                       setCommandArgs ("lhc":commandArgs)
                       entry <- lookupVariable renamedEntry globalScope
                       apply [entry, realWorld]
-    where renamedEntry = case [ renamed | CAF{cafName = renamed@(Aliased _ name)} <- grinCAFs grin, name == fromString entry ] of
+    where renamedEntry = case [ cafName caf | caf <- grinCAFs grin, Just name <- [alias (cafName caf)], name == fromString entry ] of
                            []       -> error $ "Grin.Eval.Basic.evaluate: couldn't find entry point: " ++ entry
                            (name:_) -> name
 

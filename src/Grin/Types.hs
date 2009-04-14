@@ -86,6 +86,10 @@ isBuiltin _ = False
 isExternal External{} = True
 isExternal _ = False
 
+alias :: Renamed -> Maybe CompactString
+alias (Aliased _ name) = Just name
+alias _ = Nothing
+
 data Value
     = Node Renamed NodeType [Value]
     | Lit Lit
