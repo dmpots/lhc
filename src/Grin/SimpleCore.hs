@@ -125,6 +125,9 @@ expToSimpleExp (Core.Let (Core.Nonrec def) e)
          return (Let name toplevelName args arity) `ap` expToSimpleExp e
 expToSimpleExp (Core.Let (Core.Rec defs) e)
     = bindDefs defs $ return LetRec `ap` mapM lambdaLift defs `ap` expToSimpleExp e
+expToSimpleExp (Core.Case e bind ty [Core.Adefault cond]) | typeIsStrictPrimitive (snd bind)
+    = bindVariable (fst bind) $
+      return (LetStrict (qualToCompact (fst bind))) `ap` expToSimpleExp e `ap` expToSimpleExp cond
 expToSimpleExp (Core.Case e bind ty alts)     = bindVariable (fst bind) $
                                                 do e' <- expToSimpleExp e
                                                    alts' <- mapM altToSimpleAlt alts
@@ -136,11 +139,16 @@ expToSimpleExp (Core.Label label)             = return $ Label label
 expToSimpleExp (Core.Note note e)             = {- return (Note note) `ap` -} expToSimpleExp e
 
 
--- FIXME: This function is incomplete.
 defIsStrictPrimitive :: Vdef -> Bool
 defIsStrictPrimitive def
-    = case vdefType def of
+    = typeIsStrictPrimitive (vdefType def)
+
+-- FIXME: This function is incomplete.
+typeIsStrictPrimitive :: Core.Ty -> Bool
+typeIsStrictPrimitive ty
+    = case ty of
         Core.Tcon con -> isPrimitiveQual con
+        Core.Tapp a b -> typeIsStrictPrimitive a
         _ -> False
 
 altToSimpleAlt :: Core.Alt -> M Alt

@@ -94,17 +94,17 @@ lazyExpression simplExp
     = case simplExp of
        Simple.Case exp binding [Simple.Adefault cond] ->
          bindVariable binding $ \renamed ->
-           do e <- strictExpression exp
+           do e <- lazyExpression exp
               cond' <- lazyExpression cond
-              let v = Variable renamed
-              return $ e :>>= v :-> cond'
+              let bind = Variable renamed
+              return $ e :>>= bind :-> Application (Builtin $ fromString "eval") [bind] :>>= Empty :-> cond'
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
-           do e <- strictExpression exp
+           do e <- lazyExpression exp
               v <- newVariable
               alts' <- mapM alternative alts
               let bind = Variable renamed
-              return $ e :>>= v :-> Store v :>>= bind :-> Grin.Case v alts'
+              return $ e :>>= bind :-> Application (Builtin $ fromString "eval") [bind] :>>= v :-> Grin.Case v alts'
        Simple.Primitive p ->
          return $ Unit (Node (Builtin p) (FunctionNode 0) [])
        Var var ->
