@@ -292,6 +292,8 @@ collectApps = worker []
               = worker acc a
           worker acc (Core.Note _ a)
               = worker acc a
+          worker acc (Core.Cast e _)
+              = worker acc e
           worker acc a
               = (a,acc)
 

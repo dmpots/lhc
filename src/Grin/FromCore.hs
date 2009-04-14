@@ -152,7 +152,7 @@ lazyExpression simplExp
                          Dcon con -> do name <- lookupVariable con
                                         Just n <- findArity con
                                         return $ Store (Node name (ConstructorNode (n-length vs)) vs)
-                         e -> do e' <- strictExpression e
+                         e -> do e' <- lazyExpression e
                                  v  <- newVariable
                                  app <- mkApply vs v
                                  return (e' :>>= v :-> app)
