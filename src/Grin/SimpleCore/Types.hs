@@ -34,7 +34,7 @@ simpleDefArity :: SimpleDef -> Int
 simpleDefArity = length . simpleDefArgs
 
 data SimpleExp
-    = Var CompactString
+    = Var CompactString Bool
     | Primitive CompactString
     | Dcon CompactString
     | Lit Lit
@@ -43,6 +43,7 @@ data SimpleExp
     | LetRec [(CompactString, CompactString, [CompactString], Int)] SimpleExp
     | LetStrict CompactString SimpleExp SimpleExp
     | Case SimpleExp CompactString [Alt]
+    | CaseStrict SimpleExp CompactString [Alt]
     | External String String
     | DynExternal String
     | Label String

@@ -44,7 +44,7 @@ defDependencies def
     = dependencies (simpleDefBody def) `Set.difference` Set.fromList (simpleDefArgs def)
 
 dependencies :: SimpleExp -> Set.Set CompactString
-dependencies (Var var) = Set.singleton var
+dependencies (Var var isUnboxed) = Set.singleton var
 dependencies Primitive{}= Set.empty
 dependencies (Dcon var) = Set.singleton var
 dependencies Lit{} = Set.empty
@@ -58,6 +58,8 @@ dependencies (LetRec defs e)
 dependencies (LetStrict name def e)
     = Set.delete name $ dependencies def `Set.union` dependencies e
 dependencies (Case e bind alts)
+    = Set.delete bind $ Set.unions (dependencies e : map altDependencies alts)
+dependencies (CaseStrict e bind alts)
     = Set.delete bind $ Set.unions (dependencies e : map altDependencies alts)
 dependencies External{} = Set.empty
 dependencies DynExternal{} = Set.empty

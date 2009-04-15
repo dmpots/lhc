@@ -391,11 +391,6 @@ runEvalPrimitive (HeapPointer ptr)
                    updateValue ptr reduced
                    return reduced
           worker val = return val
-runEvalPrimitive (FNode name fn 0 args)  = error $ "weird eval: " ++ show name
-runEvalPrimitive val@FNode{} = return val
-runEvalPrimitive val@Lit{} = return val
-runEvalPrimitive val@CNode{} = return val
-runEvalPrimitive Empty = return Empty
 runEvalPrimitive val = error $ "unhandled eval: " ++ show val
 
 fromPointer :: Ptr a -> EvalValue

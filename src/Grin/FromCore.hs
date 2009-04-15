@@ -92,22 +92,28 @@ defToFunc sdef
 lazyExpression :: SimpleExp -> M Expression
 lazyExpression simplExp
     = case simplExp of
+       Simple.CaseStrict exp binding alts ->
+         bindVariable binding $ \renamed ->
+           do e <- lazyExpression exp
+              alts' <- mapM (alternative lazyExpression) alts
+              let bind = Variable renamed
+              return $ e :>>= bind :-> Grin.Case bind alts'
        Simple.Case exp binding alts | simpleExpIsPrimitive exp ->
          bindVariable binding $ \renamed ->
            do e <- lazyExpression exp
-              alts' <- mapM alternative alts
+              alts' <- mapM (alternative lazyExpression) alts
               let bind = Variable renamed
               return $ e :>>= bind :-> Grin.Case bind alts'
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
            do e <- lazyExpression exp
               v <- newVariable
-              alts' <- mapM alternative alts
+              alts' <- mapM (alternative lazyExpression) alts
               let bind = Variable renamed
-              return $ e :>>= bind :-> Application (Builtin $ fromString "eval") [bind] :>>= v :-> Grin.Case v alts'
+              return $ e :>>= bind :-> eval bind :>>= v :-> Grin.Case v alts'
        Simple.Primitive p ->
-         return $ Unit (Node (Builtin p) (FunctionNode 0) [])
-       Var var ->
+         return $ Application (Builtin p) []
+       Var var isUnboxed ->
          do name <- lookupVariable var
             mbArity <- findArity var
             case mbArity of
@@ -141,14 +147,14 @@ lazyExpression simplExp
              call vs = case fn of
                          Simple.Primitive p  -> return $ Application (Builtin p) vs
                          Simple.External e _ -> return $ Application (Grin.External e) vs
-                         Var var -> do name <- lookupVariable var
-                                       mbArity <- findArity var
-                                       case mbArity of
-                                         Nothing -> mkApply vs (Variable name)
-                                         Just n  -> do let (now,later) = splitAt n vs
-                                                       v <- newVariable
-                                                       ap <- mkApply later v
-                                                       return $ Store (Node name (FunctionNode (n-length now)) now) :>>= v :-> ap
+                         Var var isUnboxed -> do name <- lookupVariable var
+                                                 mbArity <- findArity var
+                                                 case mbArity of
+                                                   Nothing -> mkApply vs (Variable name)
+                                                   Just n  -> do let (now,later) = splitAt n vs
+                                                                 v <- newVariable
+                                                                 ap <- mkApply later v
+                                                                 return $ Store (Node name (FunctionNode (n-length now)) now) :>>= v :-> ap
                          Dcon con -> do name <- lookupVariable con
                                         Just n <- findArity con
                                         return $ Store (Node name (ConstructorNode (n-length vs)) vs)
@@ -208,23 +214,74 @@ eval v = Application (Builtin $ fromString "eval") [v]
 applyCell a b = Store (Node (Builtin $ fromString "apply") (FunctionNode 0) [a,b])
 
 -- Translate a Core alternative to a Grin alternative
-alternative :: Simple.Alt -> M Lambda
-alternative (Acon con bs e)
+alternative :: (SimpleExp -> M Expression) -> Simple.Alt -> M Lambda
+alternative fn (Acon con bs e)
     = bindVariables bs $ \renamed ->
-      do e' <- lazyExpression e
+      do e' <- fn e
          name <- lookupVariable con
          return $ Node name (ConstructorNode 0) (map Variable renamed) :-> e'
-alternative (Adefault e)
-    = do e' <- lazyExpression e
+alternative fn (Adefault e)
+    = do e' <- fn e
          v <- newVariable
          return $ v :-> e'
-alternative (Alit lit e)
-    = do e' <- lazyExpression e
+alternative fn (Alit lit e)
+    = do e' <- fn e
          return $ Grin.Lit lit :-> e'
 
 strictExpression :: SimpleExp -> M Expression
 strictExpression e | simpleExpIsPrimitive e
     = lazyExpression e
+strictExpression (Simple.CaseStrict exp binding alts)
+    = bindVariable binding $ \renamed ->
+      do e <- strictExpression exp
+         alts' <- mapM (alternative strictExpression) alts
+         let bind = Variable renamed
+         return $ e :>>= bind :-> Grin.Case bind alts'
+strictExpression (Simple.Case exp binding alts) | simpleExpIsPrimitive exp
+    = bindVariable binding $ \renamed ->
+      do e <- lazyExpression exp
+         alts' <- mapM (alternative strictExpression) alts
+         let bind = Variable renamed
+         return $ e :>>= bind :-> Grin.Case bind alts'
+strictExpression (Simple.Case exp binding alts)
+    = bindVariable binding $ \renamed ->
+      do e <- lazyExpression exp
+         v <- newVariable
+         alts' <- mapM (alternative strictExpression) alts
+         let bind = Variable renamed
+         return $ e :>>= bind :-> eval bind :>>= v :-> Grin.Case v alts'
+strictExpression (Let bind func args arity e)
+    = bindVariable bind $ \bind' ->
+      do func' <- lookupVariable func
+         args' <- mapM lookupVariable args
+         e' <- strictExpression e
+         return $ Store (Node func' (FunctionNode (arity-length args)) (map Variable args')) :>>= Variable bind' :-> e'
+strictExpression (LetStrict bind fn e)
+    = bindVariable bind $ \bind' ->
+      do fn' <- strictExpression fn
+         e' <- strictExpression e
+         return $ fn' :>>= Variable bind' :-> e'
+strictExpression (LetRec defs e)
+    = let binds = [ bind | (bind,_,_,_) <- defs ]
+          funcs = [ func | (_,func,_,_) <- defs ]
+          args  = [ args | (_,_,args,_) <- defs ]
+          arities = [ arity | (_,_,_,arity) <- defs ] in
+      bindVariables binds $ \binds' ->
+      do funcs' <- mapM lookupVariable funcs
+         args'  <- mapM (mapM lookupVariable) args
+         e' <- strictExpression e
+         let holes = foldr (\(bind,arity) b -> Store (Hole arity) :>>= Variable bind :-> b ) updates (zip binds' arities)
+             updates = foldr (\(bind,fn,args,arity) b ->
+                              update bind fn args arity :>>=
+                              Empty :-> b ) e' (zip4 binds' funcs' args' arities)
+         return holes
+strictExpression (Var var isUnboxed)
+    = do name <- lookupVariable var
+         mbArity <- findArity var
+         case mbArity of
+           Nothing | isUnboxed -> return $ Unit (Variable name)
+           Nothing | otherwise -> return $ eval (Variable name)
+           Just n  -> return $ Unit (Node name (FunctionNode n) [])
 strictExpression e
     = do r <- lazyExpression e
          v <- newVariable
