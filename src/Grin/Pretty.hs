@@ -70,6 +70,7 @@ ppAlt (value :-> exp) = ppValue value <$$>
 
 ppValue (Node name nodeType args)
     = parens (hsep (ppNodeType nodeType name : map ppValue args))
+ppValue (Vector vs) = brackets (hsep (map ppValue vs))
 ppValue (Hole size) = parens (text "@hole" <+> hsep (replicate size (char '_')))
 ppValue Empty = text "()"
 ppValue (Lit lit) = ppLit lit

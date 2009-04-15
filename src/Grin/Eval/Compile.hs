@@ -105,7 +105,10 @@ compValue (Grin.Variable v) = lookupVariable v
 compValue Grin.Empty        = return $ return Empty
 compValue (Grin.Lit lit)    = return $ return $ Lit lit
 compValue (Grin.Hole size)  = return $ return $ Hole size
-
+compValue (Grin.Vector vs)
+    = do vs' <- mapM compValue vs
+         return $ do vs'' <- mapM id vs'
+                     return $ Vector vs''
 
 runCase :: EvalValue -> [(Grin.Value, CompValue)] -> CompValue
 runCase val (x@(Grin.Variable{}, e) : y : ys)
@@ -123,6 +126,8 @@ doesMatch val (Grin.Variable var)
     = Just $ local (Map.insert var val)
 doesMatch (CNode tag _ args) (Grin.Node bTag _ bArgs) | tag == bTag && length args == length bArgs
     = bindLambdas (zip args bArgs)
+doesMatch (Vector vs1) (Grin.Vector vs2) | length vs1 == length vs2
+    = bindLambdas (zip vs1 vs2)
 doesMatch (Lit litA) (Grin.Lit litB) | litA == litB
     = Just id
 doesMatch _ Grin.Empty

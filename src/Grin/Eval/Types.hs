@@ -25,6 +25,7 @@ data EvalValue
     | HeapPointer HeapPointer
     | Hole Int
     | Array [EvalValue]
+    | Vector [EvalValue]
     | Empty
       deriving (Show,Eq,Ord)
 

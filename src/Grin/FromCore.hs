@@ -168,6 +168,8 @@ translate cxt simplExp
                                                                                GT -> return $ Unit node
                                                                                EQ -> return $ Application name now
                                                                                LT -> return $ Store node :>>= v :-> ap
+                         Dcon con | Just n <- dconIsVector con
+                                  -> return $ Unit $ Vector vs
                          Dcon con -> do name <- lookupVariable con
                                         Just n <- findArity con
                                         case cxt of
@@ -208,6 +210,19 @@ translate cxt simplExp
        _ ->
           return $ Unit Empty
 
+dconIsVector con
+    = Map.lookup con (Map.fromList vectors)
+    where vectors = [ (fromString "ghc-prim:GHC.Prim.(# #)", 1)
+                    , (fromString "ghc-prim:GHC.Prim.(#,#)", 2)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,#)", 3)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,#)", 4)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,#)", 5)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,,#)", 6)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,,,#)", 7)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,,,,#)", 8)
+                    ]
+
+
 {-
 
 -- const application
@@ -231,6 +246,10 @@ applyCell a b = Store (Node (Builtin $ fromString "apply") (FunctionNode 0) [a,b
 
 -- Translate a Core alternative to a Grin alternative
 alternative :: (SimpleExp -> M Expression) -> Simple.Alt -> M Lambda
+alternative fn (Acon con bs e) | Just n <- dconIsVector con
+    = bindVariables bs $ \renamed ->
+      do e' <- fn e
+         return $ Vector (map Variable renamed) :-> e'
 alternative fn (Acon con bs e)
     = bindVariables bs $ \renamed ->
       do e' <- fn e

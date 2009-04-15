@@ -71,7 +71,11 @@ simpleValue (Variable v)
 simpleValue (Node name ty args)
     = do args' <- mapM simpleValue args
          return $ Node name ty args'
-simpleValue v = return v
+simpleValue (Vector vs)
+    = liftM Vector $ mapM simpleValue vs
+simpleValue v@Lit{}  = return v
+simpleValue v@Hole{} = return v
+simpleValue v@Empty  = return v
 
 subst :: Renamed -> Value -> Opt a -> Opt a
 subst name val

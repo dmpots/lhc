@@ -92,6 +92,7 @@ alias _ = Nothing
 
 data Value
     = Node Renamed NodeType [Value]
+    | Vector [Value]
     | Lit Lit
     | Variable Renamed
     | Hole Int

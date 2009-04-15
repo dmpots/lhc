@@ -33,9 +33,7 @@ import Grin.Eval.Methods
 -- These functions are defined in the base library. I'm not sure how to deal with this properly.
 runExternal :: String -> [CompValue] -> Gen CompValue
 runExternal name args
-    = do tNode <- getUnboxedT
-         t0Node <- getUnboxedT0
-         let returnIO v = return (mkNode tNode [realWorld, v])
+    = do let returnIO v = return (Vector [realWorld, v])
          return $
             do args' <- mapM id args
                case (name, args') of
@@ -64,7 +62,7 @@ runExternal name args
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argcPtr) (fromIntegral (length args) :: CInt)
                       cs <- liftIO $ newArray =<< mapM newCString args
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argvPtr) cs
-                      return $ mkNode t0Node [realWorld]
+                      return $ Vector [realWorld]
                  (name, args) ->
                    -- If we don't recognize the function, try loading it through the linker.
                    do fnPtr <- liftIO $ dlsym Default name
@@ -139,11 +137,10 @@ remInt = mkPrimitive "remInt#" $ binIntOp rem
 quotInt = mkPrimitive "quotInt#" $ binIntOp quot
 
 addIntC = mkPrimitive "addIntC#" $
-             do tNode <- getUnboxedT
-                return $ \(IntArg a) (IntArg b) ->
-                        let c = fromIntegral a + fromIntegral b
-                            o = c `shiftR` bitSize (0::Int)
-                        in noScope $ return (mkNode tNode [Lit (Lint c), Lit (Lint o)])
+             return $ \(IntArg a) (IntArg b) ->
+                let c = fromIntegral a + fromIntegral b
+                    o = c `shiftR` bitSize (0::Int)
+                in noScope $ return (Vector [Lit (Lint c), Lit (Lint o)])
 chrPrim
     = mkPrimitive "chr#" $
       return $ \(IntArg i) ->
@@ -162,29 +159,25 @@ indexCharOffAddr
 
 readInt32OffAddr
     = mkPrimitive "readInt32OffAddr#" $
-      do tNode <- getUnboxedT
-         return $ \(PtrArg ptr) (IntArg nth) RealWorld ->
-                    noScope $ do i <- peekElemOff (castPtr ptr) nth
-                                 return (mkNode tNode [realWorld, fromInt (fromIntegral (i::Int32))])
+      return $ \(PtrArg ptr) (IntArg nth) RealWorld ->
+           noScope $ do i <- peekElemOff (castPtr ptr) nth
+                        return (Vector [realWorld, fromInt (fromIntegral (i::Int32))])
 
 readInt8OffAddr
     = mkPrimitive "readInt8OffAddr#" $
-      do tNode <- getUnboxedT
          return $ \(PtrArg ptr) (IntArg nth) RealWorld ->
                    noScope $ do i <-  peekElemOff (castPtr ptr) nth
-                                return $ mkNode tNode [realWorld, fromInt (fromIntegral (i::Int8))]
+                                return $ Vector [realWorld, fromInt (fromIntegral (i::Int8))]
 
 readAddrOffAddr
     = mkPrimitive "readAddrOffAddr#" $
-      do tNode <- getUnboxedT
          return $ \(PtrArg ptr) (IntArg nth) RealWorld ->
                     noScope $ do p <- peekElemOff (castPtr ptr) nth
-                                 return $ mkNode tNode [realWorld, fromPointer p]
+                                 return $ Vector [realWorld, fromPointer p]
 
 -- |Write 8-bit character; offset in bytes.
 writeCharArray
     = mkPrimitive "writeCharArray#" $
-      do tNode <- getUnboxedT
          return $ \(PtrArg ptr) (IntArg offset) (CharArg c) RealWorld ->
                     noScope $ do poke (ptr `plusPtr` offset) (fromIntegral (ord c) :: Word8)
                                  return realWorld
@@ -202,9 +195,8 @@ realWorldPrim = mkPrimitive "realWorld#" $ return $ noScope $ return realWorld
 
 myThreadIdPrim
     = mkPrimitive "myThreadId#" $
-      do tNode <- getUnboxedT
          return $ \RealWorld ->
-                     noScope $ return (mkNode tNode [realWorld, Lit (Lint 0)])
+                     noScope $ return (Vector [realWorld, Lit (Lint 0)])
 
 raisePrim
     = mkPrimitive "raise#" $
@@ -235,23 +227,20 @@ unblockAsyncExceptions
 -- |Create a mutable byte array that the GC guarantees not to move.
 newPinnedByteArray
     = mkPrimitive "newPinnedByteArray#" $
-      do tNode <- getUnboxedT
          return $ \(IntArg size) RealWorld ->
                     noScope $ do ptr <- mallocBytes size
-                                 return (mkNode tNode [realWorld , fromPointer ptr])
+                                 return (Vector [realWorld , fromPointer ptr])
 
 newAlignedPinnedByteArray
     = mkPrimitive "newAlignedPinnedByteArray#" $
-      do tNode <- getUnboxedT
          return $ \(IntArg size) (IntArg alignment) RealWorld ->
                     noScope $ do ptr <- mallocBytes (size + alignment)
-                                 return (mkNode tNode [realWorld, fromPointer $ alignPtr ptr alignment])
+                                 return (Vector [realWorld, fromPointer $ alignPtr ptr alignment])
 
 unsafeFreezeByteArray
     = mkPrimitive "unsafeFreezeByteArray#" $
-      do tNode <- getUnboxedT
          return $ \(PtrArg ptr) RealWorld ->
-                     noScope $ return (mkNode tNode [realWorld, fromPointer ptr])
+                     noScope $ return (Vector [realWorld, fromPointer ptr])
 
 byteArrayContents
     = mkPrimitive "byteArrayContents#" $ return $ \(PtrArg ptr) ->
@@ -279,17 +268,15 @@ applyPrim
 
 newArrayPrim
     = mkPrimitive "newArray#" $
-      do tNode <- getUnboxedT
          return $ \(IntArg len) (AnyArg elt) RealWorld ->
                     do ptr <- storeValue (Array $ replicate len elt)
-                       return $ mkNode tNode [realWorld, HeapPointer ptr ]
+                       return $ Vector [realWorld, HeapPointer ptr ]
 
 readArray
     = mkPrimitive "readArray#" $
-      do tNode <- getUnboxedT
          return $ \(HeapArg ptr) (IntArg idx) RealWorld ->
                     do Array arr <- fetch ptr
-                       return $ mkNode tNode [realWorld, arr!!idx]
+                       return $ Vector [realWorld, arr!!idx]
 
 writeArray
     = mkPrimitive "writeArray#" $ return $ \(HeapArg ptr) (IntArg idx) (AnyArg val) RealWorld ->
@@ -301,10 +288,9 @@ writeArray
 -- |Create @MutVar\#@ with specified initial value in specified state thread.
 newMutVar
     = mkPrimitive "newMutVar#" $
-      do tNode <- getUnboxedT
          return $ \(AnyArg val) RealWorld ->
                     do ptr <- storeValue val
-                       return $ mkNode tNode [realWorld, HeapPointer ptr]
+                       return $ Vector [realWorld, HeapPointer ptr]
 
 -- |Write contents of @MutVar\#@.
 writeMutVar
@@ -315,17 +301,15 @@ writeMutVar
 -- |Read contents of @MutVar\#@. Result is not yet evaluated.
 readMutVar
     = mkPrimitive "readMutVar#" $
-      do ioNode <- getUnboxedT
          return $ \(HeapArg ptr) RealWorld ->
                   do val <- fetch ptr
-                     return (mkNode ioNode [realWorld, val])
+                     return (Vector [realWorld, val])
 
 newMVar
     = mkPrimitive "newMVar#" $
-      do tNode <- getUnboxedT
          return $ \RealWorld ->
                     do ptr <- storeValue Empty
-                       return $ mkNode tNode [realWorld, (HeapPointer ptr)]
+                       return $ Vector [realWorld, (HeapPointer ptr)]
 putMVar
     = mkPrimitive "putMVar#" $ return $ \(HeapArg ptr) (AnyArg val) RealWorld ->
       do updateValue ptr val
@@ -333,17 +317,15 @@ putMVar
 
 takeMVar
     = mkPrimitive "takeMVar#" $
-      do tNode <- getUnboxedT
          return $ \(HeapArg ptr) RealWorld ->
                     do val <- fetch ptr
-                       return $ mkNode tNode [realWorld, val]
+                       return $ Vector [realWorld, val]
 
 
 -- Dummy primitive
 mkWeak = mkPrimitive "mkWeak#" $
-         do tNode <- getUnboxedT
             return $ \(AnyArg key) (AnyArg val) (AnyArg finalizer) RealWorld ->
-                       noScope $ return (mkNode tNode [realWorld, Empty])
+                       noScope $ return (Vector [realWorld, Empty])
 
 
 narrow32Int
@@ -367,12 +349,6 @@ negateInt
 
 -- Primitive helpers
 
-
-getUnboxedT
-    = lookupNode (fromString "ghc-prim:GHC.Prim.(#,#)")
-
-getUnboxedT0
-    = lookupNode (fromString "ghc-prim:GHC.Prim.(# #)")
 
 mkNode :: Renamed -> [EvalValue] -> EvalValue
 mkNode node args
