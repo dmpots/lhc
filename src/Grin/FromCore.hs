@@ -83,32 +83,34 @@ defsToFuncs sdefs fn
 defToFunc :: SimpleDef -> M FuncDef
 defToFunc sdef
     = bindVariables (simpleDefArgs sdef) $ \renamed ->
-      do exp <- strictExpression (simpleDefBody sdef)
+      do exp <- translate Strict (simpleDefBody sdef)
          name <- lookupVariable (simpleDefName sdef)
          return FuncDef { funcDefName = name
                         , funcDefArgs = renamed
                         , funcDefBody = exp }
 
-lazyExpression :: SimpleExp -> M Expression
-lazyExpression simplExp
+data Context = Strict | Lazy
+
+translate :: Context -> SimpleExp -> M Expression
+translate cxt simplExp
     = case simplExp of
        Simple.CaseStrict exp binding alts ->
          bindVariable binding $ \renamed ->
-           do e <- lazyExpression exp
-              alts' <- mapM (alternative lazyExpression) alts
+           do e <- translate Strict exp
+              alts' <- mapM (alternative (translate cxt)) alts
               let bind = Variable renamed
               return $ e :>>= bind :-> Grin.Case bind alts'
        Simple.Case exp binding alts | simpleExpIsPrimitive exp ->
          bindVariable binding $ \renamed ->
-           do e <- lazyExpression exp
-              alts' <- mapM (alternative lazyExpression) alts
+           do e <- translate cxt exp
+              alts' <- mapM (alternative (translate cxt)) alts
               let bind = Variable renamed
               return $ e :>>= bind :-> Grin.Case bind alts'
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
-           do e <- lazyExpression exp
+           do e <- translate Lazy exp
               v <- newVariable
-              alts' <- mapM (alternative lazyExpression) alts
+              alts' <- mapM (alternative (translate cxt)) alts
               let bind = Variable renamed
               return $ e :>>= bind :-> eval bind :>>= v :-> Grin.Case v alts'
        Simple.Primitive p ->
@@ -117,30 +119,35 @@ lazyExpression simplExp
          do name <- lookupVariable var
             mbArity <- findArity var
             case mbArity of
-              Nothing -> return $ Unit (Variable name)
-              Just n  -> return $ Store (Node name (FunctionNode n) [])
+              Nothing -> case cxt of
+                           Strict | not isUnboxed -> return $ eval (Variable name)
+                           _                      -> return $ Unit (Variable name)
+              Just n  -> case cxt of
+                           Strict -> return $ Unit (Node name (FunctionNode n) [])
+                           Lazy   -> return $ Store (Node name (FunctionNode n) [])
        Dcon con ->
          do name <- lookupVariable con
             Just n <-findArity con
-            --trace (show (con,a)) (return ())
-            return $ Store (Node name (ConstructorNode n) [])
+            case cxt of
+              Strict -> return $ Unit (Node name (ConstructorNode n) [])
+              Lazy   -> return $ Store (Node name (ConstructorNode n) [])
        Simple.Lit lit ->
          return $ Unit (Grin.Lit lit)
        Let bind func args arity e ->
          bindVariable bind $ \bind' ->
          do func' <- lookupVariable func
             args' <- mapM lookupVariable args
-            e' <- lazyExpression e
+            e' <- translate cxt e
             return $ Store (Node func' (FunctionNode (arity-length args)) (map Variable args')) :>>= Variable bind' :-> e'
        LetStrict bind fn e ->
          bindVariable bind $ \bind' ->
-         do fn' <- strictExpression fn
-            e' <- lazyExpression e
+         do fn' <- translate Strict fn
+            e' <- translate cxt e
             return $ fn' :>>= Variable bind' :-> e'
        App fn args ->
          let process acc [] = call (reverse acc)
              process acc (x:xs)
-                 = do e <- lazyExpression x
+                 = do e <- translate Lazy x
                       v <- newVariable
                       r <- process (v:acc) xs
                       return $ e :>>= v :-> r
@@ -154,16 +161,26 @@ lazyExpression simplExp
                                                    Just n  -> do let (now,later) = splitAt n vs
                                                                  v <- newVariable
                                                                  ap <- mkApply later v
-                                                                 return $ Store (Node name (FunctionNode (n-length now)) now) :>>= v :-> ap
+                                                                 let node = Node name (FunctionNode (n-length now)) now
+                                                                 case cxt of
+                                                                   Lazy -> return $ Store node :>>= v :-> ap
+                                                                   Strict -> case n `compare` length vs of
+                                                                               GT -> return $ Unit node
+                                                                               EQ -> return $ Application name now
+                                                                               LT -> return $ Store node :>>= v :-> ap
                          Dcon con -> do name <- lookupVariable con
                                         Just n <- findArity con
-                                        return $ Store (Node name (ConstructorNode (n-length vs)) vs)
-                         e -> do e' <- lazyExpression e
+                                        case cxt of
+                                          Strict -> return $ Unit (Node name (ConstructorNode (n-length vs)) vs)
+                                          Lazy   -> return $ Store (Node name (ConstructorNode (n-length vs)) vs)
+                         e -> do e' <- translate Lazy e
                                  v  <- newVariable
                                  app <- mkApply vs v
                                  return (e' :>>= v :-> app)
              mkApply [] v
-                 = return (Unit v)
+                 = case cxt of
+                     Lazy   -> return $ Unit v
+                     Strict -> return $ eval v
              mkApply (x:xs) v
                  = do v' <- newVariable
                       r <- mkApply xs v'
@@ -177,20 +194,19 @@ lazyExpression simplExp
          bindVariables binds $ \binds' ->
          do funcs' <- mapM lookupVariable funcs
             args'  <- mapM (mapM lookupVariable) args
-            e' <- lazyExpression e
+            e' <- translate cxt e
             let holes = foldr (\(bind,arity) b -> Store (Hole arity) :>>= Variable bind :-> b ) updates (zip binds' arities)
                 updates = foldr (\(bind,fn,args,arity) b ->
                                  update bind fn args arity :>>=
                                  Empty :-> b ) e' (zip4 binds' funcs' args' arities)
             return holes
        Note _ e ->
-          lazyExpression e
+          translate cxt e
 --       Label str -> error $ "label: " ++ str
        Simple.External fn conv -> return $ Unit $ Variable $ Grin.External fn
 --       DynExternal fn   -> error $ "dynexternal: " ++ fn
        _ ->
           return $ Unit Empty
-
 
 {-
 
@@ -227,66 +243,6 @@ alternative fn (Adefault e)
 alternative fn (Alit lit e)
     = do e' <- fn e
          return $ Grin.Lit lit :-> e'
-
-strictExpression :: SimpleExp -> M Expression
-strictExpression e | simpleExpIsPrimitive e
-    = lazyExpression e
-strictExpression (Simple.CaseStrict exp binding alts)
-    = bindVariable binding $ \renamed ->
-      do e <- strictExpression exp
-         alts' <- mapM (alternative strictExpression) alts
-         let bind = Variable renamed
-         return $ e :>>= bind :-> Grin.Case bind alts'
-strictExpression (Simple.Case exp binding alts) | simpleExpIsPrimitive exp
-    = bindVariable binding $ \renamed ->
-      do e <- lazyExpression exp
-         alts' <- mapM (alternative strictExpression) alts
-         let bind = Variable renamed
-         return $ e :>>= bind :-> Grin.Case bind alts'
-strictExpression (Simple.Case exp binding alts)
-    = bindVariable binding $ \renamed ->
-      do e <- lazyExpression exp
-         v <- newVariable
-         alts' <- mapM (alternative strictExpression) alts
-         let bind = Variable renamed
-         return $ e :>>= bind :-> eval bind :>>= v :-> Grin.Case v alts'
-strictExpression (Let bind func args arity e)
-    = bindVariable bind $ \bind' ->
-      do func' <- lookupVariable func
-         args' <- mapM lookupVariable args
-         e' <- strictExpression e
-         return $ Store (Node func' (FunctionNode (arity-length args)) (map Variable args')) :>>= Variable bind' :-> e'
-strictExpression (LetStrict bind fn e)
-    = bindVariable bind $ \bind' ->
-      do fn' <- strictExpression fn
-         e' <- strictExpression e
-         return $ fn' :>>= Variable bind' :-> e'
-strictExpression (LetRec defs e)
-    = let binds = [ bind | (bind,_,_,_) <- defs ]
-          funcs = [ func | (_,func,_,_) <- defs ]
-          args  = [ args | (_,_,args,_) <- defs ]
-          arities = [ arity | (_,_,_,arity) <- defs ] in
-      bindVariables binds $ \binds' ->
-      do funcs' <- mapM lookupVariable funcs
-         args'  <- mapM (mapM lookupVariable) args
-         e' <- strictExpression e
-         let holes = foldr (\(bind,arity) b -> Store (Hole arity) :>>= Variable bind :-> b ) updates (zip binds' arities)
-             updates = foldr (\(bind,fn,args,arity) b ->
-                              update bind fn args arity :>>=
-                              Empty :-> b ) e' (zip4 binds' funcs' args' arities)
-         return holes
-strictExpression (Var var isUnboxed)
-    = do name <- lookupVariable var
-         mbArity <- findArity var
-         case mbArity of
-           Nothing | isUnboxed -> return $ Unit (Variable name)
-           Nothing | otherwise -> return $ eval (Variable name)
-           Just n  -> return $ Unit (Node name (FunctionNode n) [])
-strictExpression e
-    = do r <- lazyExpression e
-         v <- newVariable
-         return $ r :>>= v :-> eval v
-
 
 simpleExpIsPrimitive :: SimpleExp -> Bool
 simpleExpIsPrimitive (App Simple.Primitive{} _)
