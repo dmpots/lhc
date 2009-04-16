@@ -36,6 +36,8 @@ simpleExpression (Unit value :>>= Variable v :-> t)
          return t' -- (Unit value :>>= Variable v :-> t')
 simpleExpression (a :>>= v :-> Unit v') | v == v'
     = return a
+simpleExpression ((a :>>= b :-> c) :>>= d)
+    = simpleExpression (a :>>= b :-> c :>>= d)
 simpleExpression (a :>>= b :-> c)
     = do c' <- simpleExpressionDeep c
          return (a :>>= b :-> c')
