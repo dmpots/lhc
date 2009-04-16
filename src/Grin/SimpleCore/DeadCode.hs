@@ -19,11 +19,10 @@ removeDeadCode initialModules entryPoints modules
                     new  = Set.unions refs `Set.difference` seen
                     seen' = Set.union seen new
                 in if Set.null new
-                   then (seenMods, seen)
+                   then ( Set.toList seenMods
+                        , seen `Set.union` Set.fromList entryPointsCompact)
                    else loop (addModules (concat mods) entries) (Set.union seenMods (Set.fromList (concat mods)))  seen' (Set.toList new)
-          (modDeps', deps') = loop (addModules initialModules Map.empty) Set.empty Set.empty entryPointsCompact
-          deps = deps' `Set.union` Set.fromList entryPointsCompact
-          modDeps = Set.toList $ modDeps' `Set.union` Set.fromList initialModules
+          (modDeps, deps) = loop (addModules initialModules Map.empty) (Set.fromList initialModules) Set.empty entryPointsCompact
           neededMods = map (modules `find`) modDeps
           tdefs = concatMap moduleTypes neededMods
           defs = concatMap moduleDefs neededMods
