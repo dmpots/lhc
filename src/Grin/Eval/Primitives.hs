@@ -63,6 +63,12 @@ runExternal name args
                       cs <- liftIO $ newArray =<< mapM newCString args
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argvPtr) cs
                       return $ Vector [realWorld]
+                 ("u_iswlower", [Lit (Lint ch), realWorld]) ->
+                   do return $ Vector [realWorld, Lit (Lint (fromIntegral (fromEnum (isLower (chr (fromIntegral ch))))))]
+                 ("u_iswalpha", [Lit (Lint ch), realWorld]) ->
+                   do return $ Vector [realWorld, Lit (Lint (fromIntegral (fromEnum (isAlpha (chr (fromIntegral ch))))))]
+                 ("u_iswspace", [Lit (Lint ch), realWorld]) ->
+                   do return $ Vector [realWorld, Lit (Lint (fromIntegral (fromEnum (isSpace (chr (fromIntegral ch))))))]
                  (name, args) ->
                    -- If we don't recognize the function, try loading it through the linker.
                    do fnPtr <- liftIO $ dlsym Default name
