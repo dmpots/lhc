@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Grin.Lowering.Primitives
     ( lower
     ) where
@@ -6,13 +7,16 @@ import CompactString
 import Grin.Types
 
 import Control.Monad.State
+import Control.Monad.Reader
+import qualified Data.Map as Map
 
 lower :: Int -> Grin -> Grin
 lower u grin
-    = evalState (lowerGrin grin) u
+    = evalState (runReaderT (lowerGrin grin) emptyScope) u
+    where emptyScope = Scope { nodeMap = Map.fromList [ (name, node) | node <- grinNodes grin, Just name <- [alias (nodeName node)]] }
 
 
-type Lower = State Int
+type Lower a = State Int a
 
 lowerGrin :: Grin -> Lower Grin
 lowerGrin grin
@@ -30,7 +34,7 @@ lowerExpression (e :>>= lam)
          lam' <- lowerLambda lam
          return $ e' :>>= lam'
 --lowerExpression (Application (Builtin fn) [a,b]) | fn == fromString ">=#"
---    = do
+--    = do 
 lowerExpression (Application (Builtin fn) []) | fn == fromString "realWorld#"
     = return $ Unit Empty
 lowerExpression (Application fn vs)
@@ -49,9 +53,24 @@ lowerLambda (v :-> e)
          return $ v :-> e'
 
 
-newVariable :: Lower Renamed
+renamedOpts = [ ("gtChar#", ">#")
+              , ("geChar#", ">=#")
+              , ("ltChar#", "<#")
+              , ("leChar#", "<=#")
+              ]
+
+
+
+lookupNode :: CompactString -> Lower Renamed
+lookupNode name
+    = do m <- asks nodeMap
+         case Map.lookup name m of
+           Just node -> return (nodeName node)
+           Nothing   -> error $ "Couldn't find node: " ++ show name
+
+newVariable :: Lower Value
 newVariable
     = do u <- get
          put (u+1)
-         return $ Anonymous u
+         return $ Variable $ Anonymous u
 

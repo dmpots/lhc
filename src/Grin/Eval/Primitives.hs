@@ -101,7 +101,7 @@ listPrimitives globalScope
 
 allPrimitives :: Map.Map CompactString (GlobalScope -> Primitive)
 allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
-    where prims = [ equal, gt, lt, gte, lte, gtChar, geChar, ltChar, leChar
+    where prims = [ equal, gt, lt, gte, lte
                      , plus, minus, times, remInt, quotInt, addIntC
                      , chrPrim, ordPrim
                      , indexCharOffAddr
@@ -129,12 +129,6 @@ gt    = mkPrimitive ">#" $ binOp (>)
 lt    = mkPrimitive "<#" $ binOp (<)
 gte   = mkPrimitive ">=#" $ binOp (>=)
 lte   = mkPrimitive "<=#" $ binOp (<=)
-
-gtChar = mkPrimitive "gtChar#" $ binOp (>)
-geChar = mkPrimitive "geChar#" $ binOp (>=)
-ltChar = mkPrimitive "ltChar#" $ binOp (<)
-leChar = mkPrimitive "leChar#" $ binOp (<=)
-
 
 plus = mkPrimitive "+#" $ binIntOp (+)
 minus = mkPrimitive "-#" $ binIntOp (-)
@@ -381,18 +375,10 @@ fromPointer ptr = Lit (Lint $ fromIntegral (minusPtr ptr nullPtr))
 fromInt :: Int -> EvalValue
 fromInt = Lit . Lint . fromIntegral
 
-trueNode :: Gen Renamed
-trueNode = lookupNode (fromString "ghc-prim:GHC.Bool.True")
-
-falseNode :: Gen Renamed
-falseNode = lookupNode (fromString "ghc-prim:GHC.Bool.False")
-
 binOp :: (EvalValue -> EvalValue -> Bool) -> Gen (AnyArg -> AnyArg -> CompValue)
 binOp fn
-    = do t <- trueNode
-         f <- falseNode
-         return $ \(AnyArg a) (AnyArg b) ->
-                     noScope $ if a `fn` b then return (mkNode t []) else return (mkNode f [])
+    = do return $ \(AnyArg a) (AnyArg b) ->
+                     noScope $ if a `fn` b then return (Lit (Lint 1)) else return (Lit (Lint 0))
 
 
 binIntOp :: (Int -> Int -> Int) -> Gen (IntArg -> IntArg -> CompValue)

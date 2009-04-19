@@ -57,13 +57,6 @@ lookupVariable var globalScope
         Nothing  -> asks (Map.findWithDefault errMsg var)
     where errMsg = error $ "Grin.Compile.RunTime.lookupVariable: couldn't find variable: " ++ show var
 
-lookupNode :: CompactString -> Gen Renamed
-lookupNode name globalScope
-    = case Map.lookup name (globalNodes globalScope) of
-        Just node -> nodeName node
-        Nothing   -> error $ "Grin.Eval.Compile.lookupNode: couldn't find node: " ++ show name
-
-
 catchComp :: Comp a -> (EvalValue ->Comp a) -> Comp a
 catchComp fn handler
     = CompExpression $ StateT $ \st -> ReaderT $ \r -> runReaderT (runStateT (unComp fn) st) r `catch` \(GrinException st' ptr) ->
