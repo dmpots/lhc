@@ -411,8 +411,6 @@ instance FromArg AnyArg where
     fromArg = return . AnyArg
 instance FromArg RealWorld where
     fromArg Empty = return RealWorld
-    --fromArg (Node (Builtin name) (FunctionNode 0) []) | name == fromString "realWorld#" = return RealWorld
-    fromArg (FNode _ _ 0 []) = return RealWorld
     fromArg v     = error $ "Grin.Eval.Primitives.fromArg: Expected realWorld: " ++ show v
 instance FromArg IntArg where
     fromArg (Lit (Lint i)) = return (IntArg $ fromIntegral i)
