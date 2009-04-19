@@ -31,7 +31,6 @@ data EvalValue
 
 type LocalScope = Map.Map Renamed EvalValue
 data GlobalScope = GlobalScope { globalCAFs  :: Map.Map Renamed HeapPointer
-                               , globalNodes :: Map.Map CompactString NodeDef
                                , globalFuncs :: Map.Map Renamed CompFunction }
 
 type CompFunction = [EvalValue] -> CompExpression

@@ -351,8 +351,8 @@ negateInt
 
 
 mkNode :: Renamed -> [EvalValue] -> EvalValue
-mkNode node
-    = CNode node 0
+mkNode node args
+    = CNode node 0 args
 
 noScope :: IO EvalValue -> CompValue
 noScope = liftIO

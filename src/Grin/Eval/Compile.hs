@@ -26,7 +26,6 @@ import Data.Char
 runGrin :: Grin -> String -> [String] -> IO EvalValue
 runGrin grin entry commandArgs
     = let globalScope = GlobalScope { globalCAFs  = Map.fromList cafs
-                                    , globalNodes = Map.fromList nodes
                                     , globalFuncs = Map.fromList (funcs ++ prims) }
           cafs = zip (map cafName (grinCAFs grin)) [0..]
           nodes = [ (name, node) | node <- grinNodes grin, Just name <- [alias (nodeName node)] ]
