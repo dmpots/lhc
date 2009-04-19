@@ -21,6 +21,10 @@ import Data.Binary
 import Data.Char
 import Text.PrettyPrint.ANSI.Leijen
 import Control.Monad (liftM2)
+import qualified Data.String as String
+
+instance String.IsString CompactString where
+    fromString = fromString -- Surprise, surprise, this is not a loop.
 
 data CompactString = CompactString { csString :: S.ByteString
                                    , csHash   :: Word32 }
