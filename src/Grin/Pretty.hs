@@ -57,7 +57,7 @@ ppExpression (Case value alts)
 ppExpression (Application fn args)
     = hsep (pretty fn:map ppValue args)
 ppExpression (Store v)
-    = text "store" <+> (ppValue v)
+    = text "store" <+> ppValue v
 ppExpression (a :>>= Empty :-> c)
     = ppExpression a <$$>
       ppExpression c

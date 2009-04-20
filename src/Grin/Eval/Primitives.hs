@@ -38,8 +38,8 @@ runExternal name args
             do args' <- mapM id args
                case (name, args') of
                  ("__hscore_memcpy_dst_off", [Lit (Lint dst),Lit (Lint off),Lit (Lint src),Lit (Lint size), realWorld]) ->
-                   do let dstPtr = nullPtr `plusPtr` (fromIntegral (dst+off))
-                          srcPtr = nullPtr `plusPtr` (fromIntegral src)
+                   do let dstPtr = nullPtr `plusPtr` fromIntegral (dst+off)
+                          srcPtr = nullPtr `plusPtr` fromIntegral src
                       liftIO $ copyBytes dstPtr srcPtr (fromIntegral size)
                       returnIO (Lit (Lint (dst+off)))
                  ("__hscore_PrelHandle_write", [Lit (Lint fd),Lit (Lint ptr),Lit (Lint offset),Lit (Lint size),realWorld]) ->
@@ -48,15 +48,15 @@ runExternal name args
                       out <- liftIO $ fdWrite (Fd (fromIntegral fd)) str
                       returnIO (Lit (Lint $ fromIntegral out))
                  ("__hscore_get_errno", [realWorld]) ->
-                   do returnIO (Lit (Lint 0))
+                   returnIO (Lit (Lint 0))
                  ("__hscore_bufsiz", [realWorld]) ->
-                   do returnIO (Lit (Lint 512))
+                   returnIO (Lit (Lint 512))
                  ("fdReady", [fd,write,msecs,isSock,realWorld]) ->
-                   do returnIO (Lit (Lint 1))
+                   returnIO (Lit (Lint 1))
                  ("rtsSupportsBoundThreads", [realWorld]) ->
-                   do returnIO (Lit (Lint 1))
+                   returnIO (Lit (Lint 1))
                  ("stg_sig_install", [signo, actioncode, ptr, realWorld]) ->
-                   do returnIO (Lit (Lint 0))
+                   returnIO (Lit (Lint 0))
                  ("getProgArgv", [Lit (Lint argcPtr), Lit (Lint argvPtr), realWorld]) ->
                    do args <- getCommandArgs
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argcPtr) (fromIntegral (length args) :: CInt)
@@ -260,11 +260,11 @@ applyPrim
       do fn <- runEvalPrimitive fnPtr
          case fn of
               FNode name fn 1 args -> fn (args ++ [arg])
-              FNode name fn 0 args -> error $ "apply: over application?"
+              FNode name fn 0 args -> error "apply: over application?"
               FNode name fn n args -> return $ FNode name fn (n-1) (args ++ [arg])
-              CNode name 0 args -> error $ "apply: over application?"
+              CNode name 0 args -> error "apply: over application?"
               CNode name n args -> return $ CNode name (n-1) (args ++ [arg])
-              _ -> error $ "weird apply: " ++ (show fn)
+              _ -> error $ "weird apply: " ++ show fn
 
 newArrayPrim
     = mkPrimitive "newArray#" $
@@ -351,11 +351,11 @@ negateInt
 
 
 mkNode :: Renamed -> [EvalValue] -> EvalValue
-mkNode node args
-    = CNode node 0 args
+mkNode node
+    = CNode node 0
 
 noScope :: IO EvalValue -> CompValue
-noScope fn = liftIO fn
+noScope = liftIO
 
 
 runEvalPrimitive :: EvalValue -> CompValue
@@ -373,7 +373,7 @@ fromPointer :: Ptr a -> EvalValue
 fromPointer ptr = Lit (Lint $ fromIntegral (minusPtr ptr nullPtr))
 
 fromInt :: Int -> EvalValue
-fromInt i = Lit (Lint (fromIntegral i))
+fromInt = Lit . Lint . fromIntegral
 
 trueNode :: Gen Renamed
 trueNode = lookupNode (fromString "ghc-prim:GHC.Bool.True")

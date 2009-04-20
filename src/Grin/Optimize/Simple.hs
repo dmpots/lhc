@@ -32,8 +32,7 @@ simpleExpressionDeep e = simpleExpression e
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit value :>>= Variable v :-> t)
-    = do t' <- subst v value (simpleExpressionDeep t)
-         return t' -- (Unit value :>>= Variable v :-> t')
+    = subst v value (simpleExpressionDeep t) -- (Unit value :>>= Variable v :-> t')
 simpleExpression (a :>>= v :-> Unit v') | v == v'
     = return a
 simpleExpression ((a :>>= b :-> c) :>>= d)
@@ -80,7 +79,5 @@ simpleValue v@Hole{} = return v
 simpleValue v@Empty  = return v
 
 subst :: Renamed -> Value -> Opt a -> Opt a
-subst name val
-    = local $ Map.insert name val
-
+subst name = local . Map.insert name
 

@@ -85,7 +85,7 @@ isPrimitiveQual (pkg,mod,_ident)
 --type ScopeEnv = Map.Map (Core.Qual Core.Id) Renamed
 data Scope = Scope { currentScope :: Map.Map (Core.Qual Core.Id) Ty
                    , currentModule :: (Core.Pkgname, Core.Mname) }
-type M a = RWS Scope [SimpleDef] Int a
+type M = RWS Scope [SimpleDef] Int
 
 vdefToSimpleDef :: Core.Vdef -> M ()
 vdefToSimpleDef vdef
@@ -146,8 +146,8 @@ expToSimpleExp (Core.Note note e)             = {- return (Note note) `ap` -} ex
 
 
 defIsStrictPrimitive :: Vdef -> Bool
-defIsStrictPrimitive def
-    = typeIsStrictPrimitive (vdefType def)
+defIsStrictPrimitive
+    = typeIsStrictPrimitive . vdefType
 
 -- FIXME: This function is incomplete.
 typeIsStrictPrimitive :: Core.Ty -> Bool
@@ -211,7 +211,7 @@ lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
              isCAF = null args
              (args,body) = splitExp exp
          lambdaScopeTyped <- mapM (\var -> do t <- varType var; return (var, t)) lambdaScope
-         let 
+         let
              realArgs = map qualToCompact (lambdaScope ++ map fst args)
              toplevelName = (pkg,mod,L.pack "@lifted@_" `L.append` ident `L.append` L.pack (show unique))
              selfDef = Core.Case (foldl Core.App (Core.Var toplevelName) (map Core.Var lambdaScope))
@@ -236,17 +236,17 @@ noType = error "Urk, types shouldn't be needed"
 freeVariables :: Core.Exp -> Set.Set (Core.Qual Core.Id)
 freeVariables (Core.Var qual)                  = Set.singleton qual
 freeVariables (Core.Dcon qual)                 = Set.singleton qual
-freeVariables (Core.Lam (var,_ty) e)           = Set.delete (var) $ freeVariables e
+freeVariables (Core.Lam (var,_ty) e)           = Set.delete var $ freeVariables e
 freeVariables (Core.Let (Core.Nonrec def) e)   = freeVariables (Core.Let (Core.Rec [def]) e)
-freeVariables (Core.Let (Core.Rec defs) e)     = Set.unions (freeVariables e : (map (freeVariables . vdefExp) defs)) `Set.difference` bound
+freeVariables (Core.Let (Core.Rec defs) e)     = Set.unions (freeVariables e : map (freeVariables . vdefExp) defs) `Set.difference` bound
     where bound = Set.fromList (map vdefName defs)
 freeVariables (Core.Case e (var,_ty) _ alts)
-    = freeVariables e `Set.union` Set.delete (var) (Set.unions (map freeVariablesAlt alts))
+    = freeVariables e `Set.union` Set.delete var (Set.unions (map freeVariablesAlt alts))
 freeVariables e = tsum freeVariables e
 
 freeVariablesAlt :: Core.Alt -> Set.Set (Core.Qual Core.Id)
 freeVariablesAlt (Core.Acon con _tbinds vbinds e)
-    = Set.insert con $ freeVariables e `Set.difference` Set.fromList [ (var) | (var, _ty) <- vbinds ]
+    = Set.insert con $ freeVariables e `Set.difference` Set.fromList [ var | (var, _ty) <- vbinds ]
 freeVariablesAlt (Core.Alit _lit e)
     = freeVariables e
 freeVariablesAlt (Core.Adefault e)

@@ -12,7 +12,7 @@ lower u grin
     = evalState (lowerGrin grin) u
 
 
-type Lower a = State Int a
+type Lower = State Int
 
 lowerGrin :: Grin -> Lower Grin
 lowerGrin grin
@@ -30,7 +30,7 @@ lowerExpression (e :>>= lam)
          lam' <- lowerLambda lam
          return $ e' :>>= lam'
 --lowerExpression (Application (Builtin fn) [a,b]) | fn == fromString ">=#"
---    = do 
+--    = do
 lowerExpression (Application (Builtin fn) []) | fn == fromString "realWorld#"
     = return $ Unit Empty
 lowerExpression (Application fn vs)
