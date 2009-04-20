@@ -22,24 +22,21 @@ optimize grin
 
 simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
-    = def{ funcDefBody = runReader (unOpt (simpleExpressionDeep (funcDefBody def))) Map.empty }
-
-simpleExpressionDeep :: Expression -> Opt Expression
-simpleExpressionDeep (e :>>= v :-> t)
-    = do e' <- simpleExpressionDeep e
-         simpleExpression (e' :>>= v :-> t)
-simpleExpressionDeep e = simpleExpression e
+    = def{ funcDefBody = runReader (unOpt (simpleExpression (funcDefBody def))) Map.empty }
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit value :>>= Variable v :-> t)
-    = subst v value (simpleExpressionDeep t) -- (Unit value :>>= Variable v :-> t')
+    = do t' <- subst v value (simpleExpressionDeep t)
+         return t' -- (Unit value :>>= Variable v :-> t')
 simpleExpression (a :>>= v :-> Unit v') | v == v'
-    = return a
+    = simpleExpression a
 simpleExpression ((a :>>= b :-> c) :>>= d)
     = simpleExpression (a :>>= b :-> c :>>= d)
 simpleExpression (a :>>= b :-> c)
-    = do c' <- simpleExpressionDeep c
-         return (a :>>= b :-> c')
+    = do a' <- simpleExpression a
+         b' <- simpleValue b
+         c' <- simpleExpression c
+         return (a' :>>= b' :-> c')
 simpleExpression (Application fn values)
     = do vals <- mapM simpleValue values
          return $ Application fn vals
@@ -49,8 +46,7 @@ simpleExpression (Store v)
 simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
 simpleExpression (Case val [cond :-> e])
-    = do e' <- simpleExpressionDeep e
-         return $ Unit val :>>= cond :-> e'
+    = do simpleExpression $ Unit val :>>= cond :-> e
 simpleExpression (Case val alts)
     = do val' <- simpleValue val
          alts' <- mapM simpleLambda alts
@@ -58,7 +54,7 @@ simpleExpression (Case val alts)
 
 
 simpleLambda :: Lambda -> Opt Lambda
-simpleLambda (v :-> e) = do e' <- simpleExpressionDeep e
+simpleLambda (v :-> e) = do e' <- simpleExpression e
                             return (v :-> e')
 
 

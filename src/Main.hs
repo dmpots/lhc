@@ -65,7 +65,7 @@ build action file args
                           Map.insert (modulePackage mod, moduleName mod) mod libs
              (tdefs, defs) = Simple.removeDeadCode [("main","Main")]  ["main::Main.main"] allModules
              grin = coreToGrin tdefs defs
-             opt = Simple.optimize $ Simple.optimize grin
+             opt = Simple.optimize grin
          case action of
            Build -> print (ppGrin opt)
            Eval  -> Compile.runGrin opt "main::Main.main" args >> return ()
