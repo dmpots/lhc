@@ -35,8 +35,11 @@ lowerExpression (e :>>= lam)
          return $ e' :>>= lam'
 --lowerExpression (Application (Builtin fn) [a,b]) | fn == fromString ">=#"
 --    = do 
-lowerExpression (Application (Builtin fn) []) | fn == fromString "realWorld#"
-    = return $ Unit Empty
+lowerExpression (Application (Builtin "newMVar#") [realWorld])
+    = do v <- newVariable
+         return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
+lowerExpression (Application (Builtin "readWorld#") [])
+    = return $ Unit Empty -- FIXME: Use a special RealWorld value?
 lowerExpression (Application fn vs)
     = return $ Application fn vs
 lowerExpression (Case scrut alts)
