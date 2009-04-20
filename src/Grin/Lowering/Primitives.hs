@@ -38,6 +38,8 @@ lowerExpression (e :>>= lam)
 lowerExpression (Application (Builtin "newMVar#") [realWorld])
     = do v <- newVariable
          return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
+lowerExpression (Application (Builtin "putMVar#") [ptr, val, realWorld])
+    = do return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit realWorld
 lowerExpression (Application (Builtin "readWorld#") [])
     = return $ Unit Empty -- FIXME: Use a special RealWorld value?
 lowerExpression (Application fn vs)

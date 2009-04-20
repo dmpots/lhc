@@ -117,7 +117,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , newArrayPrim, readArray, writeArray
                      , newMutVar, writeMutVar, readMutVar
                      , narrow8Word, narrow32Int, int2Word, word2Int, negateInt
-                     , putMVar, takeMVar
+                     , takeMVar
                      , mkWeak]
 
 
