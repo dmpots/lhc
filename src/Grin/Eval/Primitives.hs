@@ -113,11 +113,10 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
                      , newPinnedByteArray, newAlignedPinnedByteArray
                      , unsafeFreezeByteArray, byteArrayContents
-                     , updatePrim, evalPrim, applyPrim
+                     , updatePrim, fetchPrim, evalPrim, applyPrim
                      , newArrayPrim, readArray, writeArray
                      , newMutVar, writeMutVar, readMutVar
                      , narrow8Word, narrow32Int, int2Word, word2Int, negateInt
-                     , takeMVar
                      , mkWeak]
 
 
@@ -251,6 +250,10 @@ updatePrim
       do updateValue ptr val
          return Empty
 
+fetchPrim
+    = mkPrimitive "fetch" $ return $ \(HeapArg ptr) ->
+      do fetch ptr
+
 evalPrim
     = mkPrimitive "eval" $ return $ \(AnyArg arg) ->
       runEvalPrimitive arg
@@ -304,23 +307,6 @@ readMutVar
          return $ \(HeapArg ptr) RealWorld ->
                   do val <- fetch ptr
                      return (Vector [realWorld, val])
-
-newMVar
-    = mkPrimitive "newMVar#" $
-         return $ \RealWorld ->
-                    do ptr <- storeValue Empty
-                       return $ Vector [realWorld, (HeapPointer ptr)]
-putMVar
-    = mkPrimitive "putMVar#" $ return $ \(HeapArg ptr) (AnyArg val) RealWorld ->
-      do updateValue ptr val
-         return realWorld
-
-takeMVar
-    = mkPrimitive "takeMVar#" $
-         return $ \(HeapArg ptr) RealWorld ->
-                    do val <- fetch ptr
-                       return $ Vector [realWorld, val]
-
 
 -- Dummy primitive
 mkWeak = mkPrimitive "mkWeak#" $

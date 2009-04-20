@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Grin.Lowering.Primitives
     ( lower
     ) where
@@ -39,7 +39,10 @@ lowerExpression (Application (Builtin "newMVar#") [realWorld])
     = do v <- newVariable
          return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "putMVar#") [ptr, val, realWorld])
-    = do return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit realWorld
+    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit realWorld
+lowerExpression (Application (Builtin "takeMVar#") [ptr, realWorld])
+    = do v <- newVariable
+         return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "readWorld#") [])
     = return $ Unit Empty -- FIXME: Use a special RealWorld value?
 lowerExpression (Application fn vs)
