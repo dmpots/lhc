@@ -28,7 +28,6 @@ runGrin grin entry commandArgs
     = let globalScope = GlobalScope { globalCAFs  = Map.fromList cafs
                                     , globalFuncs = Map.fromList (funcs ++ prims) }
           cafs = zip (map cafName (grinCAFs grin)) [0..]
-          nodes = [ (name, node) | node <- grinNodes grin, Just name <- [alias (nodeName node)] ]
           funcs = [ (funcDefName def, compFuncDef def globalScope) | def <- grinFunctions grin ]
           prims = listPrimitives globalScope
           apply = lookupFunction (Builtin $ fromString "apply") globalScope
