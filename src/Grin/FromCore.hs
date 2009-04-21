@@ -7,7 +7,7 @@ import CompactString
 import Grin.Types      as Grin
 import Grin.SimpleCore as Simple
 
-import qualified Grin.Lowering.Primitives as Prim
+import qualified Grin.Lowering.GHCism as GHCism
 
 import Data.List
 import Control.Monad.State
@@ -32,10 +32,10 @@ coreToGrin tdefs defs
                 defsToFuncs defs' $ \funcs ->
                 defsToCAFs cafs $ \cafs' ->
                 get >>= \u ->
-                return (Prim.lower u Grin { grinNodes     = nodes
-                                          , grinCAFs      = cafs'
-                                          , grinFunctions = funcs
-                                          })
+                return (GHCism.lower u Grin { grinNodes     = nodes
+                                            , grinCAFs      = cafs'
+                                            , grinFunctions = funcs
+                                            })
       in evalState (runReaderT gen emptyEnv) 0
 
 tdefsToNodes :: [SimpleType] -> ([NodeDef] -> M a) -> M a

@@ -6,7 +6,7 @@
   CAUTION: This pass MUST be run exactly once from Grin.FromCore.
            Any deviation will mess things up.
 -}
-module Grin.Lowering.Primitives
+module Grin.Lowering.GHCism
     ( lower
     ) where
 
