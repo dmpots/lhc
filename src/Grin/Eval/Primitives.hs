@@ -336,10 +336,6 @@ negateInt
 -- Primitive helpers
 
 
-mkNode :: Renamed -> [EvalValue] -> EvalValue
-mkNode node args
-    = CNode node 0 args
-
 noScope :: IO EvalValue -> CompValue
 noScope = liftIO
 

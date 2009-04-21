@@ -26,8 +26,8 @@ simpleFuncDef def
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit value :>>= Variable v :-> t)
-    = do t' <- subst v value (simpleExpressionDeep t)
-         return t' -- (Unit value :>>= Variable v :-> t')
+    = do value' <- simpleValue value
+         subst v value' (simpleExpression t)
 simpleExpression (a :>>= v :-> Unit v') | v == v'
     = simpleExpression a
 simpleExpression ((a :>>= b :-> c) :>>= d)

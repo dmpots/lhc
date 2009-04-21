@@ -15,8 +15,8 @@ lower u grin
     = evalState (runReaderT (lowerGrin grin) emptyScope) u
     where emptyScope = Scope { nodeMap = Map.fromList [ (name, node) | node <- grinNodes grin, Just name <- [alias (nodeName node)]] }
 
-
-type Lower a = State Int a
+data Scope = Scope { nodeMap :: Map.Map CompactString NodeDef }
+type Lower a = ReaderT Scope (State Int) a
 
 lowerGrin :: Grin -> Lower Grin
 lowerGrin grin
@@ -33,8 +33,14 @@ lowerExpression (e :>>= lam)
     = do e' <- lowerExpression e
          lam' <- lowerLambda lam
          return $ e' :>>= lam'
---lowerExpression (Application (Builtin fn) [a,b]) | fn == fromString ">=#"
---    = do 
+lowerExpression (Application (Builtin fn) [a,b]) | Just renamed <- lookup fn renamedOpts
+    = lowerExpression (Application (Builtin renamed) [a,b])
+lowerExpression (Application (Builtin fn) [a,b]) | fn `elem` [">=#",">#","==#","<=#","<#"]
+    = do tnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.True"
+         fnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.False"
+         v <- newVariable
+         return $ Application (Builtin fn) [a,b] :>>= v :-> Case v [Lit (Lint 0) :-> Unit (Node fnode (ConstructorNode 0) [])
+                                                                   ,Lit (Lint 1) :-> Unit (Node tnode (ConstructorNode 0) [])]
 lowerExpression (Application (Builtin "newMVar#") [realWorld])
     = do v <- newVariable
          return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
