@@ -1,4 +1,11 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
+{- |
+  The External Core output from GHC suffers from many GHCisms and the direct
+  translation to GRIN results in incorrect code.
+  This module clears out GHC specific patterns and returns GRIN code fit for use.
+  CAUTION: This pass MUST be run exactly once from Grin.FromCore.
+           Any deviation will mess things up.
+-}
 module Grin.Lowering.Primitives
     ( lower
     ) where
