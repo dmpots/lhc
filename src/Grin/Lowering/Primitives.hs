@@ -51,6 +51,12 @@ lowerExpression (Application (Builtin "takeMVar#") [ptr, realWorld])
          return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "readWorld#") [])
     = return $ Unit Empty -- FIXME: Use a special RealWorld value?
+lowerExpression (Application (Builtin "int2Word#") [v])
+    = return $ Unit v
+lowerExpression (Application (Builtin "word2Int#") [v])
+    = return $ Unit v
+lowerExpression (Application (Builtin "plusAddr#") [a,b])
+    = return $ Application (Builtin "+#") [a,b]
 lowerExpression (Application fn vs)
     = return $ Application fn vs
 lowerExpression (Case scrut alts)

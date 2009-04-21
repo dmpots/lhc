@@ -107,7 +107,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , indexCharOffAddr
                      , readInt32OffAddr, readInt8OffAddr, readAddrOffAddr
                      , writeCharArray
-                     , plusAddr, touch
+                     , touch
                      , noDuplicate
                      , realWorldPrim, myThreadIdPrim, raisePrim
                      , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
@@ -116,7 +116,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , updatePrim, fetchPrim, evalPrim, applyPrim
                      , newArrayPrim, readArray, writeArray
                      , newMutVar, writeMutVar, readMutVar
-                     , narrow8Word, narrow32Int, int2Word, word2Int, negateInt
+                     , narrow8Word, narrow32Int, negateInt
                      , mkWeak]
 
 
@@ -181,9 +181,6 @@ writeCharArray
                     noScope $ do poke (ptr `plusPtr` offset) (fromIntegral (ord c) :: Word8)
                                  return realWorld
 
-plusAddr
-    = mkPrimitive "plusAddr#" $ return $ \(PtrArg ptr) (IntArg offset) ->
-      noScope $ return (fromPointer (ptr `plusPtr` offset))
 touch
     = mkPrimitive "touch#" $ return $ \(AnyArg _) RealWorld ->
       noScope $ return realWorld
@@ -319,12 +316,6 @@ narrow32Int
 
 narrow8Word
     = mkPrimitive "narrow8Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
-
-int2Word
-    = mkPrimitive "int2Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
-
-word2Int
-    = mkPrimitive "word2Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
 
 negateInt
     = mkPrimitive "negateInt#" $ return $ \(IntArg i) -> noScope $ return (fromInt (negate i))
