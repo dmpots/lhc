@@ -57,6 +57,8 @@ lowerExpression (Application (Builtin "word2Int#") [v])
     = return $ Unit v
 lowerExpression (Application (Builtin "plusAddr#") [a,b])
     = return $ Application (Builtin "+#") [a,b]
+lowerExpression (Application (Builtin "eqAddr#") [a,b])
+    = lowerExpression $ Application (Builtin "==#") [a,b]
 lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
     = return $ Unit a
 lowerExpression (Application (External external) args)
