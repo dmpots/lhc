@@ -59,6 +59,9 @@ lowerExpression (Application (Builtin "plusAddr#") [a,b])
     = return $ Application (Builtin "+#") [a,b]
 lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
     = return $ Unit a
+lowerExpression (Application (External external) args)
+    = do v <- newVariable
+         return $ Application (External external) (init args) :>>= v :-> Unit (Vector [last args, v])
 lowerExpression (Application fn vs)
     = return $ Application fn vs
 lowerExpression (Case scrut alts)
