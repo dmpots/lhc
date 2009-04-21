@@ -103,7 +103,6 @@ allPrimitives :: Map.Map CompactString (GlobalScope -> Primitive)
 allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
     where prims = [ equal, gt, lt, gte, lte
                      , plus, minus, times, remInt, quotInt, addIntC
-                     , chrPrim, ordPrim
                      , indexCharOffAddr
                      , readInt32OffAddr, readInt8OffAddr, readAddrOffAddr
                      , writeCharArray
@@ -140,14 +139,6 @@ addIntC = mkPrimitive "addIntC#" $
                 let c = fromIntegral a + fromIntegral b
                     o = c `shiftR` bitSize (0::Int)
                 in noScope $ return (Vector [Lit (Lint c), Lit (Lint o)])
-chrPrim
-    = mkPrimitive "chr#" $
-      return $ \(IntArg i) ->
-                  noScope $ return $ Lit $ Lchar (chr i)
-ordPrim
-    = mkPrimitive "ord#" $
-      return $ \(CharArg c) ->
-                  noScope $ return $ Lit $ Lint (fromIntegral $ ord c)
 
 -- |Reads 8-bit character; offset in bytes.
 indexCharOffAddr
@@ -386,10 +377,12 @@ instance FromArg RealWorld where
     fromArg Empty = return RealWorld
     fromArg v     = error $ "Grin.Eval.Primitives.fromArg: Expected realWorld: " ++ show v
 instance FromArg IntArg where
-    fromArg (Lit (Lint i)) = return (IntArg $ fromIntegral i)
-    fromArg v              = error $ "Grin.Eval.Primitives.fromArg: Expected integer: " ++ show v
+    fromArg (Lit (Lint i))  = return (IntArg $ fromIntegral i)
+    fromArg (Lit (Lchar c)) = return (IntArg $ ord c)
+    fromArg v               = error $ "Grin.Eval.Primitives.fromArg: Expected integer: " ++ show v
 instance FromArg CharArg where
     fromArg (Lit (Lchar c)) = return (CharArg c)
+    fromArg (Lit (Lint i))  = return (CharArg (chr $ fromIntegral i))
     fromArg v               = error $ "Grin.Eval.Primitives.fromArg: Expected char: " ++ show v
 instance FromArg ArrayArg where
     fromArg (Array arr) = return (ArrayArg arr)
