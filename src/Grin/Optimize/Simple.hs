@@ -25,6 +25,8 @@ simpleFuncDef def
     = def{ funcDefBody = runReader (unOpt (simpleExpression (funcDefBody def))) Map.empty }
 
 simpleExpression :: Expression -> Opt Expression
+simpleExpression (Unit (Vector vs) :>>= Vector vs' :-> t)
+    = foldr (uncurry subst) (simpleExpression t) (zip [ v | Variable v <- vs'] vs)
 simpleExpression (Unit value :>>= Variable v :-> t)
     = do value' <- simpleValue value
          subst v value' (simpleExpression t)
