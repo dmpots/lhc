@@ -48,6 +48,8 @@ lowerExpression (Application (Builtin fn) [a,b]) | fn `elem` [">=#",">#","==#","
          v <- newVariable
          return $ Application (Builtin fn) [a,b] :>>= v :-> Case v [Lit (Lint 0) :-> Unit (Node fnode (ConstructorNode 0) [])
                                                                    ,Lit (Lint 1) :-> Unit (Node tnode (ConstructorNode 0) [])]
+
+-- MVars
 lowerExpression (Application (Builtin "newMVar#") [realWorld])
     = do v <- newVariable
          return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
@@ -56,7 +58,19 @@ lowerExpression (Application (Builtin "putMVar#") [ptr, val, realWorld])
 lowerExpression (Application (Builtin "takeMVar#") [ptr, realWorld])
     = do v <- newVariable
          return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
-lowerExpression (Application (Builtin "readWorld#") [])
+
+-- MutVars
+
+lowerExpression (Application (Builtin "newMutVar#") [val,realWorld])
+    = do v <- newVariable
+         return $ Store val :>>= v :-> Unit (Vector [realWorld, v])
+lowerExpression (Application (Builtin "writeMutVar#") [ptr, val, realWorld])
+    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit realWorld
+lowerExpression (Application (Builtin "readMutVar#") [ptr, realWorld])
+    = do v <- newVariable
+         return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
+
+lowerExpression (Application (Builtin "realWorld#") [])
     = return $ Unit Empty -- FIXME: Use a special RealWorld value?
 lowerExpression (Application (Builtin "int2Word#") [v])
     = return $ Unit v

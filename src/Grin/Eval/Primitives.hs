@@ -113,7 +113,6 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , unsafeFreezeByteArray, byteArrayContents
                      , updatePrim, fetchPrim, evalPrim, applyPrim
                      , newArrayPrim, readArray, writeArray
-                     , newMutVar, writeMutVar, readMutVar
                      , narrow8Word, narrow32Int, negateInt
                      , mkWeak]
 
@@ -276,6 +275,7 @@ writeArray
          return realWorld
 
 -- |Create @MutVar\#@ with specified initial value in specified state thread.
+{-
 newMutVar
     = mkPrimitive "newMutVar#" $
          return $ \(AnyArg val) RealWorld ->
@@ -294,7 +294,7 @@ readMutVar
          return $ \(HeapArg ptr) RealWorld ->
                   do val <- fetch ptr
                      return (Vector [realWorld, val])
-
+-}
 -- Dummy primitive
 mkWeak = mkPrimitive "mkWeak#" $
             return $ \(AnyArg key) (AnyArg val) (AnyArg finalizer) RealWorld ->
