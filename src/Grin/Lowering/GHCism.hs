@@ -17,12 +17,13 @@ import Control.Monad.State
 import Control.Monad.Reader
 import qualified Data.Map as Map
 
-lower :: Int -> Grin -> Grin
-lower u grin
-    = evalState (runReaderT (lowerGrin grin) emptyScope) u
-    where emptyScope = Scope { nodeMap = Map.fromList [ (name, node) | node <- grinNodes grin, Just name <- [alias (nodeName node)]] }
+lower :: Map.Map CompactString Renamed -> Grin -> Grin
+lower scope grin
+    = case runState (runReaderT (lowerGrin grin) emptyScope) (grinUnique grin) of
+        (newGrin, unique) -> newGrin{grinUnique = unique}
+    where emptyScope = Scope { scope = scope }
 
-data Scope = Scope { nodeMap :: Map.Map CompactString NodeDef }
+data Scope = Scope { scope :: Map.Map CompactString Renamed }
 type Lower a = ReaderT Scope (State Int) a
 
 lowerGrin :: Grin -> Lower Grin
@@ -111,9 +112,9 @@ renamedOpts = [ ("gtChar#", ">#")
 
 lookupNode :: CompactString -> Lower Renamed
 lookupNode name
-    = do m <- asks nodeMap
+    = do m <- asks scope
          case Map.lookup name m of
-           Just node -> return (nodeName node)
+           Just name -> return name
            Nothing   -> error $ "Couldn't find node: " ++ show name
 
 newVariable :: Lower Value

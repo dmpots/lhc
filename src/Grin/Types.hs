@@ -19,6 +19,7 @@ data Grin
     = Grin { grinNodes     :: [NodeDef]
            , grinCAFs      :: [CAF]
            , grinFunctions :: [FuncDef]
+           , grinUnique    :: Int
            }
 
 data CAF

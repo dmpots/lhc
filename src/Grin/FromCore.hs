@@ -32,10 +32,12 @@ coreToGrin tdefs defs
                 defsToFuncs defs' $ \funcs ->
                 defsToCAFs cafs $ \cafs' ->
                 get >>= \u ->
-                return (GHCism.lower u Grin { grinNodes     = nodes
-                                            , grinCAFs      = cafs'
-                                            , grinFunctions = funcs
-                                            })
+                asks scope >>= \varScope -> 
+                return (GHCism.lower varScope Grin { grinNodes     = nodes
+                                                   , grinCAFs      = cafs'
+                                                   , grinFunctions = funcs
+                                                   , grinUnique    = u
+                                                   })
       in evalState (runReaderT gen emptyEnv) 0
 
 tdefsToNodes :: [SimpleType] -> ([NodeDef] -> M a) -> M a
