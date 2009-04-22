@@ -26,7 +26,9 @@ simpleFuncDef def
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit (Vector vs) :>>= Vector vs' :-> t)
-    = foldr (uncurry subst) (simpleExpression t) (zip [ v | Variable v <- vs'] vs)
+    = do vsp <- mapM simpleValue vs
+         vsp' <- mapM simpleValue vs'
+         foldr (uncurry subst) (simpleExpression t) (zip [ v | Variable v <- vsp'] vsp)
 simpleExpression (Unit value :>>= Variable v :-> t)
     = do value' <- simpleValue value
          subst v value' (simpleExpression t)
@@ -77,5 +79,5 @@ simpleValue v@Hole{} = return v
 simpleValue v@Empty  = return v
 
 subst :: Renamed -> Value -> Opt a -> Opt a
-subst name = local . Map.insert name
+subst name value = local $ Map.insert name value
 
