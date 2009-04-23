@@ -12,7 +12,7 @@ import qualified Data.Map as Map
 
 newtype Opt a = Opt {unOpt :: Reader Subst a}
     deriving (MonadReader Subst, Monad)
-type Subst = Map.Map Renamed Value
+type Subst = Map.Map Renamed Renamed
 
 
 optimize :: Grin -> Grin
@@ -25,28 +25,28 @@ simpleFuncDef def
     = def{ funcDefBody = runReader (unOpt (simpleExpression (funcDefBody def))) Map.empty }
 
 simpleExpression :: Expression -> Opt Expression
+{-
 simpleExpression (Unit (Vector vs) :>>= Vector vs' :-> t)
     = do vsp <- mapM simpleValue vs
          vsp' <- mapM simpleValue vs'
          foldr (uncurry subst) (simpleExpression t) (zip [ v | Variable v <- vsp'] vsp)
-simpleExpression (Unit value :>>= Variable v :-> t)
-    = do value' <- simpleValue value
-         subst v value' (simpleExpression t)
+-}
+simpleExpression (Unit (Variable v1) :>>= Variable v2 :-> t)
+    = do v1' <- doSubst v1
+         subst v2 v1' (simpleExpression t)
+
 simpleExpression (a :>>= v :-> Unit v') | v == v'
     = simpleExpression a
 simpleExpression ((a :>>= b :-> c) :>>= d)
     = simpleExpression (a :>>= b :-> c :>>= d)
 simpleExpression (a :>>= b :-> c)
     = do a' <- simpleExpression a
-         b' <- simpleValue b
          c' <- simpleExpression c
-         return (a' :>>= b' :-> c')
+         return (a' :>>= b :-> c')
 simpleExpression (Application fn values)
-    = do vals <- mapM simpleValue values
-         return $ Application fn vals
+    = liftM (Application fn) $ doSubsts values
 simpleExpression (Store v)
-    = do v' <- simpleValue v
-         return $ Store v'
+    = liftM Store $ simpleValue v
 simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
 simpleExpression (Case val [cond :-> e])
@@ -65,19 +65,24 @@ simpleLambda (v :-> e) = do e' <- simpleExpression e
 
 simpleValue :: Value -> Opt Value
 simpleValue (Variable v)
-    = do m <- ask
-         case Map.lookup v m of
-           Nothing     -> return $ Variable v
-           Just newVal -> return newVal
+    = liftM Variable $ doSubst v
 simpleValue (Node name ty args)
-    = do args' <- mapM simpleValue args
-         return $ Node name ty args'
+    = liftM (Node name ty) $ doSubsts args
 simpleValue (Vector vs)
-    = liftM Vector $ mapM simpleValue vs
+    = liftM Vector $ doSubsts vs
 simpleValue v@Lit{}  = return v
 simpleValue v@Hole{} = return v
 simpleValue v@Empty  = return v
 
-subst :: Renamed -> Value -> Opt a -> Opt a
+doSubst :: Renamed -> Opt Renamed
+doSubst var
+    = asks $ \m -> case Map.lookup var m of
+                     Nothing     -> var
+                     Just newVar -> newVar
+
+doSubsts :: [Renamed] -> Opt [Renamed]
+doSubsts = mapM doSubst
+
+subst :: Renamed -> Renamed -> Opt a -> Opt a
 subst name value = local $ Map.insert name value
 

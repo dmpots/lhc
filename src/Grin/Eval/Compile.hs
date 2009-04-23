@@ -68,10 +68,10 @@ compExpression (e :>>= b :-> l)
          return $ do val <- e'
                      bindLambda val b l'
 compExpression (Application (External name) args)
-    = runExternal name =<< mapM compValue args
+    = runExternal name =<< mapM lookupVariable args
 compExpression (Application name args)
     = do fn <- lookupFunction name
-         args' <- mapM compValue args
+         args' <- mapM lookupVariable args
          return $ do args'' <- mapM id args'
                      --liftIO $ putStrLn $ "Running: " ++ show name ++ " " ++ show args ++ " " ++ show args''
                      fn args''
@@ -91,12 +91,12 @@ compExpression (Case val alts)
 
 compValue :: Grin.Value -> Gen CompValue
 compValue (Grin.Node name (Grin.ConstructorNode n) args)
-    = do args' <- mapM compValue args
+    = do args' <- mapM lookupVariable args
          return $ do args'' <- mapM id args'
                      return $ CNode name n args''
 compValue (Grin.Node name (Grin.FunctionNode n) args)
     = do fn <- lookupFunction name
-         args' <- mapM compValue args
+         args' <- mapM lookupVariable args
          return $ do args'' <- mapM id args'
                      return $ FNode name fn n args''
 compValue (Grin.Variable v) = lookupVariable v
@@ -104,7 +104,7 @@ compValue Grin.Empty        = return $ return Empty
 compValue (Grin.Lit lit)    = return $ return $ Lit lit
 compValue (Grin.Hole size)  = return $ return $ Hole size
 compValue (Grin.Vector vs)
-    = do vs' <- mapM compValue vs
+    = do vs' <- mapM lookupVariable vs
          return $ do vs'' <- mapM id vs'
                      return $ Vector vs''
 
@@ -123,9 +123,9 @@ doesMatch :: EvalValue -> Grin.Value -> Maybe (CompValue -> CompValue)
 doesMatch val (Grin.Variable var)
     = Just $ local (Map.insert var val)
 doesMatch (CNode tag _ args) (Grin.Node bTag _ bArgs) | tag == bTag && length args == length bArgs
-    = bindLambdas (zip args bArgs)
+    = bindLambdas (zip args $ map Grin.Variable bArgs)
 doesMatch (Vector vs1) (Grin.Vector vs2) | length vs1 == length vs2
-    = bindLambdas (zip vs1 vs2)
+    = bindLambdas (zip vs1 $ map Grin.Variable vs2)
 doesMatch (Lit litA) (Grin.Lit litB) | litA == litB
     = Just id
 doesMatch _ Grin.Empty

@@ -47,45 +47,46 @@ lowerExpression (Application (Builtin fn) [a,b]) | fn `elem` [">=#",">#","==#","
     = do tnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.True"
          fnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.False"
          v <- newVariable
-         return $ Application (Builtin fn) [a,b] :>>= v :-> Case v [Lit (Lint 0) :-> Unit (Node fnode (ConstructorNode 0) [])
-                                                                   ,Lit (Lint 1) :-> Unit (Node tnode (ConstructorNode 0) [])]
+         return $ Application (Builtin fn) [a,b] :>>= Variable v :->
+                  Case (Variable v) [Lit (Lint 0) :-> Unit (Node fnode (ConstructorNode 0) [])
+                                    ,Lit (Lint 1) :-> Unit (Node tnode (ConstructorNode 0) [])]
 
 -- MVars
 lowerExpression (Application (Builtin "newMVar#") [realWorld])
     = do v <- newVariable
-         return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
+         return $ Store Empty :>>= Variable v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "putMVar#") [ptr, val, realWorld])
-    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit realWorld
+    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit (Variable realWorld)
 lowerExpression (Application (Builtin "takeMVar#") [ptr, realWorld])
     = do v <- newVariable
-         return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
+         return $ Application (Builtin "fetch") [ptr] :>>= Variable v :-> Unit (Vector [realWorld, v])
 
 -- MutVars
 
 lowerExpression (Application (Builtin "newMutVar#") [val,realWorld])
     = do v <- newVariable
-         return $ Store val :>>= v :-> Unit (Vector [realWorld, v])
+         return $ Store (Variable val) :>>= Variable v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "writeMutVar#") [ptr, val, realWorld])
-    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit realWorld
+    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit (Variable realWorld)
 lowerExpression (Application (Builtin "readMutVar#") [ptr, realWorld])
     = do v <- newVariable
-         return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
+         return $ Application (Builtin "fetch") [ptr] :>>= Variable v :-> Unit (Vector [realWorld, v])
 
 lowerExpression (Application (Builtin "realWorld#") [])
     = return $ Unit Empty -- FIXME: Use a special RealWorld value?
 lowerExpression (Application (Builtin "int2Word#") [v])
-    = return $ Unit v
+    = return $ Unit (Variable v)
 lowerExpression (Application (Builtin "word2Int#") [v])
-    = return $ Unit v
+    = return $ Unit (Variable v)
 lowerExpression (Application (Builtin "plusAddr#") [a,b])
     = return $ Application (Builtin "+#") [a,b]
 lowerExpression (Application (Builtin "eqAddr#") [a,b])
     = lowerExpression $ Application (Builtin "==#") [a,b]
 lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
-    = return $ Unit a
+    = return $ Unit (Variable a)
 lowerExpression (Application (External external) args)
     = do v <- newVariable
-         return $ Application (External external) (init args) :>>= v :-> Unit (Vector [last args, v])
+         return $ Application (External external) (init args) :>>= Variable v :-> Unit (Vector [last args, v])
 lowerExpression (Application fn vs)
     = return $ Application fn vs
 lowerExpression (Case scrut alts)
@@ -117,9 +118,9 @@ lookupNode name
            Just name -> return name
            Nothing   -> error $ "Couldn't find node: " ++ show name
 
-newVariable :: Lower Value
+newVariable :: Lower Renamed
 newVariable
     = do u <- get
          put (u+1)
-         return $ Variable $ Anonymous u
+         return $ Anonymous u
 

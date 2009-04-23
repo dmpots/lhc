@@ -55,7 +55,7 @@ ppExpression (Case value alts)
     = text "case" <+> ppValue value <+> text "of" <$$>
       indent 2 (vsep (map ppAlt alts))
 ppExpression (Application fn args)
-    = hsep (pretty fn:map ppValue args)
+    = hsep (pretty fn:map pretty args)
 ppExpression (Store v)
     = text "store" <+> ppValue v
 ppExpression (a :>>= Empty :-> c)
@@ -69,8 +69,8 @@ ppAlt (value :-> exp) = ppValue value <$$>
                         indent 2 (text "->" <+> align (ppBeginExpression exp))
 
 ppValue (Node name nodeType args)
-    = parens (hsep (ppNodeType nodeType name : map ppValue args))
-ppValue (Vector vs) = brackets (hsep (map ppValue vs))
+    = parens (hsep (ppNodeType nodeType name : map pretty args))
+ppValue (Vector vs) = brackets (hsep (map pretty vs))
 ppValue (Hole size) = parens (text "@hole" <+> hsep (replicate size (char '_')))
 ppValue Empty = text "()"
 ppValue (Lit lit) = ppLit lit

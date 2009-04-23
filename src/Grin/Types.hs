@@ -62,7 +62,7 @@ infixr 1 :>>=
 data Expression
     = Expression :>>= Lambda
     | Application { expFunction :: Renamed
-                  , expArgs     :: [Value] }
+                  , expArgs     :: [Renamed] }
     | Case        { expValue    :: Value
                   , expAlts     :: [Lambda] }
     | Store       Value
@@ -92,8 +92,8 @@ alias (Aliased _ name) = Just name
 alias _ = Nothing
 
 data Value
-    = Node Renamed NodeType [Value]
-    | Vector [Value]
+    = Node Renamed NodeType [Renamed]
+    | Vector [Renamed]
     | Lit Lit
     | Variable Renamed
     | Hole Int
