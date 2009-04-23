@@ -84,6 +84,15 @@ lowerExpression (Application (Builtin "eqAddr#") [a,b])
     = lowerExpression $ Application (Builtin "==#") [a,b]
 lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
     = return $ Unit (Variable a)
+lowerExpression (Application (Builtin "newArray#") [size, elt, realWorld])
+    = do v <- newVariable
+         return $ Application (Builtin "newArray#") [size, elt] :>>= Variable v :-> Unit (Vector [realWorld, v])
+lowerExpression (Application (Builtin "readArray#") [arr, nth, realWorld])
+    = do v <- newVariable
+         return $ Application (Builtin "readArray#") [arr, nth] :>>= Variable v :-> Unit (Vector [realWorld, v])
+lowerExpression (Application (Builtin "writeArray#") [arr, nth, elt, realWorld])
+    = do v <- newVariable
+         return $ Application (Builtin "writeArray#") [arr, nth, elt] :>>= Variable v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (External external) args)
     = do v <- newVariable
          return $ Application (External external) (init args) :>>= Variable v :-> Unit (Vector [last args, v])
