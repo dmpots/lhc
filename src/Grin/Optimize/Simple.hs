@@ -25,16 +25,12 @@ simpleFuncDef def
     = def{ funcDefBody = runReader (unOpt (simpleExpression (funcDefBody def))) Map.empty }
 
 simpleExpression :: Expression -> Opt Expression
-{-
 simpleExpression (Unit (Vector vs) :>>= Vector vs' :-> t)
-    = do vsp <- mapM simpleValue vs
-         vsp' <- mapM simpleValue vs'
-         foldr (uncurry subst) (simpleExpression t) (zip [ v | Variable v <- vsp'] vsp)
--}
+    = do vsp <- doSubsts vs
+         foldr (uncurry subst) (simpleExpression t) (zip vs' vsp)
 simpleExpression (Unit (Variable v1) :>>= Variable v2 :-> t)
     = do v1' <- doSubst v1
          subst v2 v1' (simpleExpression t)
-
 simpleExpression (a :>>= v :-> Unit v') | v == v'
     = simpleExpression a
 simpleExpression ((a :>>= b :-> c) :>>= d)
