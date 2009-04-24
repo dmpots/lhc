@@ -86,9 +86,9 @@ lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
     = return $ Unit (Variable a)
 
 -- IO Primitives
-lowerExpression (Application (Builtin fn) args) | fn `elem` ["newArray#","readArray#","writeArray#","blockAsyncExceptions#"
+lowerExpression (Application (Builtin fn) args) | fn `elem` ["newArray#","readArray#"
                                                             ,"newPinnedByteArray#", "touch#", "newAlignedPinnedByteArray#"
-                                                            ,"unblockAsyncExceptions#", "catch#"]
+                                                            ]
     = do v <- newVariable
          return $ Application (Builtin fn) (init args) :>>= Variable v :-> Unit (Vector [last args, v])
 

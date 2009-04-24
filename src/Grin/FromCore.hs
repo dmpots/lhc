@@ -249,7 +249,7 @@ update bind fn args arity var
     = Unit (Node fn (FunctionNode (arity-length args)) args) :>>= Variable var :->
       Application (Builtin $ fromString "update") [bind, var]
 eval v = Application (Builtin $ fromString "eval") [v]
-applyCell a b = Store (Node (Builtin $ fromString "apply") (FunctionNode 0) [a,b])
+applyCell a b = Store (Node (Builtin $ fromString "evalApply") (FunctionNode 0) [a,b])
 
 -- Translate a Core alternative to a Grin alternative
 alternative :: (SimpleExp -> M Expression) -> Simple.Alt -> M Lambda

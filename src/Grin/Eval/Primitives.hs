@@ -111,7 +111,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
                      , newPinnedByteArray, newAlignedPinnedByteArray
                      , unsafeFreezeByteArray, byteArrayContents
-                     , updatePrim, fetchPrim, evalPrim, applyPrim
+                     , updatePrim, fetchPrim, evalPrim, evalApplyPrim
                      , newArrayPrim, readArray, writeArray
                      , narrow8Word, narrow32Int, negateInt
                      , mkWeak]
@@ -191,22 +191,24 @@ raisePrim
 
 catchPrim
     = mkPrimitive "catch#" $
-      do apply <- lookupFunction (Builtin $ fromString "apply")
-         return $ \(AnyArg fn) (AnyArg handler) ->
-                  apply [fn, realWorld] `catchComp` \val ->
-                  do v <- apply [handler, val]
-                     apply [v, realWorld]
+      do evalApply <- lookupFunction (Builtin $ fromString "evalApply")
+         apply <- lookupFunction (Builtin $ fromString "apply")
+         return $ \(AnyArg fn) (AnyArg handler) RealWorld ->
+                  evalApply [fn, realWorld]
+{- `catchComp` \val ->
+                  do v <- evalApply [handler, val]
+                     apply [v, realWorld]-}
 
 blockAsyncExceptions
     = mkPrimitive "blockAsyncExceptions#" $
-      do apply <- lookupFunction (Builtin $ fromString "apply")
-         return $ \(AnyArg fn) ->
+      do apply <- lookupFunction (Builtin $ fromString "evalApply")
+         return $ \(AnyArg fn) RealWorld ->
                      apply [fn,realWorld]
 
 unblockAsyncExceptions
     = mkPrimitive "unblockAsyncExceptions#" $
-      do apply <- lookupFunction (Builtin $ fromString "apply")
-         return $ \(AnyArg fn) ->
+      do apply <- lookupFunction (Builtin $ fromString "evalApply")
+         return $ \(AnyArg fn) RealWorld ->
                      apply [fn, realWorld]
 
 -- |Create a mutable byte array that the GC guarantees not to move.
@@ -244,8 +246,8 @@ evalPrim
     = mkPrimitive "eval" $ return $ \(AnyArg arg) ->
       runEvalPrimitive arg
 
-applyPrim
-    = mkPrimitive "apply" $ return $ \(AnyArg fnPtr) (AnyArg arg) ->
+evalApplyPrim
+    = mkPrimitive "evalApply" $ return $ \(AnyArg fnPtr) (AnyArg arg) ->
       do fn <- runEvalPrimitive fnPtr
          case fn of
               FNode name fn 1 args -> fn (args ++ [arg])
@@ -268,7 +270,7 @@ readArray
                        return $ arr!!idx
 
 writeArray
-    = mkPrimitive "writeArray#" $ return $ \(HeapArg ptr) (IntArg idx) (AnyArg val) ->
+    = mkPrimitive "writeArray#" $ return $ \(HeapArg ptr) (IntArg idx) (AnyArg val) RealWorld ->
       do Array arr <- fetch ptr
          let (before,after) = splitAt idx arr
          updateValue ptr (Array (before ++ [val] ++ drop 1 after))

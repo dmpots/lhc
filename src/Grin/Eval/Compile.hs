@@ -30,7 +30,7 @@ runGrin grin entry commandArgs
           cafs = zip (map cafName (grinCAFs grin)) [0..]
           funcs = [ (funcDefName def, compFuncDef def globalScope) | def <- grinFunctions grin ]
           prims = listPrimitives globalScope
-          apply = lookupFunction (Builtin $ fromString "apply") globalScope
+          apply = lookupFunction (Builtin $ fromString "evalApply") globalScope
       in runComp $ do mapM_ storeValue =<< mapM (\caf -> compValue (cafValue caf) globalScope) (grinCAFs grin)
                       setCommandArgs ("lhc":commandArgs)
                       entry <- lookupVariable renamedEntry globalScope
