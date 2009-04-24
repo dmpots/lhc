@@ -214,15 +214,15 @@ unblockAsyncExceptions
 -- |Create a mutable byte array that the GC guarantees not to move.
 newPinnedByteArray
     = mkPrimitive "newPinnedByteArray#" $
-         return $ \(IntArg size) ->
+         return $ \(IntArg size) RealWorld ->
                     noScope $ do ptr <- mallocBytes size
-                                 return (fromPointer ptr)
+                                 return (Vector [realWorld, fromPointer ptr])
 
 newAlignedPinnedByteArray
     = mkPrimitive "newAlignedPinnedByteArray#" $
-         return $ \(IntArg size) (IntArg alignment) ->
+         return $ \(IntArg size) (IntArg alignment) RealWorld ->
                     noScope $ do ptr <- mallocBytes (size + alignment)
-                                 return (fromPointer $ alignPtr ptr alignment)
+                                 return (Vector [realWorld, fromPointer $ alignPtr ptr alignment])
 
 unsafeFreezeByteArray
     = mkPrimitive "unsafeFreezeByteArray#" $
@@ -259,15 +259,15 @@ evalApplyPrim
 
 newArrayPrim
     = mkPrimitive "newArray#" $
-         return $ \(IntArg len) (AnyArg elt) ->
+         return $ \(IntArg len) (AnyArg elt) RealWorld ->
                     do ptr <- storeValue (Array $ replicate len elt)
-                       return $ HeapPointer ptr
+                       return $ Vector [realWorld, HeapPointer ptr]
 
 readArray
     = mkPrimitive "readArray#" $
-         return $ \(HeapArg ptr) (IntArg idx) ->
+         return $ \(HeapArg ptr) (IntArg idx) RealWorld ->
                     do Array arr <- fetch ptr
-                       return $ arr!!idx
+                       return $ Vector [realWorld, arr!!idx]
 
 writeArray
     = mkPrimitive "writeArray#" $ return $ \(HeapArg ptr) (IntArg idx) (AnyArg val) RealWorld ->
