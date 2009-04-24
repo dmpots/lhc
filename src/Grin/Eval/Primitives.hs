@@ -192,7 +192,7 @@ raisePrim
 catchPrim
     = mkPrimitive "catch#" $
       do apply <- lookupFunction (Builtin $ fromString "apply")
-         return $ \(AnyArg fn) (AnyArg handler) RealWorld ->
+         return $ \(AnyArg fn) (AnyArg handler) ->
                   apply [fn, realWorld] `catchComp` \val ->
                   do v <- apply [handler, val]
                      apply [v, realWorld]
@@ -200,27 +200,27 @@ catchPrim
 blockAsyncExceptions
     = mkPrimitive "blockAsyncExceptions#" $
       do apply <- lookupFunction (Builtin $ fromString "apply")
-         return $ \(AnyArg fn) RealWorld ->
+         return $ \(AnyArg fn) ->
                      apply [fn,realWorld]
 
 unblockAsyncExceptions
     = mkPrimitive "unblockAsyncExceptions#" $
       do apply <- lookupFunction (Builtin $ fromString "apply")
-         return $ \(AnyArg fn) RealWorld ->
+         return $ \(AnyArg fn) ->
                      apply [fn, realWorld]
 
 -- |Create a mutable byte array that the GC guarantees not to move.
 newPinnedByteArray
     = mkPrimitive "newPinnedByteArray#" $
-         return $ \(IntArg size) RealWorld ->
+         return $ \(IntArg size) ->
                     noScope $ do ptr <- mallocBytes size
-                                 return (Vector [realWorld , fromPointer ptr])
+                                 return (fromPointer ptr)
 
 newAlignedPinnedByteArray
     = mkPrimitive "newAlignedPinnedByteArray#" $
-         return $ \(IntArg size) (IntArg alignment) RealWorld ->
+         return $ \(IntArg size) (IntArg alignment) ->
                     noScope $ do ptr <- mallocBytes (size + alignment)
-                                 return (Vector [realWorld, fromPointer $ alignPtr ptr alignment])
+                                 return (fromPointer $ alignPtr ptr alignment)
 
 unsafeFreezeByteArray
     = mkPrimitive "unsafeFreezeByteArray#" $
@@ -257,18 +257,18 @@ applyPrim
 
 newArrayPrim
     = mkPrimitive "newArray#" $
-         return $ \(IntArg len) (AnyArg elt) RealWorld ->
+         return $ \(IntArg len) (AnyArg elt) ->
                     do ptr <- storeValue (Array $ replicate len elt)
-                       return $ Vector [realWorld, HeapPointer ptr ]
+                       return $ HeapPointer ptr
 
 readArray
     = mkPrimitive "readArray#" $
-         return $ \(HeapArg ptr) (IntArg idx) RealWorld ->
+         return $ \(HeapArg ptr) (IntArg idx) ->
                     do Array arr <- fetch ptr
-                       return $ Vector [realWorld, arr!!idx]
+                       return $ arr!!idx
 
 writeArray
-    = mkPrimitive "writeArray#" $ return $ \(HeapArg ptr) (IntArg idx) (AnyArg val) RealWorld ->
+    = mkPrimitive "writeArray#" $ return $ \(HeapArg ptr) (IntArg idx) (AnyArg val) ->
       do Array arr <- fetch ptr
          let (before,after) = splitAt idx arr
          updateValue ptr (Array (before ++ [val] ++ drop 1 after))

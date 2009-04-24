@@ -84,15 +84,17 @@ lowerExpression (Application (Builtin "eqAddr#") [a,b])
     = lowerExpression $ Application (Builtin "==#") [a,b]
 lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
     = return $ Unit (Variable a)
-lowerExpression (Application (Builtin "newArray#") [size, elt, realWorld])
+
+-- IO Primitives
+lowerExpression (Application (Builtin fn) args) | fn `elem` ["newArray#","readArray#","writeArray#","blockAsyncExceptions#"
+                                                            ,"newPinnedByteArray#", "touch#", "newAlignedPinnedByteArray#"
+                                                            ,"unblockAsyncExceptions#", "catch#"]
     = do v <- newVariable
-         return $ Application (Builtin "newArray#") [size, elt] :>>= Variable v :-> Unit (Vector [realWorld, v])
-lowerExpression (Application (Builtin "readArray#") [arr, nth, realWorld])
-    = do v <- newVariable
-         return $ Application (Builtin "readArray#") [arr, nth] :>>= Variable v :-> Unit (Vector [realWorld, v])
-lowerExpression (Application (Builtin "writeArray#") [arr, nth, elt, realWorld])
-    = do v <- newVariable
-         return $ Application (Builtin "writeArray#") [arr, nth, elt] :>>= Variable v :-> Unit (Vector [realWorld, v])
+         return $ Application (Builtin fn) (init args) :>>= Variable v :-> Unit (Vector [last args, v])
+
+lowerExpression (Application (Builtin "raiseIO#") [exp, realWorld])
+    = return $ Application (Builtin "raise#") [exp]
+
 lowerExpression (Application (External external) args)
     = do v <- newVariable
          return $ Application (External external) (init args) :>>= Variable v :-> Unit (Vector [last args, v])
@@ -116,6 +118,7 @@ renamedOpts = [ ("gtChar#", ">#")
               , ("geChar#", ">=#")
               , ("ltChar#", "<#")
               , ("leChar#", "<=#")
+              , ("eqChar#", "==#")
               ]
 
 
