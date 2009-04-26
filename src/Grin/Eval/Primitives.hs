@@ -33,47 +33,48 @@ import Grin.Eval.Methods
 -- These functions are defined in the base library. I'm not sure how to deal with this properly.
 runExternal :: String -> [CompValue] -> Gen CompValue
 runExternal name args
-    = do return $
+    = do let returnIO v = return (Vector [realWorld, v])
+         return $
             do args' <- mapM id args
-               case (name, args') of
+               case (name, init args') of
                  ("__hscore_memcpy_dst_off", [Lit (Lint dst),Lit (Lint off),Lit (Lint src),Lit (Lint size)]) ->
                    do let dstPtr = nullPtr `plusPtr` fromIntegral (dst+off)
                           srcPtr = nullPtr `plusPtr` fromIntegral src
                       liftIO $ copyBytes dstPtr srcPtr (fromIntegral size)
-                      return (Lit (Lint (dst+off)))
+                      returnIO (Lit (Lint (dst+off)))
                  ("__hscore_PrelHandle_write", [Lit (Lint fd),Lit (Lint ptr),Lit (Lint offset),Lit (Lint size)]) ->
                    do let strPtr = nullPtr `plusPtr` fromIntegral (ptr+offset)
                       str <- liftIO $ peekCStringLen (strPtr,fromIntegral size)
                       out <- liftIO $ fdWrite (Fd (fromIntegral fd)) str
-                      return (Lit (Lint $ fromIntegral out))
+                      returnIO (Lit (Lint $ fromIntegral out))
                  ("__hscore_get_errno", []) ->
-                   return (Lit (Lint 0))
+                   returnIO (Lit (Lint 0))
                  ("__hscore_bufsiz", []) ->
-                   return (Lit (Lint 512))
+                   returnIO (Lit (Lint 512))
                  ("fdReady", [fd,write,msecs,isSock]) ->
-                   return (Lit (Lint 1))
+                   returnIO (Lit (Lint 1))
                  ("rtsSupportsBoundThreads", []) ->
-                   return (Lit (Lint 1))
+                   returnIO (Lit (Lint 1))
                  ("stg_sig_install", [signo, actioncode, ptr]) ->
-                   return (Lit (Lint 0))
+                   returnIO (Lit (Lint 0))
                  ("getProgArgv", [Lit (Lint argcPtr), Lit (Lint argvPtr)]) ->
                    do args <- getCommandArgs
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argcPtr) (fromIntegral (length args) :: CInt)
                       cs <- liftIO $ newArray =<< mapM newCString args
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argvPtr) cs
-                      return $ Empty
+                      return $ Vector [Empty]
                  ("u_iswlower", [Lit (Lint ch)]) ->
-                   do return $ Lit (Lint (fromIntegral (fromEnum (isLower (chr (fromIntegral ch))))))
+                   do returnIO $ Lit (Lint (fromIntegral (fromEnum (isLower (chr (fromIntegral ch))))))
                  ("u_iswalpha", [Lit (Lint ch)]) ->
-                   do return $ Lit (Lint (fromIntegral (fromEnum (isAlpha (chr (fromIntegral ch))))))
+                   do returnIO $ Lit (Lint (fromIntegral (fromEnum (isAlpha (chr (fromIntegral ch))))))
                  ("u_iswspace", [Lit (Lint ch)]) ->
-                   do return $ Lit (Lint (fromIntegral (fromEnum (isSpace (chr (fromIntegral ch))))))
+                   do returnIO $ Lit (Lint (fromIntegral (fromEnum (isSpace (chr (fromIntegral ch))))))
                  (name, args) ->
                    -- If we don't recognize the function, try loading it through the linker.
                    do fnPtr <- liftIO $ dlsym Default name
                       let toCArg (Lit (Lint i)) = argCInt (fromIntegral i)
                       ret <- liftIO $ callFFI fnPtr retCInt (map toCArg args)
-                      return $ Lit (Lint (fromIntegral ret))
+                      returnIO $ Lit (Lint (fromIntegral ret))
 
 
 

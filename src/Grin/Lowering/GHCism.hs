@@ -88,9 +88,6 @@ lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
 lowerExpression (Application (Builtin "raiseIO#") [exp, realWorld])
     = return $ Application (Builtin "raise#") [exp]
 
-lowerExpression (Application (External external) args)
-    = do v <- newVariable
-         return $ Application (External external) (init args) :>>= Variable v :-> Unit (Vector [last args, v])
 lowerExpression (Application fn vs)
     = return $ Application fn vs
 lowerExpression (Case scrut alts)
