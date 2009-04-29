@@ -44,10 +44,12 @@ data SimpleExp
     | LetStrict CompactString SimpleExp SimpleExp
     | Case SimpleExp CompactString [Alt]
     | CaseStrict SimpleExp CompactString [Alt]
-    | External String String
-    | DynExternal String
+    | External String String [FFIType]
+    | DynExternal String [FFIType]
     | Label String
     | Note String SimpleExp
+
+data FFIType = Word | Int | Addr | Unit | Invalid
 
 data Alt
     = Acon CompactString [CompactString] SimpleExp
@@ -63,6 +65,7 @@ data Lit
 
 $(derive makeBinary ''Alt)
 $(derive makeBinary ''Lit)
+$(derive makeBinary ''FFIType)
 $(derive makeBinary ''SimpleExp)
 $(derive makeBinary ''SimpleDef)
 $(derive makeBinary ''SimpleType)

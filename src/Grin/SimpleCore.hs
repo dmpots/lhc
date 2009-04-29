@@ -139,10 +139,42 @@ expToSimpleExp (Core.Case e bind ty alts)
          let constr = if typeIsStrictPrimitive (snd bind) then CaseStrict else Case
          return $ constr e' (qualToCompact $ fst bind) alts'
 expToSimpleExp (Core.Cast e _ty) = expToSimpleExp e
-expToSimpleExp (Core.External target conv ty) = return $ External target conv
-expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv
+expToSimpleExp (Core.External target conv ty) = return $ External target conv (tyToFFITypes ty)
+expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv (tyToFFITypes ty)
 expToSimpleExp (Core.Label label)             = return $ Label label
 expToSimpleExp (Core.Note note e)             = {- return (Note note) `ap` -} expToSimpleExp e
+
+tyToFFITypes :: Core.Ty -> [FFIType]
+tyToFFITypes (Core.Tarrow (Core.Tcon con) rest)
+    = conToFFIType con : tyToFFITypes rest
+tyToFFITypes (Core.Tarrow (Core.Tapp (Core.Tcon state) (Core.Tcon realworld)) ret)
+    | state == statezh && realworld == theRealWorld
+    = case ret of
+        Core.Tapp (Core.Tcon tuple) (Core.Tapp (Core.Tcon state) (Core.Tcon realworld))
+            | tuple == z1h && state == statezh && realworld == theRealWorld
+          -> [Unit]
+        Core.Tapp (Core.Tapp (Core.Tcon tuple) (Core.Tapp (Core.Tcon state) (Core.Tcon realworld))) (Core.Tcon con)
+            | tuple == z2h && state == statezh && realworld == theRealWorld
+          -> [conToFFIType con]
+        _ -> [Invalid]
+    where z1h = mkPrimQual "Z1H"
+          z2h = mkPrimQual "Z2H"
+          statezh = mkPrimQual "Statezh"
+          theRealWorld = mkPrimQual "RealWorld"
+tyToFFITypes ty = [Invalid] -- error $ "Unrecognized ffi type: " ++ show ty
+
+mkPrimQual name
+    = (L.pack "ghczmprim", L.pack "GHCziPrim", L.pack name)
+
+conToFFIType :: Core.Qual Core.Tcon -> FFIType
+conToFFIType con
+    | con == wordzh = Word
+    | con == intzh  = Int
+    | con == addrzh = Addr
+    | otherwise     = Invalid
+    where wordzh = mkPrimQual "Wordzh"
+          intzh  = mkPrimQual "Intzh"
+          addrzh = mkPrimQual "Addrzh"
 
 
 defIsStrictPrimitive :: Vdef -> Bool

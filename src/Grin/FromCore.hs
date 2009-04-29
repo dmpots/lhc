@@ -158,7 +158,7 @@ translate cxt simplExp
                       return $ e :>>= Variable v :-> r
              call vs = case fn of
                          Simple.Primitive p  -> return $ Application (Builtin p) vs
-                         Simple.External e _ -> return $ Application (Grin.External e) vs
+                         Simple.External e _ _ -> return $ Application (Grin.External e) vs
                          Var var isUnboxed -> do name <- lookupVariable var
                                                  mbArity <- findArity var
                                                  case mbArity of
@@ -219,7 +219,7 @@ translate cxt simplExp
        Note _ e ->
           translate cxt e
 --       Label str -> error $ "label: " ++ str
-       Simple.External fn conv -> return $ Unit $ Variable $ Grin.External fn
+       Simple.External fn conv _ -> return $ Unit $ Variable $ Grin.External fn
 --       DynExternal fn   -> error $ "dynexternal: " ++ fn
        _ ->
           return $ Unit Empty
