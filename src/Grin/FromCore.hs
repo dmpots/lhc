@@ -113,11 +113,11 @@ translate cxt simplExp
               return $ e :>>= bind :-> Grin.Case bind alts'
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
-           do e <- translate Lazy exp
+           do e <- translate Strict exp
               v <- liftM Variable newVariable
               alts' <- mapM (alternative (translate cxt)) alts
               let bind = Variable renamed
-              return $ e :>>= bind :-> eval renamed :>>= v :-> Grin.Case v alts'
+              return $ e :>>= v :-> Store v :>>= bind :-> Grin.Case v alts'
        Simple.Primitive p ->
          return $ Application (Builtin p) []
        Var var isUnboxed ->
@@ -162,17 +162,19 @@ translate cxt simplExp
                          Var var isUnboxed -> do name <- lookupVariable var
                                                  mbArity <- findArity var
                                                  case mbArity of
-                                                   Nothing -> mkApply vs name
+                                                   Nothing -> case cxt of Lazy -> mkApplyLazy vs name; Strict -> mkApplyStrict vs name
                                                    Just n  -> do let (now,later) = splitAt n vs
-                                                                 v <- newVariable
-                                                                 ap <- mkApply later v
                                                                  let node = Node name (FunctionNode (n-length now)) now
                                                                  case cxt of
-                                                                   Lazy -> return $ Store node :>>= Variable v :-> ap
+                                                                   Lazy -> do v <- newVariable
+                                                                              ap <- mkApplyLazy later v
+                                                                              return $ Store node :>>= Variable v :-> ap
                                                                    Strict -> case n `compare` length vs of
                                                                                GT -> return $ Unit node
                                                                                EQ -> return $ Application name now
-                                                                               LT -> return $ Store node :>>= Variable v :-> ap
+                                                                               LT -> do v <- newVariable
+                                                                                        ap <- mkApplyStrict later v
+                                                                                        return $ Store node :>>= Variable v :-> ap
                          Dcon con | Just n <- dconIsVector con
                                   -> return $ Unit $ Vector vs
                          Dcon con -> do name <- lookupVariable con
@@ -182,16 +184,22 @@ translate cxt simplExp
                                           Lazy   -> return $ Store (Node name (ConstructorNode (n-length vs)) vs)
                          e -> do e' <- translate Lazy e
                                  v  <- newVariable
-                                 app <- mkApply vs v
+                                 app <- case cxt of Lazy -> mkApplyLazy vs v; Strict -> mkApplyStrict vs v
                                  return (e' :>>= Variable v :-> app)
-             mkApply [] v
-                 = case cxt of
-                     Lazy   -> return $ Unit (Variable v)
-                     Strict -> return $ eval v
-             mkApply (x:xs) v
+             mkApplyLazy [] v
+                 = return $ Unit (Variable v)
+             mkApplyLazy (x:xs) v
                  = do v' <- newVariable
-                      r <- mkApply xs v'
+                      r <- mkApplyLazy xs v'
                       return $ applyCell v x :>>= Variable v' :-> r
+             mkApplyStrict xs v
+                 = do let loop v [] = return $ Unit (Variable v)
+                          loop v (x:xs) = do v' <- newVariable
+                                             r  <- loop v' xs
+                                             return $ apply v x :>>= Variable v' :-> r
+                      v' <- newVariable
+                      r <- loop v' xs
+                      return $ eval v :>>= Variable v' :-> r
          in process [] args
        LetRec defs e ->
          let binds = [ bind | (bind,_,_,_) <- defs ]
@@ -249,6 +257,7 @@ update bind fn args arity var
     = Unit (Node fn (FunctionNode (arity-length args)) args) :>>= Variable var :->
       Application (Builtin $ fromString "update") [bind, var]
 eval v = Application (Builtin $ fromString "eval") [v]
+apply a b = Application (Builtin $ fromString "apply") [a,b]
 applyCell a b = Store (Node (Builtin $ fromString "evalApply") (FunctionNode 0) [a,b])
 
 -- Translate a Core alternative to a Grin alternative
