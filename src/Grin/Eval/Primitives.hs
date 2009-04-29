@@ -112,7 +112,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                      , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
                      , newPinnedByteArray, newAlignedPinnedByteArray
                      , unsafeFreezeByteArray, byteArrayContents
-                     , updatePrim, fetchPrim, evalPrim, evalApplyPrim
+                     , updatePrim, fetchPrim, evalPrim, evalApplyPrim, applyPrim
                      , newArrayPrim, readArray, writeArray
                      , narrow8Word, narrow32Int, negateInt
                      , mkWeak]
@@ -257,6 +257,16 @@ evalApplyPrim
               CNode name 0 args -> error "apply: over application?"
               CNode name n args -> return $ CNode name (n-1) (args ++ [arg])
               _ -> error $ "weird apply: " ++ show fn
+
+applyPrim
+    = mkPrimitive "apply" $ return $ \(AnyArg fn) (AnyArg arg) ->
+      do case fn of
+           FNode name fn 1 args -> fn (args ++ [arg])
+           FNode name fn 0 args -> error "apply: over application?"
+           FNode name fn n args -> return $ FNode name fn (n-1) (args ++ [arg])
+           CNode name 0 args -> error "apply: over application?"
+           CNode name n args -> return $ CNode name (n-1) (args ++ [arg])
+           _ -> error $ "weird apply: " ++ show fn
 
 newArrayPrim
     = mkPrimitive "newArray#" $
