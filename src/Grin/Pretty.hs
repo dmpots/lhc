@@ -65,7 +65,7 @@ ppExpression qual (Case value alts)
     = text "case" <+> ppValue qual value <+> text "of" <$$>
       indent 2 (vsep (map (ppAlt qual) alts))
 ppExpression qual (Application fn args)
-    = hsep (ppRenamed Map.empty fn:map (ppRenamed Map.empty) args)
+    = hsep (ppRenamed qual fn:map (ppRenamed qual) args)
 ppExpression qual (Store v)
     = text "store" <+> ppValue qual v
 ppExpression qual (a :>>= Empty :-> c)
@@ -80,11 +80,11 @@ ppAlt qual (value :-> exp) = ppValue qual value <$$>
 
 ppValue qual (Node name nodeType args)
     = parens (hsep (ppNodeType qual nodeType name : map (ppRenamed qual) args))
-ppValue qual (Vector vs) = brackets (hsep (map (ppRenamed Map.empty) vs))
+ppValue qual (Vector vs) = brackets (hsep (map (ppRenamed qual) vs))
 ppValue qual (Hole size) = parens (text "@hole" <+> hsep (replicate size (char '_')))
 ppValue qual Empty = text "()"
 ppValue qual (Lit lit) = ppLit lit
-ppValue qual (Variable variable) = ppRenamed Map.empty variable
+ppValue qual (Variable variable) = ppRenamed qual variable
 
 ppLit (Lint i) = integer i
 ppLit (Lrational r) = text (show r)
