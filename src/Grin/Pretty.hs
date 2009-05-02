@@ -3,78 +3,88 @@ module Grin.Pretty
     , ppExpression
     ) where
 
+import CompactString
 import Grin.Types
 
 import Text.PrettyPrint.ANSI.Leijen
 
+import qualified Data.Map as Map
+
+type QualMap = Map.Map CompactString Bool
+
+grinQualMap :: Grin -> QualMap
+grinQualMap grin
+    = Map.unionsWith (\_ _ -> True) [nodeMap, funcMap]
+    where nodeMap = Map.fromListWith (\_ _ -> True) [ (name, False) | NodeDef{nodeName = Aliased _ name} <- grinNodes grin ]
+          funcMap = Map.fromListWith (\_ _ -> True) [ (name, False) | FuncDef{funcDefName = Aliased _ name} <- grinFunctions grin ]
 
 ppGrin :: Grin -> Doc
 ppGrin grin
     = dullblue (text "Nodes:") <$$>
-      vsep (map ppNodeDef (grinNodes grin)) <$$>
+      vsep (map (ppNodeDef qualMap) (grinNodes grin)) <$$>
       dullblue (text "CAFs:") <$$>
-      vsep (map ppCAF (grinCAFs grin)) <$$>
+      vsep (map (ppCAF qualMap) (grinCAFs grin)) <$$>
       dullblue (text "Functions:") <$$>
-      vsep (map ppFuncDef (grinFunctions grin))
+      vsep (map (ppFuncDef qualMap) (grinFunctions grin))
+    where qualMap = grinQualMap grin
 
-ppNodeDef :: NodeDef -> Doc
-ppNodeDef (NodeDef name nodeType args)
-    = text "node" <+> ppNodeType nodeType name <+> hsep (map ppType args)
+ppNodeDef :: QualMap -> NodeDef -> Doc
+ppNodeDef qual (NodeDef name nodeType args)
+    = text "node" <+> ppNodeType qual nodeType name <+> hsep (map ppType args)
 
 ppType PtrType  = blue (text "*")
 ppType WordType = white (text "#")
 
-ppNodeType (ConstructorNode 0) name  = char 'C' <> pretty name
-ppNodeType (ConstructorNode n) name  = char 'P' <> int n <> pretty name
-ppNodeType (FunctionNode 0) name = char 'F' <> pretty name
-ppNodeType (FunctionNode n) name = char 'P' <> int n <> pretty name
+ppNodeType qual (ConstructorNode 0) name  = char 'C' <> ppRenamed qual name
+ppNodeType qual (ConstructorNode n) name  = char 'P' <> int n <> ppRenamed qual name
+ppNodeType qual (FunctionNode 0) name = char 'F' <> ppRenamed qual name
+ppNodeType qual (FunctionNode n) name = char 'P' <> int n <> ppRenamed qual name
 
-instance Pretty Renamed where
-    pretty (Aliased n var) = pretty var -- <> char '_' <> pretty n
-    pretty (Anonymous n)   = char 'x' <> pretty n
-    pretty (Builtin p)     = char '@' <> pretty p
-    pretty (External e)    = parens (text "foreign" <+> text e)
+ppRenamed qual (Aliased n var) = pretty var <> if Map.findWithDefault False var qual then char '_' <> pretty n else empty
+ppRenamed qual (Anonymous n)   = char 'x' <> pretty n
+ppRenamed qual (Builtin p)     = char '@' <> pretty p
+ppRenamed qual (External e)    = parens (text "foreign" <+> text e)
 
-ppCAF :: CAF -> Doc
-ppCAF (CAF name value)
-    = pretty name <+> equals <+> ppValue value
+ppCAF :: QualMap -> CAF -> Doc
+ppCAF qual (CAF name value)
+    = ppRenamed qual name <+> equals <+> ppValue qual value
 
-ppFuncDef :: FuncDef -> Doc
-ppFuncDef (FuncDef name args body)
-    = hsep (pretty name : map pretty args) <+> equals <$$>
-      indent 2 (ppBeginExpression body)
+ppFuncDef :: QualMap -> FuncDef -> Doc
+ppFuncDef qual (FuncDef name args body)
+    = hsep (ppRenamed qual name : map (ppRenamed qual) args) <+> equals <$$>
+      indent 2 (ppBeginExpression qual body)
 
-ppBeginExpression :: Expression -> Doc
-ppBeginExpression e@(_ :>>= _)
-    = hang 3 (text "do" <+> ppExpression e)
-ppBeginExpression e = ppExpression e
+ppBeginExpression :: QualMap -> Expression -> Doc
+ppBeginExpression qual e@(_ :>>= _)
+    = hang 3 (text "do" <+> ppExpression qual e)
+ppBeginExpression qual e = ppExpression qual e
 
-ppExpression :: Expression -> Doc
-ppExpression (Unit value) = text "unit" <+> ppValue value
-ppExpression (Case value alts)
-    = text "case" <+> ppValue value <+> text "of" <$$>
-      indent 2 (vsep (map ppAlt alts))
-ppExpression (Application fn args)
-    = hsep (pretty fn:map pretty args)
-ppExpression (Store v)
-    = text "store" <+> ppValue v
-ppExpression (a :>>= Empty :-> c)
-    = ppExpression a <$$>
-      ppExpression c
-ppExpression (a :>>= b :-> c)
-    = ppValue b <+> text "<-" <+> hang 0 (ppBeginExpression a) <$$>
-      ppExpression c
+ppExpression :: QualMap -> Expression -> Doc
+ppExpression qual (Unit value) = text "unit" <+> ppValue qual value
+ppExpression qual (Case value alts)
+    = text "case" <+> ppValue qual value <+> text "of" <$$>
+      indent 2 (vsep (map (ppAlt qual) alts))
+ppExpression qual (Application fn args)
+    = hsep (ppRenamed Map.empty fn:map (ppRenamed Map.empty) args)
+ppExpression qual (Store v)
+    = text "store" <+> ppValue qual v
+ppExpression qual (a :>>= Empty :-> c)
+    = ppExpression qual a <$$>
+      ppExpression qual c
+ppExpression qual (a :>>= b :-> c)
+    = ppValue qual b <+> text "<-" <+> hang 0 (ppBeginExpression qual a) <$$>
+      ppExpression qual c
 
-ppAlt (value :-> exp) = ppValue value <$$>
-                        indent 2 (text "->" <+> align (ppBeginExpression exp))
+ppAlt qual (value :-> exp) = ppValue qual value <$$>
+                             indent 2 (text "->" <+> align (ppBeginExpression qual exp))
 
-ppValue (Node name nodeType args)
-    = parens (hsep (ppNodeType nodeType name : map pretty args))
-ppValue (Vector vs) = brackets (hsep (map pretty vs))
-ppValue (Hole size) = parens (text "@hole" <+> hsep (replicate size (char '_')))
-ppValue Empty = text "()"
-ppValue (Lit lit) = ppLit lit
-ppValue (Variable variable) = pretty variable
+ppValue qual (Node name nodeType args)
+    = parens (hsep (ppNodeType qual nodeType name : map (ppRenamed qual) args))
+ppValue qual (Vector vs) = brackets (hsep (map (ppRenamed Map.empty) vs))
+ppValue qual (Hole size) = parens (text "@hole" <+> hsep (replicate size (char '_')))
+ppValue qual Empty = text "()"
+ppValue qual (Lit lit) = ppLit lit
+ppValue qual (Variable variable) = ppRenamed Map.empty variable
 
 ppLit (Lint i) = integer i
 ppLit (Lrational r) = text (show r)
