@@ -109,15 +109,17 @@ compValue (Grin.Vector vs)
                      return $ Vector vs''
 
 runCase :: EvalValue -> [(Grin.Value, CompValue)] -> CompValue
-runCase val (x@(Grin.Variable{}, e) : y : ys)
-    = runCase val (y:x:ys)
-runCase val [(Grin.Variable name, e)]
-    = local (Map.insert name val) e
-runCase val ((b,c):xs)
-    = case doesMatch val b of
-        Nothing -> runCase val xs
-        Just fn -> fn c
-runCase val [] = error $ "runCase: " ++ show val
+runCase val cases
+    = worker cases
+    where worker (x@(Grin.Variable{}, e) : y : ys)
+              = worker (y:x:ys)
+          worker [(Grin.Variable name, e)]
+              = local (Map.insert name val) e
+          worker ((b,c):xs)
+              = case doesMatch val b of
+                  Nothing -> worker xs
+                  Just fn -> fn c
+          worker [] = error $ "runCase: " ++ show (val, map fst cases)
 
 doesMatch :: EvalValue -> Grin.Value -> Maybe (CompValue -> CompValue)
 doesMatch val (Grin.Variable var)
