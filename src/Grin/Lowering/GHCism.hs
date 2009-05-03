@@ -88,6 +88,16 @@ lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
 lowerExpression (Application (Builtin "raiseIO#") [exp, realWorld])
     = return $ Application (Builtin "raise#") [exp]
 
+lowerExpression (Application (Builtin "catch#") [fn, handler, realworld])
+    = do v <- newVariable
+         return $ Application (Builtin "eval") [fn] :>>= Variable v :-> Application (Builtin "apply") [v, realworld]
+lowerExpression (Application (Builtin "blockAsyncExceptions#") [fn, realworld])
+    = do v <- newVariable
+         return $ Application (Builtin "eval") [fn] :>>= Variable v :-> Application (Builtin "apply") [v, realworld]
+lowerExpression (Application (Builtin "unblockAsyncExceptions#") [fn, realworld])
+    = do v <- newVariable
+         return $ Application (Builtin "eval") [fn] :>>= Variable v :-> Application (Builtin "apply") [v, realworld]
+
 lowerExpression (Application fn vs)
     = return $ Application fn vs
 lowerExpression (Case scrut alts)
