@@ -62,8 +62,8 @@ simpleLambda (v :-> e) = do e' <- simpleExpression e
 simpleValue :: Value -> Opt Value
 simpleValue (Variable v)
     = liftM Variable $ doSubst v
-simpleValue (Node name ty args)
-    = liftM (Node name ty) $ doSubsts args
+simpleValue (Node name ty missing args)
+    = liftM (Node name ty missing) $ doSubsts args
 simpleValue (Vector vs)
     = liftM Vector $ doSubsts vs
 simpleValue v@Lit{}  = return v

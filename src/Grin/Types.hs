@@ -44,8 +44,8 @@ data NodeDef
   FunctionNodes represents suspended functions which may be partially applied.
 -}
 data NodeType
-    = ConstructorNode Int
-    | FunctionNode Int    -- Function node with number of 'missing' arguments.
+    = ConstructorNode
+    | FunctionNode
     deriving (Show,Eq,Ord)
 
 data Type
@@ -92,7 +92,7 @@ alias (Aliased _ name) = Just name
 alias _ = Nothing
 
 data Value
-    = Node Renamed NodeType [Renamed]
+    = Node Renamed NodeType Int [Renamed]
     | Vector [Renamed]
     | Lit Lit
     | Variable Renamed

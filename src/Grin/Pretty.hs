@@ -14,9 +14,10 @@ type QualMap = Map.Map CompactString Bool
 
 grinQualMap :: Grin -> QualMap
 grinQualMap grin
-    = Map.unionsWith (\_ _ -> True) [nodeMap, funcMap]
+    = Map.unionsWith (\_ _ -> True) [nodeMap, funcMap, argsMap]
     where nodeMap = Map.fromListWith (\_ _ -> True) [ (name, False) | NodeDef{nodeName = Aliased _ name} <- grinNodes grin ]
           funcMap = Map.fromListWith (\_ _ -> True) [ (name, False) | FuncDef{funcDefName = Aliased _ name} <- grinFunctions grin ]
+          argsMap = Map.fromListWith (\_ _ -> True) [ (name, False) | func <- grinFunctions grin, Aliased _ name <- funcDefArgs func ]
 
 ppGrin :: Grin -> Doc
 ppGrin grin
@@ -30,17 +31,17 @@ ppGrin grin
 
 ppNodeDef :: QualMap -> NodeDef -> Doc
 ppNodeDef qual (NodeDef name nodeType args)
-    = text "node" <+> ppNodeType qual nodeType name <+> hsep (map ppType args)
+    = text "node" <+> ppNodeType qual nodeType 0 name <+> hsep (map ppType args)
 
 ppType PtrType  = blue (text "*")
 ppType WordType = white (text "#")
 
-ppNodeType qual (ConstructorNode 0) name  = char 'C' <> ppRenamed qual name
-ppNodeType qual (ConstructorNode n) name  = char 'P' <> int n <> ppRenamed qual name
-ppNodeType qual (FunctionNode 0) name = char 'F' <> ppRenamed qual name
-ppNodeType qual (FunctionNode n) name = char 'P' <> int n <> ppRenamed qual name
+ppNodeType qual ConstructorNode 0 name  = char 'C' <> ppRenamed qual name
+ppNodeType qual ConstructorNode n name  = char 'P' <> int n <> ppRenamed qual name
+ppNodeType qual FunctionNode 0 name = char 'F' <> ppRenamed qual name
+ppNodeType qual FunctionNode n name = char 'P' <> int n <> ppRenamed qual name
 
-ppRenamed qual (Aliased n var) = pretty var <> if Map.findWithDefault False var qual then char '_' <> pretty n else empty
+ppRenamed qual (Aliased n var) = pretty var <> if True || Map.findWithDefault False var qual then char '_' <> pretty n else empty
 ppRenamed qual (Anonymous n)   = char 'x' <> pretty n
 ppRenamed qual (Builtin p)     = char '@' <> pretty p
 ppRenamed qual (External e)    = parens (text "foreign" <+> text e)
@@ -78,8 +79,8 @@ ppExpression qual (a :>>= b :-> c)
 ppAlt qual (value :-> exp) = ppValue qual value <$$>
                              indent 2 (text "->" <+> align (ppBeginExpression qual exp))
 
-ppValue qual (Node name nodeType args)
-    = parens (hsep (ppNodeType qual nodeType name : map (ppRenamed qual) args))
+ppValue qual (Node name nodeType missing args)
+    = parens (hsep (ppNodeType qual nodeType missing name : map (ppRenamed qual) args))
 ppValue qual (Vector vs) = brackets (hsep (map (ppRenamed qual) vs))
 ppValue qual (Hole size) = parens (text "@hole" <+> hsep (replicate size (char '_')))
 ppValue qual Empty = text "()"

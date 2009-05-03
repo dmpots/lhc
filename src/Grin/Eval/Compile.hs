@@ -90,11 +90,11 @@ compExpression (Case val alts)
                      runCase val'' (zip binds cases')
 
 compValue :: Grin.Value -> Gen CompValue
-compValue (Grin.Node name (Grin.ConstructorNode n) args)
+compValue (Grin.Node name Grin.ConstructorNode n args)
     = do args' <- mapM lookupVariable args
          return $ do args'' <- mapM id args'
                      return $ CNode name n args''
-compValue (Grin.Node name (Grin.FunctionNode n) args)
+compValue (Grin.Node name Grin.FunctionNode n args)
     = do fn <- lookupFunction name
          args' <- mapM lookupVariable args
          return $ do args'' <- mapM id args'
@@ -122,12 +122,14 @@ runCase val [] = error $ "runCase: " ++ show val
 doesMatch :: EvalValue -> Grin.Value -> Maybe (CompValue -> CompValue)
 doesMatch val (Grin.Variable var)
     = Just $ local (Map.insert var val)
-doesMatch (CNode tag _ args) (Grin.Node bTag _ bArgs) | tag == bTag && length args == length bArgs
+doesMatch (CNode tag _ args) (Grin.Node bTag _ _ bArgs) | tag == bTag && length args == length bArgs
     = bindLambdas (zip args $ map Grin.Variable bArgs)
 doesMatch (Vector vs1) (Grin.Vector vs2) | length vs1 == length vs2
     = bindLambdas (zip vs1 $ map Grin.Variable vs2)
 doesMatch (Lit litA) (Grin.Lit litB) | litA == litB
     = Just id
+doesMatch (FNode name fn arity args) (Grin.Node tag FunctionNode n args') | name == tag && arity == n
+    = bindLambdas (zip args $ map Grin.Variable args')
 doesMatch _ Grin.Empty
     = Just id
 doesMatch from to

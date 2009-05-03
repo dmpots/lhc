@@ -48,8 +48,8 @@ lowerExpression (Application (Builtin fn) [a,b]) | fn `elem` [">=#",">#","==#","
          fnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.False"
          v <- newVariable
          return $ Application (Builtin fn) [a,b] :>>= Variable v :->
-                  Case (Variable v) [Lit (Lint 0) :-> Unit (Node fnode (ConstructorNode 0) [])
-                                    ,Lit (Lint 1) :-> Unit (Node tnode (ConstructorNode 0) [])]
+                  Case (Variable v) [Lit (Lint 0) :-> Unit (Node fnode ConstructorNode 0 [])
+                                    ,Lit (Lint 1) :-> Unit (Node tnode ConstructorNode 0 [])]
 
 -- MVars
 lowerExpression (Application (Builtin "newMVar#") [realWorld])

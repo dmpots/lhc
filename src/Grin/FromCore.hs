@@ -49,7 +49,7 @@ tdefsToNodes tdefs fn
 tdefToNode :: SimpleType -> M NodeDef
 tdefToNode stype
     = do name <- lookupVariable (simpleTypeName stype)
-         return (NodeDef name (ConstructorNode 0) (replicate (simpleTypeArity stype) PtrType))
+         return (NodeDef name ConstructorNode (replicate (simpleTypeArity stype) PtrType))
 
 
 splitCAFs :: [SimpleDef] -> ([SimpleDef], [(Variable,Variable)])
@@ -74,7 +74,7 @@ defToCAF (varName, fnName)
     = do var <- lookupVariable varName
          fn <- lookupVariable fnName
          return $ CAF { cafName = var
-                      , cafValue = Node fn (FunctionNode 0) [] }
+                      , cafValue = Node fn FunctionNode 0 [] }
 
 bindCAFs :: [(Variable,Variable)] -> M a -> M a
 bindCAFs vs fn = bindVariables (map fst vs) $ \_ -> fn
@@ -128,14 +128,14 @@ translate cxt simplExp
                            Strict | not isUnboxed -> return $ eval name
                            _                      -> return $ Unit (Variable name)
               Just n  -> case cxt of
-                           Strict -> return $ Unit (Node name (FunctionNode n) [])
-                           Lazy   -> return $ Store (Node name (FunctionNode n) [])
+                           Strict -> return $ Unit (Node name FunctionNode n [])
+                           Lazy   -> return $ Store (Node name FunctionNode n [])
        Dcon con ->
          do name <- lookupVariable con
             Just n <-findArity con
             case cxt of
-              Strict -> return $ Unit (Node name (ConstructorNode n) [])
-              Lazy   -> return $ Store (Node name (ConstructorNode n) [])
+              Strict -> return $ Unit (Node name ConstructorNode n [])
+              Lazy   -> return $ Store (Node name ConstructorNode n [])
        Simple.Lit lit ->
          return $ Unit (Grin.Lit lit)
        Let bind func args arity e ->
@@ -143,7 +143,7 @@ translate cxt simplExp
          do func' <- lookupVariable func
             args' <- mapM lookupVariable args
             e' <- translate cxt e
-            return $ Store (Node func' (FunctionNode (arity-length args)) args') :>>= Variable bind' :-> e'
+            return $ Store (Node func' FunctionNode (arity-length args) args') :>>= Variable bind' :-> e'
        LetStrict bind fn e ->
          bindVariable bind $ \bind' ->
          do fn' <- translate Strict fn
@@ -164,7 +164,7 @@ translate cxt simplExp
                                                  case mbArity of
                                                    Nothing -> case cxt of Lazy -> mkApplyLazy vs name; Strict -> mkApplyStrict vs name
                                                    Just n  -> do let (now,later) = splitAt n vs
-                                                                 let node = Node name (FunctionNode (n-length now)) now
+                                                                 let node = Node name FunctionNode (n-length now) now
                                                                  case cxt of
                                                                    Lazy -> do v <- newVariable
                                                                               ap <- mkApplyLazy later v
@@ -180,8 +180,8 @@ translate cxt simplExp
                          Dcon con -> do name <- lookupVariable con
                                         Just n <- findArity con
                                         case cxt of
-                                          Strict -> return $ Unit (Node name (ConstructorNode (n-length vs)) vs)
-                                          Lazy   -> return $ Store (Node name (ConstructorNode (n-length vs)) vs)
+                                          Strict -> return $ Unit (Node name ConstructorNode (n-length vs) vs)
+                                          Lazy   -> return $ Store (Node name ConstructorNode (n-length vs) vs)
                          e -> do e' <- translate Lazy e
                                  v  <- newVariable
                                  app <- case cxt of Lazy -> mkApplyLazy vs v; Strict -> mkApplyStrict vs v
@@ -254,11 +254,11 @@ fn f = eval f >>= \v -> apply v fibs
 -}
 
 update bind fn args arity var
-    = Unit (Node fn (FunctionNode (arity-length args)) args) :>>= Variable var :->
+    = Unit (Node fn FunctionNode (arity-length args) args) :>>= Variable var :->
       Application (Builtin $ fromString "update") [bind, var]
 eval v = Application (Builtin $ fromString "eval") [v]
 apply a b = Application (Builtin $ fromString "apply") [a,b]
-applyCell a b = Store (Node (Builtin $ fromString "evalApply") (FunctionNode 0) [a,b])
+applyCell a b = Store (Node (Builtin $ fromString "evalApply") FunctionNode 0 [a,b])
 
 -- Translate a Core alternative to a Grin alternative
 alternative :: (SimpleExp -> M Expression) -> Simple.Alt -> M Lambda
@@ -270,7 +270,7 @@ alternative fn (Acon con bs e)
     = bindVariables bs $ \renamed ->
       do e' <- fn e
          name <- lookupVariable con
-         return $ Node name (ConstructorNode 0) renamed :-> e'
+         return $ Node name ConstructorNode 0 renamed :-> e'
 alternative fn (Adefault e)
     = do e' <- fn e
          v <- newVariable
