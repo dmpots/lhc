@@ -1,3 +1,4 @@
+-- TODO: Use unicode for the symbols.
 module Grin.Pretty
     ( ppGrin
     , ppExpression
@@ -36,10 +37,12 @@ ppNodeDef qual (NodeDef name nodeType args)
 ppType PtrType  = blue (text "*")
 ppType WordType = white (text "#")
 
-ppNodeType qual ConstructorNode 0 name  = char 'C' <> ppRenamed qual name
-ppNodeType qual ConstructorNode n name  = char 'P' <> int n <> ppRenamed qual name
-ppNodeType qual FunctionNode 0 name = char 'F' <> ppRenamed qual name
-ppNodeType qual FunctionNode n name = char 'P' <> int n <> ppRenamed qual name
+ppNodeType qual nt n name
+    = green (worker qual nt n name)
+    where worker qual ConstructorNode 0 name  = char 'C' <> ppRenamed qual name
+          worker qual ConstructorNode n name  = char 'P' <> int n <> ppRenamed qual name
+          worker qual FunctionNode 0 name = char 'F' <> ppRenamed qual name
+          worker qual FunctionNode n name = char 'P' <> int n <> ppRenamed qual name
 
 ppRenamed qual (Aliased n var) = pretty var <> if True || Map.findWithDefault False var qual then char '_' <> pretty n else empty
 ppRenamed qual (Anonymous n)   = char 'x' <> pretty n
@@ -61,14 +64,14 @@ ppBeginExpression qual e@(_ :>>= _)
 ppBeginExpression qual e = ppExpression qual e
 
 ppExpression :: QualMap -> Expression -> Doc
-ppExpression qual (Unit value) = text "unit" <+> ppValue qual value
+ppExpression qual (Unit value) = blue (text "unit") <+> ppValue qual value
 ppExpression qual (Case value alts)
-    = text "case" <+> ppValue qual value <+> text "of" <$$>
+    = blue (text "case") <+> ppValue qual value <+> blue (text "of") <$$>
       indent 2 (vsep (map (ppAlt qual) alts))
 ppExpression qual (Application fn args)
     = hsep (ppRenamed qual fn:map (ppRenamed qual) args)
 ppExpression qual (Store v)
-    = text "store" <+> ppValue qual v
+    = blue (text "store") <+> ppValue qual v
 ppExpression qual (a :>>= Empty :-> c)
     = ppExpression qual a <$$>
       ppExpression qual c
