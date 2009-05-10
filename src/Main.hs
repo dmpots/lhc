@@ -18,6 +18,7 @@ import Grin.Pretty
 import qualified Grin.SimpleCore.DeadCode as Simple
 import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
+import qualified Grin.HtmlAnnotate as Html
 
 main :: IO ()
 main = do args <- getArgs
