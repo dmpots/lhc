@@ -29,7 +29,6 @@ main :: IO ()
 main = do args <- getArgs
           case args of
             [] -> error "No arguments!"
-            ["libcheck"]      -> error "TODO"
             ("install":files) -> mapM_ installCoreFile files
             ("build":file:args)   -> build Build file args
             ("eval":file:args)    -> build Eval file args
