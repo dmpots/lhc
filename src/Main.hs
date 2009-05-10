@@ -20,6 +20,11 @@ import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
 import qualified Grin.HtmlAnnotate as Html
 
+import Grin.Rename
+import qualified Grin.HPT as HPT
+import qualified Grin.Lowering.Apply as Apply
+
+-- TODO: We need proper command line parsing.
 main :: IO ()
 main = do args <- getArgs
           case args of
@@ -67,18 +72,36 @@ build action file args
              (tdefs, defs) = Simple.removeDeadCode [("main","Main")]  ["main::Main.main"] allModules
              grin = coreToGrin tdefs defs
              opt = iterate Simple.optimize grin !! 2
+             applyLowered = Apply.lower opt
+             hpt = HPT.analyze applyLowered
+             evalLowered = HPT.lower hpt applyLowered
+             opt' = iterate Simple.optimize evalLowered !! 2
+             out = opt'
          case action of
-           Build -> print (ppGrin opt)
-           Eval  -> Compile.runGrin opt "main::Main.main" args >> return ()
+           Build -> print (ppGrin out)
+           Eval  -> Compile.runGrin out "main::Main.main" args >> return ()
            Compile -> do let target = replaceExtension file "lhc"
-                             grinTarget = replaceExtension file "grin"
-                         writeFile grinTarget (show $ ppGrin opt)
+                         outputGrin target "_raw" grin
+                         outputGrin target "_simple" opt
+                         outputGrin target "_apply" applyLowered
+                         outputGrin target "_eval" evalLowered
+                         --outputAnnotation target "_eval.html" Map.empty evalLowered
+                         outputGrin target "" out
+                         --outputAnnotation target ".html" Map.empty out
+
                          lhc <- findExecutable "lhc"
                          L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
-                                                        , encode opt ]
+                                                        , encode out ]
                          perm <- getPermissions target
                          setPermissions target perm{executable = True}
 
+outputGrin file variant grin
+    = do let outputFile = replaceExtension file ("grin"++variant)
+         writeFile outputFile (show $ ppGrin grin)
+
+outputAnnotation file variant annotation grin
+    = do let outputFile = replaceExtension file ("grin"++variant)
+         writeFile outputFile (Html.annotate annotation grin)
 
 execute :: FilePath -> [String] -> IO ()
 execute path args
