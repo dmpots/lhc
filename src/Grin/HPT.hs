@@ -12,6 +12,7 @@ import Data.Monoid
 import Control.Monad.RWS
 import Control.Monad.State
 import Control.Monad.Reader
+import Control.Monad.Writer
 
 import Debug.Trace
 
@@ -234,12 +235,13 @@ solve eqs
     = let iterate [] = return ()
           iterate ((lhs,rhs):xs)
               = do reducedRhs <- reduceEqs rhs
-                   modify $ Map.insertWith mappend lhs reducedRhs
+                   orig <- lookupEq lhs
+                   when (orig /= reducedRhs) $ tell $ Endo $ Map.insertWith mappend lhs reducedRhs
                    iterate xs
-          loop prev = case execState (iterate (Map.toList eqs)) prev of
-                        absEqs -> if prev == absEqs then absEqs
-                                  else loop absEqs
-      in loop Map.empty
+          loop prev = case appEndo (execWriter (runReaderT (iterate (Map.toList eqs)) prev)) Map.empty of
+                        newDefs -> let next = (Map.unionWith mappend prev newDefs)
+                                   in if prev == next then next else loop next
+      in loop (Map.map (const mempty) eqs)
 
 reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
                          return $ mconcat rhs'
@@ -303,11 +305,11 @@ reduceEq (PartialApply a b)
 reduceEq (Update hp val)
     = do Rhs hps <- lookupEq (VarEntry hp)
          valRhs  <- lookupEq (VarEntry val)
-         forM_ hps $ \(Heap hp) -> modify $ Map.insertWith mappend (HeapEntry hp) valRhs
+         forM_ hps $ \(Heap hp) -> tell $ Endo $ Map.insertWith mappend (HeapEntry hp) valRhs
          return mempty
 
 lookupEq lhs
-    = gets $ Map.findWithDefault mempty lhs
+    = asks $ Map.findWithDefault mempty lhs
 
 
 
@@ -353,13 +355,13 @@ lowerExpression (Application (Builtin "eval") [a])
                                          Case (Variable f) alts :>>= Variable v :->
                                          Application (Builtin "update") [a,v] :>>= Empty :->
                                          Unit (Variable v)
-           Nothing -> error $ "Urk!"
+           Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application (Builtin "apply") [a,b])
     = do HeapAnalysis hpt <- ask
          case Map.lookup (VarEntry a) hpt of
            Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [b]) rhs
                                 return $ Case (Variable a) alts
-           Nothing -> error $ "Urk!"
+           Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application fn args)
     = return $ Application fn args
 lowerExpression (Case scrut alts)
