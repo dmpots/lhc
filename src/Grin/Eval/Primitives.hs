@@ -123,6 +123,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
 
 -- Primitive definitions
 
+-- FIXME: Throw an error when values of different types are compared.
 equal = mkPrimitive "==#" $ binOp (==)
 gt    = mkPrimitive ">#" $ binOp (>)
 lt    = mkPrimitive "<#" $ binOp (<)

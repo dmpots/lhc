@@ -22,6 +22,8 @@ module Grin.SimpleCore
 import Grin.Types (Variable)
 import Grin.SimpleCore.Types
 import Language.Core (Ty,Tdef,Vdef(..))
+-- TODO: The Language.Core library uses parsec and is fairly slow. We could write
+-- TODO: a faster version using Happy.
 import qualified Language.Core as Core
 
 import CompactString

@@ -70,6 +70,7 @@ data Expression
 
 type Variable = CompactString
 
+-- FIXME: Writer manual Eq and Ord instances for Renamed.
 data Renamed = Aliased Int CompactString
              | Anonymous Int
              | Builtin CompactString
