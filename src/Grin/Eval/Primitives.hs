@@ -108,7 +108,7 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                   , readInt32OffAddr, readInt8OffAddr, readAddrOffAddr
                   , writeInt8OffAddr
                   , writeCharArray
-                  , touch
+                  , touch, makeStablePtr, writeStablePtrOffAddr
                   , noDuplicate
                   , realWorldPrim, myThreadIdPrim, raisePrim
                   , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
@@ -185,6 +185,14 @@ writeCharArray
 
 touch
     = mkPrimitive "touch#" $ return $ \(AnyArg _) RealWorld ->
+      noScope $ return realWorld
+
+makeStablePtr
+    = mkPrimitive "makeStablePtr#" $ return $ \(AnyArg a) RealWorld ->
+      noScope $ return $ Vector [realWorld, Lit (Lstring "stable pointer")]
+
+writeStablePtrOffAddr
+    = mkPrimitive "writeStablePtrOffAddr#" $ return $ \(PtrArg p) (IntArg n) (AnyArg stablePtr) RealWorld ->
       noScope $ return realWorld
 
 noDuplicate = mkPrimitive "noDuplicate#" $ return $ \RealWorld -> noScope $ return realWorld
