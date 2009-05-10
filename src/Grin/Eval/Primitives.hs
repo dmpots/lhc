@@ -102,20 +102,22 @@ listPrimitives globalScope
 allPrimitives :: Map.Map CompactString (GlobalScope -> Primitive)
 allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
     where prims = [ equal, gt, lt, gte, lte
-                     , plus, minus, times, remInt, quotInt, addIntC
-                     , indexCharOffAddr
-                     , readInt32OffAddr, readInt8OffAddr, readAddrOffAddr
-                     , writeCharArray
-                     , touch
-                     , noDuplicate
-                     , realWorldPrim, myThreadIdPrim, raisePrim
-                     , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
-                     , newPinnedByteArray, newAlignedPinnedByteArray
-                     , unsafeFreezeByteArray, byteArrayContents
-                     , updatePrim, fetchPrim, evalPrim, evalApplyPrim, applyPrim
-                     , newArrayPrim, readArray, writeArray
-                     , narrow8Word, narrow32Int, negateInt
-                     , mkWeak]
+                  , chrPrim, ordPrim
+                  , plus, minus, times, remInt, quotInt, addIntC
+                  , indexCharOffAddr
+                  , readInt32OffAddr, readInt8OffAddr, readAddrOffAddr
+                  , writeInt8OffAddr
+                  , writeCharArray
+                  , touch
+                  , noDuplicate
+                  , realWorldPrim, myThreadIdPrim, raisePrim
+                  , catchPrim, blockAsyncExceptions, unblockAsyncExceptions
+                  , newPinnedByteArray, newAlignedPinnedByteArray
+                  , unsafeFreezeByteArray, byteArrayContents
+                  , updatePrim, fetchPrim, evalPrim, evalApplyPrim, applyPrim
+                  , newArrayPrim, readArray, writeArray
+                  , narrow8Word, narrow8Int, narrow32Int, negateInt
+                  , mkWeak]
 
 
 
@@ -132,6 +134,9 @@ minus = mkPrimitive "-#" $ binIntOp (-)
 times = mkPrimitive "*#" $ binIntOp (*)
 remInt = mkPrimitive "remInt#" $ binIntOp rem
 quotInt = mkPrimitive "quotInt#" $ binIntOp quot
+
+chrPrim = mkPrimitive "chr#" $ return $ \(CharArg c) -> noScope $ return (Lit (Lchar c))
+ordPrim = mkPrimitive "ord#" $ return $ \(IntArg i) -> noScope $ return (Lit (Lint $ fromIntegral i))
 
 addIntC = mkPrimitive "addIntC#" $
              return $ \(IntArg a) (IntArg b) ->
@@ -157,6 +162,12 @@ readInt8OffAddr
          return $ \(PtrArg ptr) (IntArg nth) RealWorld ->
                    noScope $ do i <-  peekElemOff (castPtr ptr) nth
                                 return $ Vector [realWorld, fromInt (fromIntegral (i::Int8))]
+
+writeInt8OffAddr
+    = mkPrimitive "writeInt8OffAddr#" $
+      return $ \(PtrArg ptr) (IntArg nth) (IntArg elt) RealWorld ->
+               noScope $ do poke (ptr `plusPtr` nth) (fromIntegral elt :: Word8)
+                            return realWorld
 
 readAddrOffAddr
     = mkPrimitive "readAddrOffAddr#" $
@@ -319,6 +330,8 @@ narrow32Int
 
 narrow8Word
     = mkPrimitive "narrow8Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+narrow8Int
+    = mkPrimitive "narrow8Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
 
 negateInt
     = mkPrimitive "negateInt#" $ return $ \(IntArg i) -> noScope $ return (fromInt (negate i))

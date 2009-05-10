@@ -82,8 +82,8 @@ lowerExpression (Application (Builtin "plusAddr#") [a,b])
     = return $ Application (Builtin "+#") [a,b]
 lowerExpression (Application (Builtin "eqAddr#") [a,b])
     = lowerExpression $ Application (Builtin "==#") [a,b]
-lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
-    = return $ Unit (Variable a)
+--lowerExpression (Application (Builtin fn) [a]) | fn `elem` ["chr#", "ord#"]
+--    = return $ Unit (Variable a)
 
 lowerExpression (Application (Builtin "raiseIO#") [exp, realWorld])
     = return $ Application (Builtin "raise#") [exp]
