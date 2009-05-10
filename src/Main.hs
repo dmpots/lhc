@@ -20,7 +20,7 @@ import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
 import qualified Grin.HtmlAnnotate as Html
 
-import Grin.Rename
+--import Grin.Rename
 import qualified Grin.HPT as HPT
 import qualified Grin.Lowering.Apply as Apply
 
