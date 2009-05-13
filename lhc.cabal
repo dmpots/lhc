@@ -7,8 +7,7 @@ description:
   program analysis and other optimizations.
 Tested-With:         GHC == 6.10.1
 category:            Compiler
-license:             BSD3
-license-file:        COPYING
+license:             PublicDomain
 author:              David Himmelstrup
 maintainer:          lhc@projects.haskell.org
 homepage:            http://lhc.seize.it/
