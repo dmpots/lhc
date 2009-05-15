@@ -122,9 +122,9 @@ runTestCase cfg tc
                   , testCasePath tc `replaceExtension` "hcr" ] ++
                   cfgLHCOptions cfg ++
                   testCaseArgs tc
-           ghcArgs = ["-D__LHC__","-fforce-recomp","-fext-core","-O2","-c",testCasePath tc]
+           ghcArgs = ["-fforce-recomp","-fext-core","-O2","-c",testCasePath tc]
        when (cfgVerbose cfg >= 4) $ putStrLn $ unwords ("ghc":ghcArgs)
-       (ret,out,err) <- execProcess "ghc" ghcArgs B.empty
+       (ret,out,err) <- execProcess "lhc" ghcArgs B.empty
        case ret of
          ExitFailure c -> return $ CompileError $ unlines $ ["ghc failed with: " ++ show c, B.unpack err]
          ExitSuccess
