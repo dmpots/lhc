@@ -3,7 +3,7 @@
 -- two ways of printing the calendar ... as in B+W, or like UNIX `cal':
 
 import System.IO -- 1.3
-import System -- 1.3
+import System.Environment -- 1.3
 import Data.List -- 1.3
 import Data.Char -- 1.3
 

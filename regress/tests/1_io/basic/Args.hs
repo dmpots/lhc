@@ -1,4 +1,4 @@
-import System
+import System.Environment
 
 main :: IO ()
 main = do
