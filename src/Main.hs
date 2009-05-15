@@ -1,10 +1,11 @@
-module Main (main) where
+module LhcMain (tryMain) where
 
 import System.Directory
 import System.FilePath
 import System.Environment
 import qualified Data.ByteString.Lazy.Char8 as L
 import System.IO
+import System.Exit
 import qualified Data.Map as Map
 import Data.Binary
 import Data.Maybe
@@ -25,15 +26,15 @@ import qualified Grin.HPT as HPT
 import qualified Grin.Lowering.Apply as Apply
 
 -- TODO: We need proper command line parsing.
-main :: IO ()
-main = do args <- getArgs
-          case args of
-            [] -> error "No arguments!"
-            ("install":files) -> mapM_ installCoreFile files
-            ("build":file:args)   -> build Build file args
-            ("eval":file:args)    -> build Eval file args
-            ("compile":file:args) -> build Compile file args
-            ("execute":file:args)  -> execute file args
+tryMain :: IO ()
+tryMain = do args <- getArgs
+             case args of
+               ("install":files)      -> mapM_ installCoreFile files >> exitWith ExitSuccess
+               ("build":file:args)    -> build Build file args >> exitWith ExitSuccess
+               ("eval":file:args)     -> build Eval file args >> exitWith ExitSuccess
+               ("compile":file:args)  -> build Compile file args >> exitWith ExitSuccess
+               ("execute":file:args)  -> execute file args >> exitWith ExitSuccess
+               _ -> return ()
 
 
 installCoreFile :: FilePath -> IO ()
