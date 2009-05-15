@@ -21,14 +21,15 @@ flag lhc-regress
   default:            False
 
 Executable lhc
- main-is:             Main.hs
+ main-is:             GhcMain.hs
  Hs-Source-Dirs:      src
  ghc-prof-options:    -auto-all
  Extensions:
  build-depends:       base, mtl, bytestring, containers, ansi-wl-pprint, binary,
                       digest, bytestring-trie, core >=0.5, filepath, directory,
                       derive, unix, libffi, xhtml, pretty
- -- other-modules:       Paths_lhc
+ build-depends:       ghc>=6.10
+ other-modules:       Paths_lhc
 
  ghc-options:         -fwarn-unused-imports -fwarn-unused-binds -fwarn-incomplete-patterns
  if impl(ghc >= 6.10)

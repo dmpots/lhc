@@ -62,6 +62,8 @@ import Data.Maybe
 import Data.Word (Word)
 import Foreign.Storable (sizeOf)
 
+import qualified LhcMain as Lhc
+
 -----------------------------------------------------------------------------
 -- ToDo:
 
@@ -82,8 +84,11 @@ getLibdir
          return (appdir </> subdir)
 
 main :: IO ()
-main =
-  
+main = do Lhc.tryMain -- This call will exit if it recognized the command arguments.
+          ghcMain
+
+ghcMain :: IO ()
+ghcMain = 
   GHC.defaultErrorHandler defaultDynFlags $ do
   -- 1. extract the -B flag from the args
   argv0 <- getArgs
