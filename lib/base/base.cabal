@@ -30,6 +30,7 @@ Library {
       Data.HashTable
       Data.Typeable
       Data.Dynamic
+      Data.IORef
       Text.ParserCombinators.ReadP
       Text.Read.Lex
       Text.Show
