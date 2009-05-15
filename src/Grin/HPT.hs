@@ -236,38 +236,16 @@ solve :: Equations -> (Int, Equations)
 solve eqs
     = let iterate ls
               = forM_ ls $ \(lhs,rhs) ->
-                  do dead <- isDead lhs
-                     when (not dead) $
-                       do reducedRhs <- reduceEqs rhs
-                          addReduced lhs reducedRhs
-                          --dead <- rhsIsDead rhs
-                          {-traceOut (if dead then "" else "\nNot dead: " ++ show rhs ++ "\n") $ -}
-                          --when dead $ setDead lhs
-          loop iter dead prev
-              = case {-traceOut ("\nIteration: " ++ show iter ++ "\n") $-} (execWriter (runReaderT (iterate (Map.toList eqs)) (dead,prev))) of
-                  (newDead,newDefs) ->
+                  do reducedRhs <- reduceEqs rhs
+                     addReduced lhs reducedRhs
+          loop iter prev
+              = case {-traceOut ("\nIteration: " ++ show iter ++ "\n") $-} (execWriter (runReaderT (iterate (Map.toList eqs)) prev)) of
+                  newDefs ->
                     let next = (Map.unionWith mappend prev (appEndo newDefs Map.empty))
-                    in if prev == next then (iter, next) else loop (iter+1) (appEndo newDead dead) next
-      in loop 1 (Map.map (const False) eqs) (Map.map (const mempty) eqs)
+                    in if prev == next then (iter, next) else loop (iter+1) next
+      in loop 1 (Map.map (const mempty) eqs)
 
 traceOut str v = unsafePerformIO (putStr str) `seq` v
-
-rhsIsDead (Rhs vs) = liftM and $ mapM valueIsDead vs
-    where valueIsDead (Ident i) = isDead (VarEntry i)
-          valueIsDead (Heap hp) = isDead (HeapEntry hp)
-          valueIsDead Base      = return True
-          valueIsDead (Eval i)  = isDead (VarEntry i)
-          valueIsDead (Apply a b) = isDead (VarEntry a)
-          valueIsDead (Tag _fn FunctionNode n _args) | n >= 1 = return True
-          valueIsDead (Tag _fn _type _n args)
-              = liftM and $ mapM rhsIsDead args
-          valueIsDead (VectorTag args)
-              = liftM and $ mapM rhsIsDead args
-          valueIsDead (Extract rhs tag n)
-              = rhsIsDead rhs
-          valueIsDead (ExtractVector rhs n)
-              = rhsIsDead rhs
-          valueIsDead _ = return False
 
 
 a `isSubSetOf` b = b == (a `mappend` b)
@@ -276,11 +254,11 @@ addReduced lhs rhs
     = do orig <- lookupEq lhs
          let isNew = not (rhs `isSubSetOf` orig)
              tag = if isNew then "+" else "-"
-         {-traceOut tag $ unless (rhs `isSubSetOf` orig) $ -}
-         tell $ (mempty, Endo $ Map.insertWith mappend lhs rhs)
+         {-traceOut tag $-}
+         unless (rhs `isSubSetOf` orig) $ tell $ Endo $ Map.insertWith mappend lhs rhs
 
-isDead lhs = asks $ \(dead,_) -> Map.findWithDefault False lhs dead
-setDead lhs = tell $ (Endo $ Map.insert lhs True, mempty)
+--isDead lhs = asks $ \(dead,_) -> Map.findWithDefault False lhs dead
+--setDead lhs = tell $ (Endo $ Map.insert lhs True, mempty)
 
 reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
                          return $ mconcat rhs'
@@ -348,7 +326,7 @@ reduceEq (Update hp val)
          return mempty
 
 lookupEq lhs
-    = asks $ \(_,eqs) -> Map.findWithDefault mempty lhs eqs
+    = asks $ \eqs -> Map.findWithDefault mempty lhs eqs
 
 
 
