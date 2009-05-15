@@ -15,6 +15,8 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 
 import Debug.Trace
+import System.IO
+import System.IO.Unsafe
 
 type HeapPointer = Int
 data Lhs = HeapEntry HeapPointer
@@ -230,18 +232,55 @@ lookupFuncArgs func
         Just args -> args
 
 
-solve :: Equations -> Equations
+solve :: Equations -> (Int, Equations)
 solve eqs
-    = let iterate [] = return ()
-          iterate ((lhs,rhs):xs)
-              = do reducedRhs <- reduceEqs rhs
-                   orig <- lookupEq lhs
-                   when (orig /= reducedRhs) $ tell $ Endo $ Map.insertWith mappend lhs reducedRhs
-                   iterate xs
-          loop prev = case appEndo (execWriter (runReaderT (iterate (Map.toList eqs)) prev)) Map.empty of
-                        newDefs -> let next = (Map.unionWith mappend prev newDefs)
-                                   in if prev == next then next else loop next
-      in loop (Map.map (const mempty) eqs)
+    = let iterate ls
+              = forM_ ls $ \(lhs,rhs) ->
+                  do dead <- isDead lhs
+                     when (not dead) $
+                       do reducedRhs <- reduceEqs rhs
+                          addReduced lhs reducedRhs
+                          --dead <- rhsIsDead rhs
+                          {-traceOut (if dead then "" else "\nNot dead: " ++ show rhs ++ "\n") $ -}
+                          --when dead $ setDead lhs
+          loop iter dead prev
+              = case {-traceOut ("\nIteration: " ++ show iter ++ "\n") $-} (execWriter (runReaderT (iterate (Map.toList eqs)) (dead,prev))) of
+                  (newDead,newDefs) ->
+                    let next = (Map.unionWith mappend prev (appEndo newDefs Map.empty))
+                    in if prev == next then (iter, next) else loop (iter+1) (appEndo newDead dead) next
+      in loop 1 (Map.map (const False) eqs) (Map.map (const mempty) eqs)
+
+traceOut str v = unsafePerformIO (putStr str) `seq` v
+
+rhsIsDead (Rhs vs) = liftM and $ mapM valueIsDead vs
+    where valueIsDead (Ident i) = isDead (VarEntry i)
+          valueIsDead (Heap hp) = isDead (HeapEntry hp)
+          valueIsDead Base      = return True
+          valueIsDead (Eval i)  = isDead (VarEntry i)
+          valueIsDead (Apply a b) = isDead (VarEntry a)
+          valueIsDead (Tag _fn FunctionNode n _args) | n >= 1 = return True
+          valueIsDead (Tag _fn _type _n args)
+              = liftM and $ mapM rhsIsDead args
+          valueIsDead (VectorTag args)
+              = liftM and $ mapM rhsIsDead args
+          valueIsDead (Extract rhs tag n)
+              = rhsIsDead rhs
+          valueIsDead (ExtractVector rhs n)
+              = rhsIsDead rhs
+          valueIsDead _ = return False
+
+
+a `isSubSetOf` b = b == (a `mappend` b)
+
+addReduced lhs rhs
+    = do orig <- lookupEq lhs
+         let isNew = not (rhs `isSubSetOf` orig)
+             tag = if isNew then "+" else "-"
+         {-traceOut tag $ unless (rhs `isSubSetOf` orig) $ -}
+         tell $ (mempty, Endo $ Map.insertWith mappend lhs rhs)
+
+isDead lhs = asks $ \(dead,_) -> Map.findWithDefault False lhs dead
+setDead lhs = tell $ (Endo $ Map.insert lhs True, mempty)
 
 reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
                          return $ mconcat rhs'
@@ -266,8 +305,8 @@ reduceEq (Tag fn FunctionNode 0 args)
          rets <- lookupEq (VarEntry fn)
          return $ singleton (Tag fn FunctionNode 0 args') `mappend` rets
 reduceEq (Tag t nt missing args)
-    = do args' <- mapM reduceEqs args
-         return $ singleton (Tag t nt missing args')
+    = do --args' <- mapM reduceEqs args
+         return $ singleton (Tag t nt missing args)
 reduceEq (VectorTag args)
     = do args' <- mapM reduceEqs args
          return $ singleton (VectorTag args')
@@ -305,23 +344,23 @@ reduceEq (PartialApply a b)
 reduceEq (Update hp val)
     = do Rhs hps <- lookupEq (VarEntry hp)
          valRhs  <- lookupEq (VarEntry val)
-         forM_ hps $ \(Heap hp) -> tell $ Endo $ Map.insertWith mappend (HeapEntry hp) valRhs
+         forM_ hps $ \(Heap hp) -> addReduced (HeapEntry hp) valRhs
          return mempty
 
 lookupEq lhs
-    = asks $ Map.findWithDefault mempty lhs
+    = asks $ \(_,eqs) -> Map.findWithDefault mempty lhs eqs
 
 
 
-analyze :: Grin -> HeapAnalysis
+analyze :: Grin -> (Int, HeapAnalysis)
 analyze grin
     = let reader      = Map.fromList [ (funcDefName func, funcDefArgs func) | func <- grinFunctions grin ] in
       case execRWS (setupEnvGrin grin) reader 0 of
          (st, eqsEndo) -> let eqs = appEndo eqsEndo Map.empty
-                              solved = solve eqs
+                              (iterations, solved) = solve eqs
                           in --trace (ppEquations eqs) $
                              --trace (ppEquations solved) $
-                             (HeapAnalysis solved)
+                             (iterations, HeapAnalysis solved)
 
 
 type M a = ReaderT HeapAnalysis (State Int) a

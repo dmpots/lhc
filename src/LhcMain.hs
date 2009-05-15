@@ -73,7 +73,7 @@ build action file args
              grin = coreToGrin tdefs defs
              opt = iterate Simple.optimize grin !! 2
              applyLowered = Apply.lower opt
-             hpt = HPT.analyze applyLowered
+             (iterations, hpt) = HPT.analyze applyLowered
              evalLowered = HPT.lower hpt applyLowered
              opt' = iterate Simple.optimize evalLowered !! 2
              out = opt'
@@ -89,6 +89,8 @@ build action file args
                          outputGrin target "" out
                          --outputAnnotation target ".html" Map.empty out
 
+                         putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
+
                          lhc <- findExecutable "lhc"
                          L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
                                                         , encode out ]
@@ -98,6 +100,7 @@ build action file args
 outputGrin file variant grin
     = do let outputFile = replaceExtension file ("grin"++variant)
          writeFile outputFile (show $ ppGrin grin)
+         return ()
 
 outputAnnotation file variant annotation grin
     = do let outputFile = replaceExtension file ("grin"++variant)
