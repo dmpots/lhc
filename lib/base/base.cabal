@@ -1,0 +1,94 @@
+name:           base
+version:        4.1.0.0
+license:        BSD3
+license-file:   LICENSE
+maintainer:     lhc@haskell.org
+synopsis:       Basic libraries
+description:
+    This package contains the Prelude and its support libraries,
+    and a large collection of useful libraries ranging from data
+    structures to parsing combinators and debugging utilities.
+cabal-version:  >=1.2
+build-type:     Simple
+
+Library {
+   extensions: CPP, NoImplicitPrelude
+   build-depends: ghc-prim, integer
+   ghc-options: -fglasgow-exts
+   include-dirs: includes/
+
+   Exposed-modules:
+      Prelude
+      Data.List
+      Data.Char
+      Data.Maybe
+      Data.Either
+      Data.Tuple
+      Data.Bits
+      Data.Word
+      Data.Int
+      Data.HashTable
+      Data.Typeable
+      Data.Dynamic
+      Text.ParserCombinators.ReadP
+      Text.Read.Lex
+      Text.Show
+      Text.Read
+--      Text.Show.Functions
+      Numeric
+      System.IO.Unsafe
+      System.IO.Error
+      System.IO
+      System.Posix.Types
+      System.Posix.Internals
+
+      GHC.Base
+      GHC.Unicode
+      GHC.Read
+      GHC.Float
+      GHC.Arr
+      GHC.Classes
+      GHC.Exception
+      GHC.Err
+      GHC.List
+      GHC.Show
+      GHC.Enum
+      GHC.Num
+      GHC.ST
+      GHC.STRef
+      GHC.Word
+      GHC.Int
+      GHC.Real
+      GHC.Ptr
+      GHC.Stable
+      GHC.Storable
+      GHC.ForeignPtr
+      GHC.Pack
+      GHC.Conc
+      GHC.Handle
+      GHC.IO
+      GHC.TopHandler
+      GHC.IOBase
+      Unsafe.Coerce
+      Foreign.C.Types
+      Foreign.C.String
+      Foreign.C.Error
+      Foreign.C
+      Foreign.Ptr
+      Foreign.ForeignPtr
+      Foreign.StablePtr
+      Foreign.Storable
+      Foreign.Marshal.Alloc
+      Foreign.Marshal.Utils
+      Foreign.Marshal.Array
+      Foreign.Marshal.Error
+      Foreign.Marshal.Pool
+      Foreign.Marshal
+      Foreign
+
+      Control.Monad
+      Control.Exception.Base
+      Control.Exception
+
+   Hs-source-dirs: src
+}

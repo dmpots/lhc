@@ -1,0 +1,30 @@
+name:           ghc-prim
+version:        0.1.0.0
+license:        BSD3
+license-file:   LICENSE
+maintainer:     libraries@haskell.org
+synopsis:       GHC primitives
+description:
+    GHC primitives.
+cabal-version:  >=1.2
+build-type: Custom
+
+Library {
+    if impl(ghc)
+      build-depends: rts
+    exposed-modules:
+        GHC.Bool
+        GHC.Generics
+        GHC.Ordering
+        GHC.PrimopWrappers
+        GHC.IntWord32
+        GHC.IntWord64
+        GHC.Tuple
+        GHC.Types
+        GHC.Unit
+    extensions: CPP, MagicHash, ForeignFunctionInterface, UnliftedFFITypes,
+                UnboxedTuples, EmptyDataDecls, NoImplicitPrelude
+    -- We need to set the package name to ghc-prim (without a version number)
+    -- as it's magic.
+    ghc-options: -package-name ghc-prim
+}
