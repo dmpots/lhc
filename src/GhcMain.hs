@@ -59,6 +59,9 @@ import Control.Monad
 import Data.List
 import Data.Maybe
 
+import Data.Word (Word)
+import Foreign.Storable (sizeOf)
+
 -----------------------------------------------------------------------------
 -- ToDo:
 
@@ -89,8 +92,12 @@ main =
         (minusB_args, argv1) = partition ("-B" `isPrefixOf`) argv0
         mbMinusB | null minusB_args = Just libdir
                  | otherwise = Just (drop 2 (last minusB_args))
-
-  let argv1' = map (mkGeneralLocated "on the commandline") ("-no-user-package-conf":"-D__LHC__":argv1)
+        wordSize = sizeOf (undefined :: Word)
+  let argv1' = map (mkGeneralLocated "on the commandline") ("-fext-core":
+                                                            "-no-user-package-conf":
+                                                            "-D__LHC__":
+                                                            ("-DWORD_SIZE="++show wordSize):
+                                                            argv1)
   (argv2, staticFlagWarnings) <- parseStaticFlags argv1'
 
   -- 2. Parse the "mode" flags (--make, --interactive etc.)
