@@ -42,9 +42,8 @@ lowerExpression (e :>> t)
 lowerExpression (Application fn args)
     = do return $ Application fn args
 lowerExpression (Case v alts)
-    = do v' <- lowerValue v
-         alts' <- mapM lowerAlt alts
-         return $ Case v' alts'
+    = do alts' <- mapM lowerAlt alts
+         return $ Case v alts'
 lowerExpression (Store v)
     = liftM Store (lowerValue v)
 lowerExpression (Unit v)

@@ -72,7 +72,7 @@ ppBeginExpression qual e = ppExpression qual e
 ppExpression :: QualMap -> Expression -> Doc
 ppExpression qual (Unit value) = text "unit" <+> ppValue linkToAnchor qual value
 ppExpression qual (Case value alts)
-    = hang (text "case" <+> ppValue linkToAnchor qual value <+> text "of") 2
+    = hang (text "case" <+> ppValue linkToAnchor qual (Variable value) <+> text "of") 2
            (vsep (map (ppAlt qual) alts))
 ppExpression qual (Application fn args)
     = hsep (ppRenamed linkToAnchor qual fn:map (ppRenamed linkToAnchor qual) args)

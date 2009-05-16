@@ -103,18 +103,18 @@ translate cxt simplExp
          bindVariable binding $ \renamed ->
            do e <- translate Strict exp
               alts' <- mapM (alternative (translate cxt)) alts
-              return $ e :>>= renamed :-> Grin.Case (Variable renamed) alts'
+              return $ e :>>= renamed :-> Grin.Case renamed alts'
        Simple.Case exp binding alts | simpleExpIsPrimitive exp ->
          bindVariable binding $ \renamed ->
            do e <- translate cxt exp
               alts' <- mapM (alternative (translate cxt)) alts
-              return $ e :>>= renamed :-> Grin.Case (Variable renamed) alts'
+              return $ e :>>= renamed :-> Grin.Case renamed alts'
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
            do e <- translate Strict exp
               v <- newVariable
               alts' <- mapM (alternative (translate cxt)) alts
-              return $ e :>>= v :-> Store (Variable v) :>>= renamed :-> Grin.Case (Variable v) alts'
+              return $ e :>>= v :-> Store (Variable v) :>>= renamed :-> Grin.Case v alts'
        Simple.Primitive p ->
          return $ Application (Builtin p) []
        Var var isUnboxed ->

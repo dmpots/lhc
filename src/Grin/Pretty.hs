@@ -66,7 +66,7 @@ ppBeginExpression qual e = ppExpression qual e
 ppExpression :: QualMap -> Expression -> Doc
 ppExpression qual (Unit value) = blue (text "unit") <+> ppValue qual value
 ppExpression qual (Case value alts)
-    = blue (text "case") <+> ppValue qual value <+> blue (text "of") <$$>
+    = blue (text "case") <+> ppValue qual (Variable value) <+> blue (text "of") <$$>
       indent 2 (vsep (map (ppAlt qual) alts))
 ppExpression qual (Application fn args)
     = hsep (ppRenamed qual fn:map (ppRenamed qual) args)

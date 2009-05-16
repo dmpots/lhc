@@ -77,7 +77,7 @@ compExpression (Store val)
          return $ do ptr <- storeValue =<< val'
                      return $ HeapPointer ptr
 compExpression (Case val alts)
-    = do val' <- compValue val
+    = do val' <- lookupVariable val
          let (binds,cases) = unzip [ (b,c) | b :> c <- alts ]
          cases' <- mapM compExpression cases
          return $ do val'' <- val'

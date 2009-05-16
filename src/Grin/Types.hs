@@ -66,7 +66,7 @@ data Expression
     | Expression :>> Expression
     | Application { expFunction :: Renamed
                   , expArgs     :: [Renamed] }
-    | Case        { expValue    :: Value
+    | Case        { expValue    :: Renamed
                   , expAlts     :: [Alt] }
     | Store       Value
     | Unit        Value

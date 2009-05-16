@@ -64,7 +64,7 @@ simpleExpression (Case val [cond :> e])
     = do simpleExpression $ Unit val :>>= cond :-> e
 -}
 simpleExpression (Case val alts)
-    = do val' <- simpleValue val
+    = do val' <- doSubst val
          alts' <- mapM simpleAlt alts
          return $ Case val' alts'
 

@@ -137,7 +137,7 @@ setupEnv (exp :>> rest)
 setupEnv (Unit val)
     = processVal val
 setupEnv (Case val alts)
-    = do valRhs <- processVal val
+    = do let valRhs = singleton $ Ident val
          rets <- forM alts $ \(l :> alt) ->
                    case l of
                      Node tag _ _ args -> do forM_ (zip [0..] args) $ \(n,arg) ->
@@ -385,7 +385,7 @@ lowerExpression (Application (Builtin "eval") [a])
                                 alts <- mapM (mkApplyAlt []) rhs'
                                 v <- newVariable
                                 return $ Application (Builtin "fetch") [a] :>>= f :->
-                                         Case (Variable f) alts :>>= v :->
+                                         Case f alts :>>= v :->
                                          Application (Builtin "update") [a,v] :>>
                                          Unit (Variable v)
            Nothing -> return $ Application (Builtin "urk") []
@@ -393,7 +393,7 @@ lowerExpression (Application (Builtin "apply") [a,b])
     = do HeapAnalysis hpt <- ask
          case Map.lookup (VarEntry a) hpt of
            Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [b]) rhs
-                                return $ Case (Variable a) alts
+                                return $ Case a alts
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application fn args)
     = return $ Application fn args
