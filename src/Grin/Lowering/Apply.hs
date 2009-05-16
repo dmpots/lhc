@@ -35,21 +35,25 @@ lowerExpression (e :>>= v :-> t)
     = do e' <- lowerExpression e
          t' <- lowerExpression t
          return (e' :>>= v :-> t')
+lowerExpression (e :>> t)
+    = do e' <- lowerExpression e
+         t' <- lowerExpression t
+         return (e' :>> t')
 lowerExpression (Application fn args)
     = do return $ Application fn args
 lowerExpression (Case v alts)
     = do v' <- lowerValue v
-         alts' <- mapM lowerLambda alts
+         alts' <- mapM lowerAlt alts
          return $ Case v' alts'
 lowerExpression (Store v)
     = liftM Store (lowerValue v)
 lowerExpression (Unit v)
     = liftM Unit (lowerValue v)
 
-lowerLambda :: Lambda -> Lower Lambda
-lowerLambda (v :-> e)
+lowerAlt :: Alt -> Lower Alt
+lowerAlt (v :> e)
     = do e' <- lowerExpression e
-         return (v :-> e')
+         return (v :> e')
 
 
 lowerValue :: Value -> Lower Value
@@ -74,7 +78,7 @@ newApplyFunction
          fn'Arg <- newVariable "fn'"
          tell $ Endo $ \lst -> FuncDef { funcDefName = name
                                        , funcDefArgs = [fnArg, valArg]
-                                       , funcDefBody = Application (Builtin "eval") [fnArg] :>>= Variable fn'Arg :-> Application (Builtin "apply") [fn'Arg, valArg]
+                                       , funcDefBody = Application (Builtin "eval") [fnArg] :>>= fn'Arg :-> Application (Builtin "apply") [fn'Arg, valArg]
                                        } : lst
          return name
 

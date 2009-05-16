@@ -103,21 +103,18 @@ translate cxt simplExp
          bindVariable binding $ \renamed ->
            do e <- translate Strict exp
               alts' <- mapM (alternative (translate cxt)) alts
-              let bind = Variable renamed
-              return $ e :>>= bind :-> Grin.Case bind alts'
+              return $ e :>>= renamed :-> Grin.Case (Variable renamed) alts'
        Simple.Case exp binding alts | simpleExpIsPrimitive exp ->
          bindVariable binding $ \renamed ->
            do e <- translate cxt exp
               alts' <- mapM (alternative (translate cxt)) alts
-              let bind = Variable renamed
-              return $ e :>>= bind :-> Grin.Case bind alts'
+              return $ e :>>= renamed :-> Grin.Case (Variable renamed) alts'
        Simple.Case exp binding alts ->
          bindVariable binding $ \renamed ->
            do e <- translate Strict exp
-              v <- liftM Variable newVariable
+              v <- newVariable
               alts' <- mapM (alternative (translate cxt)) alts
-              let bind = Variable renamed
-              return $ e :>>= v :-> Store v :>>= bind :-> Grin.Case v alts'
+              return $ e :>>= v :-> Store (Variable v) :>>= renamed :-> Grin.Case (Variable v) alts'
        Simple.Primitive p ->
          return $ Application (Builtin p) []
        Var var isUnboxed ->
@@ -143,19 +140,19 @@ translate cxt simplExp
          do func' <- lookupVariable func
             args' <- mapM lookupVariable args
             e' <- translate cxt e
-            return $ Store (Node func' FunctionNode (arity-length args) args') :>>= Variable bind' :-> e'
+            return $ Store (Node func' FunctionNode (arity-length args) args') :>>= bind' :-> e'
        LetStrict bind fn e ->
          bindVariable bind $ \bind' ->
          do fn' <- translate Strict fn
             e' <- translate cxt e
-            return $ fn' :>>= Variable bind' :-> e'
+            return $ fn' :>>= bind' :-> e'
        App fn args ->
          let process acc [] = call (reverse acc)
              process acc (x:xs)
                  = do e <- translate Lazy x
                       v <- newVariable
                       r <- process (v:acc) xs
-                      return $ e :>>= Variable v :-> r
+                      return $ e :>>= v :-> r
              call vs = case fn of
                          Simple.Primitive p  -> return $ Application (Builtin p) vs
                          Simple.External e _ _ -> return $ Application (Grin.External e) vs
@@ -168,13 +165,13 @@ translate cxt simplExp
                                                                  case cxt of
                                                                    Lazy -> do v <- newVariable
                                                                               ap <- mkApplyLazy later v
-                                                                              return $ Store node :>>= Variable v :-> ap
+                                                                              return $ Store node :>>= v :-> ap
                                                                    Strict -> case n `compare` length vs of
                                                                                GT -> return $ Unit node
                                                                                EQ -> return $ Application name now
                                                                                LT -> do v <- newVariable
                                                                                         ap <- mkApplyStrict later v
-                                                                                        return $ Store node :>>= Variable v :-> ap
+                                                                                        return $ Store node :>>= v :-> ap
                          Dcon con | Just n <- dconIsVector con
                                   -> return $ Unit $ Vector vs
                          Dcon con -> do name <- lookupVariable con
@@ -185,21 +182,21 @@ translate cxt simplExp
                          e -> do e' <- translate Lazy e
                                  v  <- newVariable
                                  app <- case cxt of Lazy -> mkApplyLazy vs v; Strict -> mkApplyStrict vs v
-                                 return (e' :>>= Variable v :-> app)
+                                 return (e' :>>= v :-> app)
              mkApplyLazy [] v
                  = return $ Unit (Variable v)
              mkApplyLazy (x:xs) v
                  = do v' <- newVariable
                       r <- mkApplyLazy xs v'
-                      return $ applyCell v x :>>= Variable v' :-> r
+                      return $ applyCell v x :>>= v' :-> r
              mkApplyStrict xs v
                  = do let loop v [] = return $ Unit (Variable v)
                           loop v (x:xs) = do v' <- newVariable
                                              r  <- loop v' xs
-                                             return $ apply v x :>>= Variable v' :-> r
+                                             return $ apply v x :>>= v' :-> r
                       v' <- newVariable
                       r <- loop v' xs
-                      return $ eval v :>>= Variable v' :-> r
+                      return $ eval v :>>= v' :-> r
          in process [] args
        LetRec defs e ->
          let binds = [ bind | (bind,_,_,_) <- defs ]
@@ -211,10 +208,10 @@ translate cxt simplExp
             args'  <- mapM (mapM lookupVariable) args
             e' <- translate cxt e
             vars <- replicateM (length defs) newVariable
-            let holes = foldr (\(bind,arity) b -> Store (Hole arity) :>>= Variable bind :-> b ) updates (zip binds' arities)
+            let holes = foldr (\(bind,arity) b -> Store (Hole arity) :>>= bind :-> b ) updates (zip binds' arities)
                 updates = foldr (\(bind,fn,args,arity,var) b ->
-                                 update bind fn args arity var :>>=
-                                 Empty :-> b ) e' (zip5 binds' funcs' args' arities vars)
+                                 update bind fn args arity var :>>
+                                 b ) e' (zip5 binds' funcs' args' arities vars)
             return holes
        Note _ e ->
           translate cxt e
@@ -254,30 +251,30 @@ fn f = eval f >>= \v -> apply v fibs
 -}
 
 update bind fn args arity var
-    = Unit (Node fn FunctionNode (arity-length args) args) :>>= Variable var :->
+    = Unit (Node fn FunctionNode (arity-length args) args) :>>= var :->
       Application (Builtin $ fromString "update") [bind, var]
 eval v = Application (Builtin $ fromString "eval") [v]
 apply a b = Application (Builtin $ fromString "apply") [a,b]
 applyCell a b = Store (Node (Builtin $ fromString "evalApply") FunctionNode 0 [a,b])
 
 -- Translate a Core alternative to a Grin alternative
-alternative :: (SimpleExp -> M Expression) -> Simple.Alt -> M Lambda
+alternative :: (SimpleExp -> M Expression) -> Simple.Alt -> M Grin.Alt
 alternative fn (Acon con bs e) | Just n <- dconIsVector con
     = bindVariables bs $ \renamed ->
       do e' <- fn e
-         return $ Vector renamed :-> e'
+         return $ Vector renamed :> e'
 alternative fn (Acon con bs e)
     = bindVariables bs $ \renamed ->
       do e' <- fn e
          name <- lookupVariable con
-         return $ Node name ConstructorNode 0 renamed :-> e'
+         return $ Node name ConstructorNode 0 renamed :> e'
 alternative fn (Adefault e)
     = do e' <- fn e
          v <- newVariable
-         return $ Variable v :-> e'
+         return $ Variable v :> e'
 alternative fn (Alit lit e)
     = do e' <- fn e
-         return $ Grin.Lit lit :-> e'
+         return $ Grin.Lit lit :> e'
 
 simpleExpIsPrimitive :: SimpleExp -> Bool
 simpleExpIsPrimitive (App Simple.Primitive{} _)

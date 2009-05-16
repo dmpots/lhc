@@ -25,16 +25,30 @@ simpleFuncDef def
     = def{ funcDefBody = runReader (unOpt (simpleExpression (funcDefBody def))) Map.empty }
 
 simpleExpression :: Expression -> Opt Expression
+{-
 simpleExpression (Unit (Vector vs) :>>= Vector vs' :-> t)
     = do vsp <- doSubsts vs
          foldr (uncurry subst) (simpleExpression t) (zip vs' vsp)
-simpleExpression (Unit (Variable v1) :>>= Variable v2 :-> t)
+-}
+simpleExpression (Unit (Variable v1) :>>= v2 :-> t)
     = do v1' <- doSubst v1
          subst v2 v1' (simpleExpression t)
+{-
 simpleExpression (a :>>= v :-> Unit v') | v == v'
     = simpleExpression a
+-}
 simpleExpression ((a :>>= b :-> c) :>>= d)
     = simpleExpression (a :>>= b :-> c :>>= d)
+simpleExpression ((a :>>= b :-> c) :>> d)
+    = simpleExpression (a :>>= b :-> c :>> d)
+simpleExpression ((a :>> b) :>>= c)
+    = simpleExpression (a :>> b :>>= c)
+simpleExpression ((a :>> b) :>> c)
+    = simpleExpression (a :>> b :>> c)
+simpleExpression (a :>> b)
+    = do a' <- simpleExpression a
+         b' <- simpleExpression b
+         return (a' :>> b')
 simpleExpression (a :>>= b :-> c)
     = do a' <- simpleExpression a
          c' <- simpleExpression c
@@ -45,17 +59,19 @@ simpleExpression (Store v)
     = liftM Store $ simpleValue v
 simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
-simpleExpression (Case val [cond :-> e])
+{-
+simpleExpression (Case val [cond :> e])
     = do simpleExpression $ Unit val :>>= cond :-> e
+-}
 simpleExpression (Case val alts)
     = do val' <- simpleValue val
-         alts' <- mapM simpleLambda alts
+         alts' <- mapM simpleAlt alts
          return $ Case val' alts'
 
 
-simpleLambda :: Lambda -> Opt Lambda
-simpleLambda (v :-> e) = do e' <- simpleExpression e
-                            return (v :-> e')
+simpleAlt :: Alt -> Opt Alt
+simpleAlt (v :> e) = do e' <- simpleExpression e
+                        return (v :> e')
 
 
 

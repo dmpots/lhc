@@ -54,17 +54,20 @@ data Type
     | NodeType
     deriving (Eq)
 
-data Lambda = Value :-> Expression
+data Lambda = Renamed :-> Expression
+data Alt = Value :> Expression
 
 infixr 1 :->
 infixr 1 :>>=
+infixr 1 :>>
 
 data Expression
     = Expression :>>= Lambda
+    | Expression :>> Expression
     | Application { expFunction :: Renamed
                   , expArgs     :: [Renamed] }
     | Case        { expValue    :: Value
-                  , expAlts     :: [Lambda] }
+                  , expAlts     :: [Alt] }
     | Store       Value
     | Unit        Value
 
@@ -110,6 +113,7 @@ $(derive makeBinary ''FuncDef)
 $(derive makeBinary ''NodeDef)
 $(derive makeBinary ''Expression)
 $(derive makeBinary ''Type)
+$(derive makeBinary ''Alt)
 $(derive makeBinary ''Lambda)
 $(derive makeBinary ''Grin)
 

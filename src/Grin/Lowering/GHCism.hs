@@ -41,36 +41,40 @@ lowerExpression (e :>>= lam)
     = do e' <- lowerExpression e
          lam' <- lowerLambda lam
          return $ e' :>>= lam'
+lowerExpression (e :>> f)
+    = do e' <- lowerExpression e
+         f' <- lowerExpression f
+         return $ e' :>> f'
 lowerExpression (Application (Builtin fn) [a,b]) | Just renamed <- lookup fn renamedOpts
     = lowerExpression (Application (Builtin renamed) [a,b])
 lowerExpression (Application (Builtin fn) [a,b]) | fn `elem` [">=#",">#","==#","<=#","<#"]
     = do tnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.True"
          fnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.False"
          v <- newVariable
-         return $ Application (Builtin fn) [a,b] :>>= Variable v :->
-                  Case (Variable v) [Lit (Lint 0) :-> Unit (Node fnode ConstructorNode 0 [])
-                                    ,Lit (Lint 1) :-> Unit (Node tnode ConstructorNode 0 [])]
+         return $ Application (Builtin fn) [a,b] :>>= v :->
+                  Case (Variable v) [Lit (Lint 0) :> Unit (Node fnode ConstructorNode 0 [])
+                                    ,Lit (Lint 1) :> Unit (Node tnode ConstructorNode 0 [])]
 
 -- MVars
 lowerExpression (Application (Builtin "newMVar#") [realWorld])
     = do v <- newVariable
-         return $ Store Empty :>>= Variable v :-> Unit (Vector [realWorld, v])
+         return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "putMVar#") [ptr, val, realWorld])
-    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit (Variable realWorld)
+    = return $ Application (Builtin "update") [ptr, val] :>> Unit (Variable realWorld)
 lowerExpression (Application (Builtin "takeMVar#") [ptr, realWorld])
     = do v <- newVariable
-         return $ Application (Builtin "fetch") [ptr] :>>= Variable v :-> Unit (Vector [realWorld, v])
+         return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
 
 -- MutVars
 
 lowerExpression (Application (Builtin "newMutVar#") [val,realWorld])
     = do v <- newVariable
-         return $ Store (Variable val) :>>= Variable v :-> Unit (Vector [realWorld, v])
+         return $ Store (Variable val) :>>= v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "writeMutVar#") [ptr, val, realWorld])
-    = return $ Application (Builtin "update") [ptr, val] :>>= Empty :-> Unit (Variable realWorld)
+    = return $ Application (Builtin "update") [ptr, val] :>> Unit (Variable realWorld)
 lowerExpression (Application (Builtin "readMutVar#") [ptr, realWorld])
     = do v <- newVariable
-         return $ Application (Builtin "fetch") [ptr] :>>= Variable v :-> Unit (Vector [realWorld, v])
+         return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
 
 lowerExpression (Application (Builtin "realWorld#") [])
     = return $ Unit Empty -- FIXME: Use a special RealWorld value?
@@ -90,18 +94,18 @@ lowerExpression (Application (Builtin "raiseIO#") [exp, realWorld])
 
 lowerExpression (Application (Builtin "catch#") [fn, handler, realworld])
     = do v <- newVariable
-         return $ Application (Builtin "eval") [fn] :>>= Variable v :-> Application (Builtin "apply") [v, realworld]
+         return $ Application (Builtin "eval") [fn] :>>= v :-> Application (Builtin "apply") [v, realworld]
 lowerExpression (Application (Builtin "blockAsyncExceptions#") [fn, realworld])
     = do v <- newVariable
-         return $ Application (Builtin "eval") [fn] :>>= Variable v :-> Application (Builtin "apply") [v, realworld]
+         return $ Application (Builtin "eval") [fn] :>>= v :-> Application (Builtin "apply") [v, realworld]
 lowerExpression (Application (Builtin "unblockAsyncExceptions#") [fn, realworld])
     = do v <- newVariable
-         return $ Application (Builtin "eval") [fn] :>>= Variable v :-> Application (Builtin "apply") [v, realworld]
+         return $ Application (Builtin "eval") [fn] :>>= v :-> Application (Builtin "apply") [v, realworld]
 
 lowerExpression (Application fn vs)
     = return $ Application fn vs
 lowerExpression (Case scrut alts)
-    = do alts' <- mapM lowerLambda alts
+    = do alts' <- mapM lowerAlt alts
          return $ Case scrut alts'
 lowerExpression (Store v)
     = return $ Store v
@@ -112,6 +116,10 @@ lowerLambda :: Lambda -> Lower Lambda
 lowerLambda (v :-> e)
     = do e' <- lowerExpression e
          return $ v :-> e'
+lowerAlt :: Alt -> Lower Alt
+lowerAlt (v :> e)
+    = do e' <- lowerExpression e
+         return $ v :> e'
 
 
 renamedOpts = [ ("gtChar#", ">#")

@@ -115,6 +115,7 @@ setupEnv :: Expression -> GenM Rhs
 setupEnv (Store val)
     = do hp <- store =<< processVal val
          return $ singleton $ Heap hp
+{-
 setupEnv (exp :>>= bind :-> rest)
   = do expRhs <- setupEnv exp
        case bind of
@@ -125,15 +126,26 @@ setupEnv (exp :>>= bind :-> rest)
                               addEquation (VarEntry arg) (singleton $ ExtractVector expRhs n)
          Empty           -> return ()
        setupEnv rest
+-}
+setupEnv (exp :>>= bind :-> rest)
+    = do expRhs <- setupEnv exp
+         addEquation (VarEntry bind) expRhs
+         setupEnv rest
+setupEnv (exp :>> rest)
+    = do setupEnv exp
+         setupEnv rest
 setupEnv (Unit val)
     = processVal val
 setupEnv (Case val alts)
     = do valRhs <- processVal val
-         rets <- forM alts $ \(l :-> alt) ->
+         rets <- forM alts $ \(l :> alt) ->
                    case l of
                      Node tag _ _ args -> do forM_ (zip [0..] args) $ \(n,arg) ->
                                                addEquation (VarEntry arg) (singleton $ Extract valRhs tag n)
                                              setupEnv alt
+                     Vector args -> do forM_ (zip [0..] args) $ \(n,arg) ->
+                                         addEquation (VarEntry arg) (singleton $ ExtractVector valRhs n)
+                                       setupEnv alt
                      Lit{}          -> setupEnv alt
                      Variable v     -> do addEquation (VarEntry v) valRhs
                                           setupEnv alt
@@ -361,6 +373,10 @@ lowerExpression (a :>>= lam)
     = do a' <- lowerExpression a
          lam' <- lowerLambda lam
          return $ a' :>>= lam'
+lowerExpression (a :>> b)
+    = do a' <- lowerExpression a
+         b' <- lowerExpression b
+         return $ a' :>> b'
 lowerExpression (Application (Builtin "eval") [a])
     = do f <- newVariable
          HeapAnalysis hpt <- ask
@@ -368,9 +384,9 @@ lowerExpression (Application (Builtin "eval") [a])
            Just (Rhs rhs) -> do let Rhs rhs' = mconcat [ hpt Map.! HeapEntry hp | Heap hp <- rhs ]
                                 alts <- mapM (mkApplyAlt []) rhs'
                                 v <- newVariable
-                                return $ Application (Builtin "fetch") [a] :>>= Variable f :->
-                                         Case (Variable f) alts :>>= Variable v :->
-                                         Application (Builtin "update") [a,v] :>>= Empty :->
+                                return $ Application (Builtin "fetch") [a] :>>= f :->
+                                         Case (Variable f) alts :>>= v :->
+                                         Application (Builtin "update") [a,v] :>>
                                          Unit (Variable v)
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application (Builtin "apply") [a,b])
@@ -382,7 +398,7 @@ lowerExpression (Application (Builtin "apply") [a,b])
 lowerExpression (Application fn args)
     = return $ Application fn args
 lowerExpression (Case scrut alts)
-    = do alts' <- mapM lowerLambda alts
+    = do alts' <- mapM lowerAlt alts
          return $ Case scrut alts'
 lowerExpression (Store val)
     = return $ Store val
@@ -393,12 +409,17 @@ lowerLambda (a :-> b)
     = do b' <- lowerExpression b
          return $ a :-> b'
 
+lowerAlt :: Alt -> M Alt
+lowerAlt (a :> b)
+    = do b' <- lowerExpression b
+         return $ a :> b'
+
 mkApplyAlt extraArgs (Tag tag FunctionNode n argsRhs) | n == length extraArgs
     = do args <- replicateM (length argsRhs) newVariable
-         return $ Node tag FunctionNode n args :-> Application tag (args ++ extraArgs)
+         return $ Node tag FunctionNode n args :> Application tag (args ++ extraArgs)
 mkApplyAlt extraArgs (Tag tag nt n argsRhs)
     = do args <- replicateM (length argsRhs) newVariable
-         return $ Node tag nt n args :-> Unit (Node tag nt (n - length extraArgs) (args ++ extraArgs))
+         return $ Node tag nt n args :> Unit (Node tag nt (n - length extraArgs) (args ++ extraArgs))
 
 newVariable :: M Renamed
 newVariable = do unique <- get

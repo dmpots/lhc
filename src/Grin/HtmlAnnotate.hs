@@ -78,15 +78,15 @@ ppExpression qual (Application fn args)
     = hsep (ppRenamed linkToAnchor qual fn:map (ppRenamed linkToAnchor qual) args)
 ppExpression qual (Store v)
     = text "store" <+> ppValue linkToAnchor qual v
-ppExpression qual (a :>>= Empty :-> c)
+ppExpression qual (a :>> c)
     = ppExpression qual a <$$>
       ppExpression qual c
 ppExpression qual (a :>>= b :-> c)
-    = (ppValue setAnchor qual b <+> text "<-" <+> (ppBeginExpression qual a)) <$$>
+    = (ppValue setAnchor qual (Variable b) <+> text "<-" <+> (ppBeginExpression qual a)) <$$>
       ppExpression qual c
 
-ppAlt qual (value :-> exp) = hang (ppValue setAnchor qual value) 2
-                                  (text "->" <+> (ppBeginExpression qual exp))
+ppAlt qual (value :> exp) = hang (ppValue setAnchor qual value) 2
+                                 (text "->" <+> (ppBeginExpression qual exp))
 
 ppValue def qual (Node name nodeType missing args)
     = parens (hsep (ppNodeType linkToAnchor qual nodeType missing name : map (ppRenamed def qual) args))

@@ -53,20 +53,15 @@ compFuncDef func
          return $ \args -> local (const $ Map.fromList (zip (funcDefArgs func) args)) exp
 
 compExpression :: Expression -> Gen CompExpression
-compExpression (e :>>= Grin.Empty :-> l)
+compExpression (e :>> l)
     = do e' <- compExpression e
          l' <- compExpression l
          return $ e' >> l'
-compExpression (e :>>= Grin.Variable v :-> l)
+compExpression (e :>>= v :-> l)
     = do e' <- compExpression e
          l' <- compExpression l
          return $ do val <- e'
                      local (Map.insert v val) l'
-compExpression (e :>>= b :-> l)
-    = do e' <- compExpression e
-         l' <- compExpression l
-         return $ do val <- e'
-                     bindLambda val b l'
 compExpression (Application (External name) args)
     = runExternal name =<< mapM lookupVariable args
 compExpression (Application name args)
@@ -83,7 +78,7 @@ compExpression (Store val)
                      return $ HeapPointer ptr
 compExpression (Case val alts)
     = do val' <- compValue val
-         let (binds,cases) = unzip [ (b,c) | b :-> c <- alts ]
+         let (binds,cases) = unzip [ (b,c) | b :> c <- alts ]
          cases' <- mapM compExpression cases
          return $ do val'' <- val'
                      --liftIO $ putStrLn $ "case expression: " ++ show (val,val'')

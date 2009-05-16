@@ -72,15 +72,15 @@ ppExpression qual (Application fn args)
     = hsep (ppRenamed qual fn:map (ppRenamed qual) args)
 ppExpression qual (Store v)
     = blue (text "store") <+> ppValue qual v
-ppExpression qual (a :>>= Empty :-> c)
+ppExpression qual (a :>> c)
     = ppExpression qual a <$$>
       ppExpression qual c
 ppExpression qual (a :>>= b :-> c)
-    = ppValue qual b <+> text "<-" <+> hang 0 (ppBeginExpression qual a) <$$>
+    = ppValue qual (Variable b) <+> text "<-" <+> hang 0 (ppBeginExpression qual a) <$$>
       ppExpression qual c
 
-ppAlt qual (value :-> exp) = ppValue qual value <$$>
-                             indent 2 (text "->" <+> align (ppBeginExpression qual exp))
+ppAlt qual (value :> exp) = ppValue qual value <$$>
+                            indent 2 (text "->" <+> align (ppBeginExpression qual exp))
 
 ppValue qual (Node name nodeType missing args)
     = parens (hsep (ppNodeType qual nodeType missing name : map (ppRenamed qual) args))
