@@ -113,18 +113,6 @@ setupEnv :: Expression -> GenM Rhs
 setupEnv (Store val)
     = do hp <- store =<< processVal val
          return $ singleton $ Heap hp
-{-
-setupEnv (exp :>>= bind :-> rest)
-  = do expRhs <- setupEnv exp
-       case bind of
-         Variable l      -> addEquation (VarEntry l) expRhs
-         Node tag _ _ args -> forM_ (zip args [0..]) $ \(arg, n) ->
-                                addEquation (VarEntry arg) (singleton $ Extract expRhs tag n)
-         Vector vs       -> forM_ (zip vs [0..]) $ \(arg, n) ->
-                              addEquation (VarEntry arg) (singleton $ ExtractVector expRhs n)
-         Empty           -> return ()
-       setupEnv rest
--}
 setupEnv (exp :>>= bind :-> rest)
     = do expRhs <- setupEnv exp
          addEquation (VarEntry bind) expRhs
@@ -266,9 +254,6 @@ addReduced lhs rhs
              tag = if isNew then "+" else "-"
          {-traceOut tag $-}
          unless (rhs `isSubSetOf` orig) $ tell $ Endo $ Map.insertWith mappend lhs rhs
-
---isDead lhs = asks $ \(dead,_) -> Map.findWithDefault False lhs dead
---setDead lhs = tell $ (Endo $ Map.insert lhs True, mempty)
 
 reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
                          return $ mconcat rhs'
