@@ -24,8 +24,8 @@ data Lhs = HeapEntry HeapPointer
     deriving (Eq,Ord)
 
 data RhsValue
-    = Extract Rhs Renamed Int
-    | ExtractVector Rhs Int
+    = Extract Renamed Renamed Int
+    | ExtractVector Renamed Int
     | Eval Renamed
     | Update Renamed Renamed
     | Apply Renamed Renamed
@@ -93,8 +93,6 @@ type GenM a = RWS GenReader (Endo Equations) Int a
 
 applications :: Renamed
 applications = Builtin "applications"
-applicationsRhs :: Rhs
-applicationsRhs = singleton $ Ident applications
 
 updates :: Renamed
 updates = Builtin "updates"
@@ -109,7 +107,7 @@ setupEnvGrin grin
               addEquation (VarEntry (funcDefName function)) rhs
               forM_ (zip (funcDefArgs function) [0..]) $ \(arg, n) ->
                 addEquation (VarEntry arg)
-                            (singleton $ Extract applicationsRhs (funcDefName function) n)
+                            (singleton $ Extract applications (funcDefName function) n)
 
 setupEnv :: Expression -> GenM Rhs
 setupEnv (Store val)
@@ -141,10 +139,10 @@ setupEnv (Case val alts)
          rets <- forM alts $ \(l :> alt) ->
                    case l of
                      Node tag _ _ args -> do forM_ (zip [0..] args) $ \(n,arg) ->
-                                               addEquation (VarEntry arg) (singleton $ Extract valRhs tag n)
+                                               addEquation (VarEntry arg) (singleton $ Extract val tag n)
                                              setupEnv alt
                      Vector args -> do forM_ (zip [0..] args) $ \(n,arg) ->
-                                         addEquation (VarEntry arg) (singleton $ ExtractVector valRhs n)
+                                         addEquation (VarEntry arg) (singleton $ ExtractVector val n)
                                        setupEnv alt
                      Lit{}          -> setupEnv alt
                      Variable v     -> do addEquation (VarEntry v) valRhs
@@ -278,16 +276,16 @@ reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
 reduceEq Base      = return $ singleton Base
 reduceEq (Heap hp) = return $ singleton $ Heap hp
 reduceEq (Ident i) = lookupEq (VarEntry i)
-reduceEq (Extract eqs tag n)
-    = do Rhs eqs' <- reduceEqs eqs
+reduceEq (Extract eq tag n)
+    = do Rhs eqs' <- lookupEq (VarEntry eq)
          reduceEqs (mconcat [ args `nth` n | Tag t _ _ args <- eqs', t == tag ])
     where nth [] n = mempty --error $ "reduceEq: ExtractVector: " ++ show (eqs, tag, n)
           nth (x:xs) 0 = x
           nth (x:xs) n = nth xs (n-1)
-reduceEq (ExtractVector eqs n)
-    = do Rhs eqs' <- reduceEqs eqs
+reduceEq (ExtractVector eq n)
+    = do Rhs eqs' <- lookupEq (VarEntry eq)
          reduceEqs (mconcat [ args `nth` n | VectorTag args <- eqs' ])
-    where nth [] n = error $ "reduceEq: ExtractVector: " ++ show (eqs, n)
+    where nth [] n = error $ "reduceEq: ExtractVector: " ++ show (eq, n)
           nth (x:xs) 0 = x
           nth (x:xs) n = nth xs (n-1)
 reduceEq (Tag fn FunctionNode 0 args)
