@@ -3,7 +3,7 @@ Compute the digits of "e" using continued fractions.
 Original program due to Dale Thurston, Aug 2001
 -}
 
-import System
+import System.Environment
 
 type ContFrac = [Integer]
 
