@@ -5,7 +5,7 @@
 -- Shortened by Don Stewart
 -- De-optimized by Isaac Gouy
 
-import System; import Text.Printf; import Control.Monad
+import System.Environment; import Text.Printf; import Control.Monad
 
 
 data Tree = Nil | Node !Int Tree Tree

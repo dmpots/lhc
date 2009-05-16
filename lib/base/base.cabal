@@ -37,6 +37,7 @@ Library {
       Text.Read.Lex
       Text.Show
       Text.Read
+      Text.Printf
 --      Text.Show.Functions
       Numeric
       System.IO.Unsafe
