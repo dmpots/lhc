@@ -19,7 +19,7 @@ import Grin.Types hiding (Value(..))
 import qualified Data.Map as Map
 import Control.Monad.State
 import Data.Char
-
+import Data.IORef; import System.IO.Unsafe
 
 
 
@@ -45,7 +45,17 @@ runComp comp
                                 , stateFree = 0
                                 , stateArgs = ["lhc"] }
 
+{-# NOINLINE indent #-}
+indent :: IORef Int
+indent = unsafePerformIO (newIORef 0)
 
+withIndent str fn
+    = do n <- liftIO $ readIORef indent
+         liftIO $ putStrLn $ replicate n ' ' ++ str
+         liftIO $ writeIORef indent (n+2)
+         ret <- fn
+         liftIO $ writeIORef indent n
+         return ret
 
 compFuncDef :: FuncDef -> Gen CompFunction
 compFuncDef func
@@ -68,7 +78,7 @@ compExpression (Application name args)
     = do fn <- lookupFunction name
          args' <- mapM lookupVariable args
          return $ do args'' <- mapM id args'
-                     --liftIO $ putStrLn $ "Running: " ++ show name ++ " " ++ show args ++ " " ++ show args''
+                     --withIndent ("Running: " ++ show name ++ " " ++ show args ++ " " ++ show args'') $
                      fn args''
 compExpression (Unit value)
     = compValue value
