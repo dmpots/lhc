@@ -54,6 +54,8 @@ simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
 simpleExpression (Case var [Variable v :> alt])
     = simpleExpression (Unit (Variable var) :>>= v :-> alt)
+simpleExpression (Case var alts) | and [ case alt of Unit ret -> ret == cond; _ -> False | cond :> alt <- alts]
+    = simpleExpression (Unit (Variable var))
 simpleExpression (Case val alts)
     = do val' <- doSubst val
          alts' <- mapM simpleAlt alts
