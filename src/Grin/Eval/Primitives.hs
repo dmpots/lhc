@@ -103,7 +103,7 @@ allPrimitives :: Map.Map CompactString (GlobalScope -> Primitive)
 allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
     where prims = [ equal, gt, lt, gte, lte
                   , chrPrim, ordPrim
-                  , plus, minus, times, remInt, quotInt, addIntC
+                  , plus, plusWord, minus, minusWord, times, timesWord, remInt, quotInt, addIntC
                   , indexCharOffAddr
                   , readInt32OffAddr, readInt8OffAddr, readAddrOffAddr
                   , writeInt8OffAddr
@@ -116,7 +116,8 @@ allPrimitives = Map.fromList [ (fromString name, prim) | (name, prim) <- prims ]
                   , unsafeFreezeByteArray, byteArrayContents
                   , updatePrim, fetchPrim, evalPrim, evalApplyPrim, applyPrim
                   , newArrayPrim, readArray, writeArray
-                  , narrow8Word, narrow8Int, narrow32Int, negateInt
+                  , narrow8Word, narrow8Int, narrow16Word, narrow16Int, narrow32Int, negateInt
+                  , narrow32Word
                   , mkWeak]
 
 
@@ -131,8 +132,11 @@ gte   = mkPrimitive ">=#" $ binOp (>=)
 lte   = mkPrimitive "<=#" $ binOp (<=)
 
 plus = mkPrimitive "+#" $ binIntOp (+)
+plusWord = mkPrimitive "plusWord#" $ binIntOp (+)
 minus = mkPrimitive "-#" $ binIntOp (-)
+minusWord = mkPrimitive "minusWord#" $ binIntOp (-)
 times = mkPrimitive "*#" $ binIntOp (*)
+timesWord = mkPrimitive "timesWord#" $ binIntOp (*)
 remInt = mkPrimitive "remInt#" $ binIntOp rem
 quotInt = mkPrimitive "quotInt#" $ binIntOp quot
 
@@ -336,6 +340,13 @@ mkWeak = mkPrimitive "mkWeak#" $
 
 narrow32Int
     = mkPrimitive "narrow32Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+narrow32Word
+    = mkPrimitive "narrow32Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+
+narrow16Int
+    = mkPrimitive "narrow16Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+narrow16Word
+    = mkPrimitive "narrow16Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
 
 narrow8Word
     = mkPrimitive "narrow8Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
