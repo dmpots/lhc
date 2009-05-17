@@ -25,18 +25,9 @@ simpleFuncDef def
     = def{ funcDefBody = runReader (unOpt (simpleExpression (funcDefBody def))) Map.empty }
 
 simpleExpression :: Expression -> Opt Expression
-{-
-simpleExpression (Unit (Vector vs) :>>= Vector vs' :-> t)
-    = do vsp <- doSubsts vs
-         foldr (uncurry subst) (simpleExpression t) (zip vs' vsp)
--}
 simpleExpression (Unit (Variable v1) :>>= v2 :-> t)
     = do v1' <- doSubst v1
          subst v2 v1' (simpleExpression t)
-{-
-simpleExpression (a :>>= v :-> Unit v') | v == v'
-    = simpleExpression a
--}
 simpleExpression ((a :>>= b :-> c) :>>= d)
     = simpleExpression (a :>>= b :-> c :>>= d)
 simpleExpression ((a :>>= b :-> c) :>> d)
@@ -45,6 +36,8 @@ simpleExpression ((a :>> b) :>>= c)
     = simpleExpression (a :>> b :>>= c)
 simpleExpression ((a :>> b) :>> c)
     = simpleExpression (a :>> b :>> c)
+simpleExpression (Unit Empty :>> c)
+    = simpleExpression c
 simpleExpression (a :>> b)
     = do a' <- simpleExpression a
          b' <- simpleExpression b
@@ -59,10 +52,8 @@ simpleExpression (Store v)
     = liftM Store $ simpleValue v
 simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
-{-
-simpleExpression (Case val [cond :> e])
-    = do simpleExpression $ Unit val :>>= cond :-> e
--}
+simpleExpression (Case var [Variable v :> alt])
+    = simpleExpression (Unit (Variable var) :>>= v :-> alt)
 simpleExpression (Case val alts)
     = do val' <- doSubst val
          alts' <- mapM simpleAlt alts
