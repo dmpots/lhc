@@ -109,6 +109,24 @@ setupEnvGrin grin
                 addEquation (VarEntry arg)
                             (singleton $ Extract applications (funcDefName function) n)
 
+-- FIXME: Put these in order.
+baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
+                      ,"uncheckedIShiftRA#","and#","==#", "remInt#", "noDuplicate#"
+                      ,"narrow8Word#", "writeInt8OffAddr#"
+                      ,"narrow8Int#", "newPinnedByteArray#", "byteArrayContents#","touch#"
+                      ,"newAlignedPinnedByteArray#", "uncheckedIShiftL#", "negateInt#"
+                      ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
+                      ,"ord#","chr#","or#","narrow32Word#","uncheckedShiftL#","plusWord#"
+                      ,"uncheckedShiftRL#","neChar#","gcdInt#","narrow16Int#","timesWord#"
+                      ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#"
+                      ,"leWord#","/=#","writeCharArray#","xor#" ]
+vectorBuiltins      = ["unsafeFreezeByteArray#","fork#"
+                      ,"atomically#", "word2Integer#","integer2Int#"
+                      ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"]
+unsupportedBuiltins = ["raise#","atomicModifyMutVar#","waitWrite#","mkWeak#","writeTVar#"
+                      ,"raiseIO#"]
+
+
 setupEnv :: Expression -> GenM Rhs
 setupEnv (Store val)
     = do hp <- store =<< processVal val
@@ -148,17 +166,14 @@ setupEnv (Application (Builtin "apply") [arg1, arg2])
 setupEnv (Application (Builtin "update") [ptr,val])
     = do addEquation (VarEntry updates) (singleton $ Update ptr val)
          return mempty
-setupEnv (Application (Builtin fn) args) | fn `elem` ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
-                                                     ,"uncheckedIShiftRA#","and#","==#", "remInt#", "noDuplicate#"
-                                                     ,"readInt8OffAddr#","narrow8Word#", "writeInt8OffAddr#"
-                                                     ,"narrow8Int#", "newPinnedByteArray#", "byteArrayContents#","touch#"
-                                                     ,"newAlignedPinnedByteArray#", "uncheckedIShiftL#", "negateInt#"
-                                                     ,"indexCharOffAddr#","minusWord#","writeTVar#","geWord#"
-                                                     ]
+
+setupEnv (Application (Builtin fn) args) | fn `elem` baseBuiltins
     = return $ singleton Base
-setupEnv (Application (Builtin fn) args) | fn `elem` ["unsafeFreezeByteArray#"
-                                                     ,"atomically#", "word2Integer#","integer2Int#"]
+setupEnv (Application (Builtin fn) args) | fn `elem` vectorBuiltins
     = return $ singleton $ VectorTag [singleton Base, singleton Base]
+setupEnv (Application (Builtin fn) args) | fn `elem` unsupportedBuiltins
+    = return mempty
+
 setupEnv (Application (Builtin "makeStablePtr#") [val,realworld])
     = do hp <- store (singleton $ Ident val)
          return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
@@ -167,8 +182,6 @@ setupEnv (Application (Builtin "deRefStablePtr#") [ptr,realworld])
 setupEnv (Application (Builtin "unblockAsyncExceptions#") [fn, realworld])
     = do return $ singleton $ Apply fn realworld
 setupEnv (Application (Builtin "blockAsyncExceptions#") [fn, realworld])
-    = do return $ singleton $ Apply fn realworld
-setupEnv (Application (Builtin "catch#") [fn, handler, realworld])
     = do return $ singleton $ Apply fn realworld
 setupEnv (Application (Builtin "fetch") [a])
     = return $ singleton $ Fetch a
@@ -180,8 +193,6 @@ setupEnv (Application (Builtin "readArray#") [arr, nth, realworld])
 setupEnv (Application (Builtin "writeArray#") [arr, nth, elt, realworld])
     = do addEquation (VarEntry updates) (singleton $ Update arr elt)
          return mempty
-setupEnv (Application (Builtin _) args)
-    = return mempty
 setupEnv (Application (Builtin builtin) args)
     = error $ "unknown builtin: " ++ show builtin
 
