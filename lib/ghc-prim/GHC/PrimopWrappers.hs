@@ -496,7 +496,7 @@ indexWord16Array# a1 a2 = (GHC.Prim.indexWord16Array#) a1 a2
 indexWord32Array# :: ByteArray# -> Int# -> Word#
 indexWord32Array# a1 a2 = (GHC.Prim.indexWord32Array#) a1 a2
 {-# NOINLINE indexWord64Array# #-}
-indexWord64Array# :: ByteArray# -> Int# -> Word#
+indexWord64Array# :: ByteArray# -> Int# -> WORD64
 indexWord64Array# a1 a2 = (GHC.Prim.indexWord64Array#) a1 a2
 {-# NOINLINE readCharArray# #-}
 readCharArray# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,Char# #)
@@ -544,7 +544,7 @@ readWord16Array# a1 a2 a3 = (GHC.Prim.readWord16Array#) a1 a2 a3
 readWord32Array# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,Word# #)
 readWord32Array# a1 a2 a3 = (GHC.Prim.readWord32Array#) a1 a2 a3
 {-# NOINLINE readWord64Array# #-}
-readWord64Array# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,Word# #)
+readWord64Array# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,WORD64 #)
 readWord64Array# a1 a2 a3 = (GHC.Prim.readWord64Array#) a1 a2 a3
 {-# NOINLINE writeCharArray# #-}
 writeCharArray# :: MutableByteArray# s -> Int# -> Char# -> State# s -> State# s
@@ -592,7 +592,7 @@ writeWord16Array# a1 a2 a3 a4 = (GHC.Prim.writeWord16Array#) a1 a2 a3 a4
 writeWord32Array# :: MutableByteArray# s -> Int# -> Word# -> State# s -> State# s
 writeWord32Array# a1 a2 a3 a4 = (GHC.Prim.writeWord32Array#) a1 a2 a3 a4
 {-# NOINLINE writeWord64Array# #-}
-writeWord64Array# :: MutableByteArray# s -> Int# -> Word# -> State# s -> State# s
+writeWord64Array# :: MutableByteArray# s -> Int# -> WORD64 -> State# s -> State# s
 writeWord64Array# a1 a2 a3 a4 = (GHC.Prim.writeWord64Array#) a1 a2 a3 a4
 {-# NOINLINE plusAddr# #-}
 plusAddr# :: Addr# -> Int# -> Addr#
@@ -673,7 +673,7 @@ indexWord16OffAddr# a1 a2 = (GHC.Prim.indexWord16OffAddr#) a1 a2
 indexWord32OffAddr# :: Addr# -> Int# -> Word#
 indexWord32OffAddr# a1 a2 = (GHC.Prim.indexWord32OffAddr#) a1 a2
 {-# NOINLINE indexWord64OffAddr# #-}
-indexWord64OffAddr# :: Addr# -> Int# -> Word#
+indexWord64OffAddr# :: Addr# -> Int# -> WORD64
 indexWord64OffAddr# a1 a2 = (GHC.Prim.indexWord64OffAddr#) a1 a2
 {-# NOINLINE readCharOffAddr# #-}
 readCharOffAddr# :: Addr# -> Int# -> State# s -> (# State# s,Char# #)
@@ -721,7 +721,7 @@ readWord16OffAddr# a1 a2 a3 = (GHC.Prim.readWord16OffAddr#) a1 a2 a3
 readWord32OffAddr# :: Addr# -> Int# -> State# s -> (# State# s,Word# #)
 readWord32OffAddr# a1 a2 a3 = (GHC.Prim.readWord32OffAddr#) a1 a2 a3
 {-# NOINLINE readWord64OffAddr# #-}
-readWord64OffAddr# :: Addr# -> Int# -> State# s -> (# State# s,Word# #)
+readWord64OffAddr# :: Addr# -> Int# -> State# s -> (# State# s,WORD64 #)
 readWord64OffAddr# a1 a2 a3 = (GHC.Prim.readWord64OffAddr#) a1 a2 a3
 {-# NOINLINE writeCharOffAddr# #-}
 writeCharOffAddr# :: Addr# -> Int# -> Char# -> State# s -> State# s
@@ -769,7 +769,7 @@ writeWord16OffAddr# a1 a2 a3 a4 = (GHC.Prim.writeWord16OffAddr#) a1 a2 a3 a4
 writeWord32OffAddr# :: Addr# -> Int# -> Word# -> State# s -> State# s
 writeWord32OffAddr# a1 a2 a3 a4 = (GHC.Prim.writeWord32OffAddr#) a1 a2 a3 a4
 {-# NOINLINE writeWord64OffAddr# #-}
-writeWord64OffAddr# :: Addr# -> Int# -> Word# -> State# s -> State# s
+writeWord64OffAddr# :: Addr# -> Int# -> WORD64 -> State# s -> State# s
 writeWord64OffAddr# a1 a2 a3 a4 = (GHC.Prim.writeWord64OffAddr#) a1 a2 a3 a4
 {-# NOINLINE newMutVar# #-}
 newMutVar# :: a -> State# s -> (# State# s,MutVar# s a #)
