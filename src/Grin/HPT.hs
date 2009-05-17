@@ -378,9 +378,10 @@ lowerExpression (Application (Builtin "eval") [a])
            Just (Rhs rhs) -> do let Rhs rhs' = mconcat [ hpt Map.! HeapEntry hp | Heap hp <- rhs ]
                                 alts <- mapM (mkApplyAlt []) rhs'
                                 v <- newVariable
+                                u <- mkUpdate a f v rhs'
                                 return $ Application (Builtin "fetch") [a] :>>= f :->
                                          Case f alts :>>= v :->
-                                         Application (Builtin "update") [a,v] :>>
+                                         u :>> -- Application (Builtin "update") [a,v] :>>
                                          Unit (Variable v)
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application (Builtin "apply") [a,b])
@@ -407,6 +408,17 @@ lowerAlt :: Alt -> M Alt
 lowerAlt (a :> b)
     = do b' <- lowerExpression b
          return $ a :> b'
+
+mkUpdate ptr scrut val tags
+    = do fnTags <- sequence [ do args' <- replicateM (length args) newVariable
+                                 return $ Node tag FunctionNode n args' | t@(Tag tag FunctionNode n args) <- tags, n == 0 ]
+         constrTags <- sequence [ do args' <- replicateM (length args) newVariable
+                                     return $ Node tag nt n args' | t@(Tag tag nt n args) <- tags, not (n == 0 && nt == FunctionNode) ]
+         let doUpdate = Case val [ tag :> Application (Builtin "update") [ptr,val] | tag <- constrTags ]
+         if null fnTags || null constrTags
+            then return $ Unit Empty
+            else return $ doUpdate
+
 
 mkApplyAlt extraArgs (Tag tag FunctionNode n argsRhs) | n == length extraArgs
     = do args <- replicateM (length argsRhs) newVariable
