@@ -337,21 +337,27 @@ mkWeak = mkPrimitive "mkWeak#" $
             return $ \(AnyArg key) (AnyArg val) (AnyArg finalizer) RealWorld ->
                        noScope $ return (Vector [realWorld, Empty])
 
+fromInt32 i = fromInt (fromIntegral (fromIntegral i::Int32)::Int)
+fromWord32 i = fromInt (fromIntegral (fromIntegral i::Word32)::Int)
+fromInt16 i = fromInt (fromIntegral (fromIntegral i::Int16)::Int)
+fromWord16 i = fromInt (fromIntegral (fromIntegral i::Word16)::Int)
+fromInt8 i = fromInt (fromIntegral (fromIntegral i::Int8)::Int)
+fromWord8 i = fromInt (fromIntegral (fromIntegral i::Word8)::Int)
 
 narrow32Int
-    = mkPrimitive "narrow32Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+    = mkPrimitive "narrow32Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt32 i)
 narrow32Word
-    = mkPrimitive "narrow32Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+    = mkPrimitive "narrow32Word#" $ return $ \(IntArg i) -> noScope $ return (fromWord32 i)
 
 narrow16Int
-    = mkPrimitive "narrow16Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+    = mkPrimitive "narrow16Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt16 i)
 narrow16Word
-    = mkPrimitive "narrow16Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+    = mkPrimitive "narrow16Word#" $ return $ \(IntArg i) -> noScope $ return (fromWord16 i)
 
 narrow8Word
-    = mkPrimitive "narrow8Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+    = mkPrimitive "narrow8Word#" $ return $ \(IntArg i) -> noScope $ return (fromInt8 i)
 narrow8Int
-    = mkPrimitive "narrow8Int#" $ return $ \(IntArg i) -> noScope $ return (fromInt i)
+    = mkPrimitive "narrow8Int#" $ return $ \(IntArg i) -> noScope $ return (fromWord8 i)
 
 negateInt
     = mkPrimitive "negateInt#" $ return $ \(IntArg i) -> noScope $ return (fromInt (negate i))
