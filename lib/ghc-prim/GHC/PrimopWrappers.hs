@@ -1,9 +1,20 @@
-{-# LANGUAGE NoImplicitPrelude, UnboxedTuples #-}
+{-# LANGUAGE NoImplicitPrelude, UnboxedTuples, CPP #-}
 module GHC.PrimopWrappers where
 import qualified GHC.Prim
 import GHC.Bool (Bool)
 import GHC.Unit ()
 import GHC.Prim (Char#, Int#, Word#, Float#, Double#, ByteArray#, State#, MutableArray#, Array#, MutableByteArray#, Addr#, StablePtr#, MutVar#, RealWorld, TVar#, MVar#, ThreadId#, Weak#, StableName#, BCO#)
+
+
+#if WORD_SIZE   == 4
+#define INT64 Int64#
+#define WORD64 Word64#
+#elif WORD_SIZE == 8
+#define INT64 Int#
+#define WORD64 Word#
+#endif
+
+
 {-# NOINLINE gtChar# #-}
 gtChar# :: Char# -> Char# -> Bool
 gtChar# a1 a2 = (GHC.Prim.gtChar#) a1 a2
@@ -473,7 +484,7 @@ indexInt16Array# a1 a2 = (GHC.Prim.indexInt16Array#) a1 a2
 indexInt32Array# :: ByteArray# -> Int# -> Int#
 indexInt32Array# a1 a2 = (GHC.Prim.indexInt32Array#) a1 a2
 {-# NOINLINE indexInt64Array# #-}
-indexInt64Array# :: ByteArray# -> Int# -> Int#
+indexInt64Array# :: ByteArray# -> Int# -> INT64
 indexInt64Array# a1 a2 = (GHC.Prim.indexInt64Array#) a1 a2
 {-# NOINLINE indexWord8Array# #-}
 indexWord8Array# :: ByteArray# -> Int# -> Word#
@@ -521,7 +532,7 @@ readInt16Array# a1 a2 a3 = (GHC.Prim.readInt16Array#) a1 a2 a3
 readInt32Array# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,Int# #)
 readInt32Array# a1 a2 a3 = (GHC.Prim.readInt32Array#) a1 a2 a3
 {-# NOINLINE readInt64Array# #-}
-readInt64Array# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,Int# #)
+readInt64Array# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,INT64 #)
 readInt64Array# a1 a2 a3 = (GHC.Prim.readInt64Array#) a1 a2 a3
 {-# NOINLINE readWord8Array# #-}
 readWord8Array# :: MutableByteArray# s -> Int# -> State# s -> (# State# s,Word# #)
@@ -569,7 +580,7 @@ writeInt16Array# a1 a2 a3 a4 = (GHC.Prim.writeInt16Array#) a1 a2 a3 a4
 writeInt32Array# :: MutableByteArray# s -> Int# -> Int# -> State# s -> State# s
 writeInt32Array# a1 a2 a3 a4 = (GHC.Prim.writeInt32Array#) a1 a2 a3 a4
 {-# NOINLINE writeInt64Array# #-}
-writeInt64Array# :: MutableByteArray# s -> Int# -> Int# -> State# s -> State# s
+writeInt64Array# :: MutableByteArray# s -> Int# -> INT64 -> State# s -> State# s
 writeInt64Array# a1 a2 a3 a4 = (GHC.Prim.writeInt64Array#) a1 a2 a3 a4
 {-# NOINLINE writeWord8Array# #-}
 writeWord8Array# :: MutableByteArray# s -> Int# -> Word# -> State# s -> State# s
@@ -650,7 +661,7 @@ indexInt16OffAddr# a1 a2 = (GHC.Prim.indexInt16OffAddr#) a1 a2
 indexInt32OffAddr# :: Addr# -> Int# -> Int#
 indexInt32OffAddr# a1 a2 = (GHC.Prim.indexInt32OffAddr#) a1 a2
 {-# NOINLINE indexInt64OffAddr# #-}
-indexInt64OffAddr# :: Addr# -> Int# -> Int#
+indexInt64OffAddr# :: Addr# -> Int# -> INT64
 indexInt64OffAddr# a1 a2 = (GHC.Prim.indexInt64OffAddr#) a1 a2
 {-# NOINLINE indexWord8OffAddr# #-}
 indexWord8OffAddr# :: Addr# -> Int# -> Word#
@@ -698,7 +709,7 @@ readInt16OffAddr# a1 a2 a3 = (GHC.Prim.readInt16OffAddr#) a1 a2 a3
 readInt32OffAddr# :: Addr# -> Int# -> State# s -> (# State# s,Int# #)
 readInt32OffAddr# a1 a2 a3 = (GHC.Prim.readInt32OffAddr#) a1 a2 a3
 {-# NOINLINE readInt64OffAddr# #-}
-readInt64OffAddr# :: Addr# -> Int# -> State# s -> (# State# s,Int# #)
+readInt64OffAddr# :: Addr# -> Int# -> State# s -> (# State# s,INT64 #)
 readInt64OffAddr# a1 a2 a3 = (GHC.Prim.readInt64OffAddr#) a1 a2 a3
 {-# NOINLINE readWord8OffAddr# #-}
 readWord8OffAddr# :: Addr# -> Int# -> State# s -> (# State# s,Word# #)
@@ -746,7 +757,7 @@ writeInt16OffAddr# a1 a2 a3 a4 = (GHC.Prim.writeInt16OffAddr#) a1 a2 a3 a4
 writeInt32OffAddr# :: Addr# -> Int# -> Int# -> State# s -> State# s
 writeInt32OffAddr# a1 a2 a3 a4 = (GHC.Prim.writeInt32OffAddr#) a1 a2 a3 a4
 {-# NOINLINE writeInt64OffAddr# #-}
-writeInt64OffAddr# :: Addr# -> Int# -> Int# -> State# s -> State# s
+writeInt64OffAddr# :: Addr# -> Int# -> INT64 -> State# s -> State# s
 writeInt64OffAddr# a1 a2 a3 a4 = (GHC.Prim.writeInt64OffAddr#) a1 a2 a3 a4
 {-# NOINLINE writeWord8OffAddr# #-}
 writeWord8OffAddr# :: Addr# -> Int# -> Word# -> State# s -> State# s
