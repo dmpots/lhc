@@ -3,7 +3,7 @@ module GHC.PrimopWrappers where
 import qualified GHC.Prim
 import GHC.Bool (Bool)
 import GHC.Unit ()
-import GHC.Prim (Char#, Int#, Word#, Float#, Double#, ByteArray#, State#, MutableArray#, Array#, MutableByteArray#, Addr#, StablePtr#, MutVar#, RealWorld, TVar#, MVar#, ThreadId#, Weak#, StableName#, BCO#)
+import GHC.Prim (Char#, Int#, Word#, Int64#, Word64#, Float#, Double#, ByteArray#, State#, MutableArray#, Array#, MutableByteArray#, Addr#, StablePtr#, MutVar#, RealWorld, TVar#, MVar#, ThreadId#, Weak#, StableName#, BCO#)
 
 
 #if WORD_SIZE   == 4
