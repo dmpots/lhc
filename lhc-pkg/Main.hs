@@ -378,10 +378,10 @@ getPkgDatabases modify my_flags = do
   let err_msg = "missing --global-conf option, location of global package.conf unknown\n"
   global_conf <-
      case [ f | FlagGlobalConfig f <- my_flags ] of
-        [] -> do let globalConfPath = "/usr/local/lib/lhc/package.conf"
-                 exist <- doesFileExist globalConfPath
-                 if exist then return $ Just globalConfPath
-                          else return $ Nothing
+        [] -> return Nothing{-do let globalConfPath = "/usr/local/lib/lhc/package.conf"
+                  exist <- doesFileExist globalConfPath
+                  if exist then return $ Just globalConfPath
+                           else return $ Nothing-}
         fs -> return $ Just (last fs)
 
   let global_conf_dir = fromMaybe "" global_conf ++ ".d"
