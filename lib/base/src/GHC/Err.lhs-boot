@@ -1,3 +1,4 @@
+\begin{code}
 {-# OPTIONS_GHC -XNoImplicitPrelude #-}
 ---------------------------------------------------------------------------
 --                  Ghc.Err.hs-boot
@@ -22,3 +23,4 @@ divZeroError :: a
 
 -- overflow is needed quite early
 overflowError :: a
+\end{code}
