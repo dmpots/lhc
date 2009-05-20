@@ -106,18 +106,18 @@ baseBuiltins, vectorBuiltins, unsupportedBuiltins :: [CompactString]
 baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"uncheckedIShiftRA#","and#","==#", "remInt#", "noDuplicate#"
                       ,"narrow8Word#", "writeInt8OffAddr#"
-                      ,"narrow8Int#", "newPinnedByteArray#", "byteArrayContents#","touch#"
-                      ,"newAlignedPinnedByteArray#", "uncheckedIShiftL#", "negateInt#"
+                      ,"narrow8Int#", "byteArrayContents#","touch#"
+                      ,"uncheckedIShiftL#", "negateInt#"
                       ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
                       ,"ord#","chr#","or#","narrow32Word#","uncheckedShiftL#","plusWord#"
                       ,"uncheckedShiftRL#","neChar#","gcdInt#","narrow16Int#","timesWord#"
                       ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#"
                       ,"leWord#","/=#","writeCharArray#","xor#" ]
-vectorBuiltins      = ["unsafeFreezeByteArray#","fork#"
-                      ,"atomically#", "word2Integer#","integer2Int#"
+vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
+                      , "word2Integer#","integer2Int#", "newPinnedByteArray#"
                       ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"]
 unsupportedBuiltins = ["raise#","atomicModifyMutVar#","waitWrite#","mkWeak#","writeTVar#"
-                      ,"raiseIO#"]
+                      ,"raiseIO#","fork#","atomically#"]
 
 
 setupEnv :: Expression -> GenM Rhs
@@ -149,7 +149,7 @@ setupEnv (Case val alts)
                      _              -> error $ "setupEnv: Invalid case: " ++ show l
          return $ mconcat rets
 setupEnv (Application External{} args)
-    = return $ singleton (VectorTag [singleton Base, singleton Base])
+    = return $ singleton (VectorTag [mempty, singleton Base])
 
 setupEnv (Application (Builtin "eval") [arg])
   = do return $ singleton (Eval arg)
@@ -163,15 +163,15 @@ setupEnv (Application (Builtin "update") [ptr,val])
 setupEnv (Application (Builtin fn) args) | fn `elem` baseBuiltins
     = return $ singleton Base
 setupEnv (Application (Builtin fn) args) | fn `elem` vectorBuiltins
-    = return $ singleton $ VectorTag [singleton Base, singleton Base]
+    = return $ singleton $ VectorTag [mempty, singleton Base]
 setupEnv (Application (Builtin fn) args) | fn `elem` unsupportedBuiltins
     = return mempty
 
 setupEnv (Application (Builtin "makeStablePtr#") [val,realworld])
     = do hp <- store (singleton $ Ident val)
-         return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
+         return $ singleton $ VectorTag [mempty, singleton $ Heap hp]
 setupEnv (Application (Builtin "deRefStablePtr#") [ptr,realworld])
-    = do return $ singleton $ VectorTag [singleton Base, singleton $ Fetch ptr]
+    = do return $ singleton $ VectorTag [mempty, singleton $ Fetch ptr]
 setupEnv (Application (Builtin "unblockAsyncExceptions#") [fn, realworld])
     = do return $ singleton $ Apply fn realworld
 setupEnv (Application (Builtin "blockAsyncExceptions#") [fn, realworld])
@@ -180,9 +180,9 @@ setupEnv (Application (Builtin "fetch") [a])
     = return $ singleton $ Fetch a
 setupEnv (Application (Builtin "newArray#") [size, elt, realworld])
     = do hp <- store (singleton $ Ident elt)
-         return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
+         return $ singleton $ VectorTag [mempty, singleton $ Heap hp]
 setupEnv (Application (Builtin "readArray#") [arr, nth, realworld])
-    = return $ singleton $ VectorTag [singleton Base, singleton $ Fetch arr]
+    = return $ singleton $ VectorTag [mempty, singleton $ Fetch arr]
 setupEnv (Application (Builtin "writeArray#") [arr, nth, elt, realworld])
     = do addEquation (VarEntry updates) (singleton $ Update arr elt)
          return mempty
