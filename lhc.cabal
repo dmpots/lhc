@@ -20,6 +20,9 @@ flag threaded
 flag lhc-regress
   default:            False
 
+flag with-libs
+  default:            False
+
 Executable lhc
  main-is:            GhcMain.hs
  Hs-Source-Dirs:     src
@@ -31,6 +34,10 @@ Executable lhc
 
  ghc-options:        -fwarn-unused-imports -fwarn-unused-binds -fwarn-incomplete-patterns
  Extensions:         ScopedTypeVariables
+ if flag(with-libs)
+   x-build-libs:     True
+ else
+   x-build-libs:     False
  if flag(hpc)
   ghc-options:       -fhpc -hisuf hpc_hi -osuf hpc_o
  if flag(threaded)
