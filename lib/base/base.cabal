@@ -14,7 +14,7 @@ build-type:     Simple
 Library {
    extensions: CPP, NoImplicitPrelude
    build-depends: ghc-prim, integer
-   ghc-options: -fglasgow-exts
+   ghc-options: -package-name base
    include-dirs: includes/
 
    Exposed-modules:
