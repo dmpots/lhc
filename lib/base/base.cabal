@@ -12,7 +12,7 @@ cabal-version:  >=1.2
 build-type:     Simple
 
 Library {
-   extensions: CPP, NoImplicitPrelude
+   extensions: CPP, NoImplicitPrelude, MagicHash
    build-depends: ghc-prim, integer
    ghc-options: -package-name base -fglasgow-exts
    include-dirs: includes/
