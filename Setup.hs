@@ -20,8 +20,6 @@ main = defaultMainWithHooks simpleUserHooks { postInst = myPostInst }
               pkgVer = pkgVersion (package pkgdesc)
               lhc    = bindir dirs </> "lhc"
               lhcpkg = bindir dirs </> "lhc-pkg"
-              confargs = unwords [ "--lhc", "--with-lhc="++lhc, "--with-lhc-pkg="++lhcpkg
-                                 , "--prefix="++show (prefix (installDirTemplates buildinfo))]
               lpkgdesc = localPkgDescr buildinfo
               exes     = executables lpkgdesc
               sanity   = any (\(Executable s _ _) -> s == "lhc") exes
@@ -56,8 +54,12 @@ main = defaultMainWithHooks simpleUserHooks { postInst = myPostInst }
           putStrLn "Done"
           -- build libraries if -fwith-libs is passed
           when (withLibs customF) $ do
+            let confargs = unwords [ "--lhc", "--with-lhc="++lhc, "--with-lhc-pkg="++lhcpkg
+                                   , "--prefix="++show (prefix (installDirTemplates buildinfo))
+                                   , "--extra-include-dirs="++(ghcLibdir</>"include") ]
             putStrLn "building libraries..."
             installLhcPkgs confargs libsToBuild
+
         withLibs = any $ \(x,y) -> x == "x-build-libs" && y == "True"
         installLhcPkgs cf  = mapM_ (installLhcPkg cf)
         installLhcPkg cf n = do
