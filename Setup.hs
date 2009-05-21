@@ -1,6 +1,7 @@
 import System.Cmd (system)
+import System.Process (readProcess)
 import System.FilePath
-import Control.Monad (when, unless)
+import Control.Monad (when, unless, liftM)
 import System.Directory
 import System.Info as SysVer
 import Data.Version
@@ -40,7 +41,19 @@ main = defaultMainWithHooks simpleUserHooks { postInst = myPostInst }
             createDirectoryIfMissing True udir
             writeFile (udir </> "package.conf") "[]\n"
             putStrLn "Done"
-          putStrLn "Copying unlit and extra-gcc-opts... TODO FIXME"
+
+          -- copy over extra-gcc-opts and unlit from
+          -- ghc's libdir
+          -- NOTE FIXME: this assumes that the 'ghc' executable
+          -- points to the same one you compiled LHC against; although,
+          -- the compile options would probably roughly stay the same anyway
+          ghcLibdir <- liftM (unwords . words) $ readProcess "ghc" ["--print-libdir"] []
+          let unlit          = ghcLibdir </> "unlit"
+              extragccopts = ghcLibdir </> "extra-gcc-opts"
+          putStr "Copying unlit and extra-gcc-opts..."
+          system $ "cp "++unlit++" "++(udir </> "unlit")
+          system $ "cp "++extragccopts++" "++(udir </> "extra-gcc-opts")
+          putStrLn "Done"
           -- build libraries if -fwith-libs is passed
           when (withLibs customF) $ do
             putStrLn "building libraries..."
