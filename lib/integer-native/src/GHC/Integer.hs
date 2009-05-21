@@ -41,7 +41,7 @@ import GHC.Types
 import GHC.Prim
 import GHC.Bool
 import GHC.Ordering
-
+import GHC.IntWord64
 import GHC.Integer.Internals
 
 toInt# :: Integer -> Int#
@@ -139,10 +139,10 @@ complementInteger (Integer x#)
 
 #if WORD_SIZE == 4
 integerToWord64 :: Integer -> Word64#
-integerToWord64 (Integer x#) = int64ToWord64# (intToInt64# i)
+integerToWord64 (Integer x) = int64ToWord64# (intToInt64# x)
 
 integerToInt64 :: Integer -> Int64#
-integerToInt64 (Integer x#) = intToInt64# i
+integerToInt64 (Integer x) = intToInt64# x
 
 word64ToInteger :: Word64# -> Integer
 word64ToInteger w = Integer (int64ToInt# (word64ToInt64# w))
@@ -172,7 +172,7 @@ x# `divInt#` y#
 --    | (x# <# 0#) && (y# ># 0#) = ((x# -# y#) +# 1#) `quotInt#` y#
     = if  (x# ># 0#) && (y# <# 0#)
       then ((x# -# 1#) `quotInt#` y#) -# 1#
-      else if (x# <# 0#) && (y# ># 0#) 
+      else if (x# <# 0#) && (y# ># 0#)
            then ((x# +# 1#) `quotInt#` y#) -# 1#
            else x# `quotInt#` y#
 
