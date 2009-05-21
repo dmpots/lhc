@@ -11,7 +11,7 @@ license:             PublicDomain
 author:              David Himmelstrup
 maintainer:          lhc@projects.haskell.org
 homepage:            http://lhc.seize.it/
-build-type:          Simple
+build-type:          Custom
 
 flag hpc
   default:            False
