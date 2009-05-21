@@ -15,7 +15,7 @@
 
 module Main (main) where
 
-import Paths_lhc_pkg
+import Paths_lhc
 import System.Info
 import Data.Version
 import Distribution.ModuleName hiding (main)
@@ -435,7 +435,7 @@ getPkgDatabases modify my_flags = do
 
   let db_flags = [ f | Just f <- map is_db_flag my_flags ]
          where is_db_flag FlagUser
-                      | Just (user_conf, _user_exists) <- mb_user_conf 
+                      | Just (user_conf, _user_exists) <- mb_user_conf
                       = Just user_conf
                is_db_flag FlagGlobal     = Just virt_global_conf
                is_db_flag (FlagConfig f) = Just f
@@ -464,7 +464,7 @@ getPkgDatabases modify my_flags = do
 
                 -- the database we actually modify is the one mentioned
                 -- rightmost on the command-line.
-                to_modify = if null db_flags 
+                to_modify = if null db_flags
                                 then Just virt_global_conf
                                 else Just (last db_flags)
              in
@@ -563,7 +563,7 @@ modifyPackage fn pkgid my_flags force = do
   ((db_name, pkgs), ps) <- fmap head $ findPackagesByDB db_stack (Id pkgid)
 --  let ((db_name, pkgs) : rest_of_stack) = db_stack
 --  ps <- findPackages [(db_name,pkgs)] (Id pkgid)
-  let 
+  let
       pids = map package ps
       modify pkg
           | package pkg `elem` pids = fn pkg
