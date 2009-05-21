@@ -8,7 +8,7 @@ description:
 Tested-With:         GHC == 6.10.1
 category:            Compiler
 license:             PublicDomain
-author:              David Himmelstrup
+author:              David Himmelstrup, Austin Seipp
 maintainer:          lhc@projects.haskell.org
 homepage:            http://lhc.seize.it/
 build-type:          Custom
