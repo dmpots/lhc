@@ -24,21 +24,23 @@ module Foreign.C.Error (
   -- different values of @errno@.  This module defines the common values,
   -- but due to the open definition of 'Errno' users may add definitions
   -- which are not predefined.
-  eOK, e2BIG, eACCES, eADDRINUSE, eADDRNOTAVAIL, eADV, eAFNOSUPPORT, eAGAIN, 
-  eALREADY, eBADF, eBADMSG, eBUSY, eCHILD, eCOMM, eCONNABORTED, 
-  eCONNREFUSED, eCONNRESET, eDEADLK, eDESTADDRREQ, eDOM, eDQUOT, 
-  eEXIST, eFAULT, eFBIG, eHOSTDOWN, eHOSTUNREACH, eIDRM, eILSEQ, 
-  eINPROGRESS, eINTR, eINVAL, eIO, eISCONN, eISDIR, eLOOP, eMFILE, eMLINK, 
-  eMSGSIZE, eMULTIHOP, eNAMETOOLONG, eNETDOWN, eNETRESET, eNETUNREACH, 
-  eNFILE, eNOBUFS, eNODATA, eNODEV, eNOENT, eNOEXEC, eNOLCK, eNOLINK, 
-  eNOMEM, eNOMSG, eNONET, eNOPROTOOPT, eNOSPC, eNOSR, eNOSTR, eNOSYS, 
-  eNOTBLK, eNOTCONN, eNOTDIR, eNOTEMPTY, eNOTSOCK, eNOTTY, eNXIO, 
-  eOPNOTSUPP, ePERM, ePFNOSUPPORT, ePIPE, 
-  ePROTO, ePROTONOSUPPORT, ePROTOTYPE, 
-  eRANGE, eREMCHG, eREMOTE, eROFS, eSHUTDOWN, 
-  eSOCKTNOSUPPORT, eSPIPE, eSRCH, eSRMNT, eSTALE, eTIME, eTIMEDOUT, 
+  eOK, e2BIG, eACCES, eADDRINUSE, eADDRNOTAVAIL, eAFNOSUPPORT, eAGAIN,
+  eALREADY, eBADF, eBADMSG, eBUSY, eCHILD, eCONNABORTED,
+  eCONNREFUSED, eCONNRESET, eDEADLK, eDESTADDRREQ, eDOM, eDQUOT,
+  eEXIST, eFAULT, eFBIG, eHOSTDOWN, eHOSTUNREACH, eIDRM, eILSEQ,
+  eINPROGRESS, eINTR, eINVAL, eIO, eISCONN, eISDIR, eLOOP, eMFILE, eMLINK,
+  eMSGSIZE, eMULTIHOP, eNAMETOOLONG, eNETDOWN, eNETRESET, eNETUNREACH,
+  eNFILE, eNOBUFS, eNODATA, eNODEV, eNOENT, eNOEXEC, eNOLCK, eNOLINK,
+  eNOMEM, eNOMSG, eNOPROTOOPT, eNOSPC, eNOSR, eNOSTR, eNOSYS,
+  eNOTBLK, eNOTCONN, eNOTDIR, eNOTEMPTY, eNOTSOCK, eNOTTY, eNXIO,
+  eOPNOTSUPP, ePERM, ePFNOSUPPORT, ePIPE,
+  ePROTO, ePROTONOSUPPORT, ePROTOTYPE,
+  eRANGE, eREMOTE, eROFS, eSHUTDOWN,
+  eSOCKTNOSUPPORT, eSPIPE, eSRCH, eSTALE, eTIME, eTIMEDOUT,
   eTOOMANYREFS, eTXTBSY, eUSERS, eWOULDBLOCK, eXDEV,
-
+  {- unused; may go back in somehow?
+  eADV, eCOMM, eNONET, eREMCHG, eSRMNT,
+  -}
   -- ** 'Errno' functions
                         -- :: Errno
   isValidErrno,         -- :: Errno -> Bool
@@ -66,23 +68,23 @@ module Foreign.C.Error (
   throwErrnoIf_,        -- :: (a -> Bool) -> String -> IO a       -> IO ()
   throwErrnoIfRetry,    -- :: (a -> Bool) -> String -> IO a       -> IO a
   throwErrnoIfRetry_,   -- :: (a -> Bool) -> String -> IO a       -> IO ()
-  throwErrnoIfMinus1,   -- :: Num a 
+  throwErrnoIfMinus1,   -- :: Num a
                         -- =>                String -> IO a       -> IO a
-  throwErrnoIfMinus1_,  -- :: Num a 
+  throwErrnoIfMinus1_,  -- :: Num a
                         -- =>                String -> IO a       -> IO ()
   throwErrnoIfMinus1Retry,
-                        -- :: Num a 
+                        -- :: Num a
                         -- =>                String -> IO a       -> IO a
-  throwErrnoIfMinus1Retry_,  
-                        -- :: Num a 
+  throwErrnoIfMinus1Retry_,
+                        -- :: Num a
                         -- =>                String -> IO a       -> IO ()
   throwErrnoIfNull,     -- ::                String -> IO (Ptr a) -> IO (Ptr a)
   throwErrnoIfNullRetry,-- ::                String -> IO (Ptr a) -> IO (Ptr a)
 
-  throwErrnoIfRetryMayBlock, 
+  throwErrnoIfRetryMayBlock,
   throwErrnoIfRetryMayBlock_,
   throwErrnoIfMinus1RetryMayBlock,
-  throwErrnoIfMinus1RetryMayBlock_,  
+  throwErrnoIfMinus1RetryMayBlock_,
   throwErrnoIfNullRetryMayBlock,
 
   throwErrnoPath,
@@ -137,29 +139,30 @@ import Foreign.Storable         ( Storable(poke,peek) )
 newtype Errno = Errno CInt
 
 instance Eq Errno where
-  errno1@(Errno no1) == errno2@(Errno no2) 
+  errno1@(Errno no1) == errno2@(Errno no2)
     | isValidErrno errno1 && isValidErrno errno2 = no1 == no2
     | otherwise                                  = False
 
 -- common "errno" symbols
 --
-eOK, e2BIG, eACCES, eADDRINUSE, eADDRNOTAVAIL, eADV, eAFNOSUPPORT, eAGAIN, 
-  eALREADY, eBADF, eBADMSG, eBUSY, eCHILD, eCOMM, eCONNABORTED, 
-  eCONNREFUSED, eCONNRESET, eDEADLK, eDESTADDRREQ, eDOM, eDQUOT, 
-  eEXIST, eFAULT, eFBIG, eHOSTDOWN, eHOSTUNREACH, eIDRM, eILSEQ, 
-  eINPROGRESS, eINTR, eINVAL, eIO, eISCONN, eISDIR, eLOOP, eMFILE, eMLINK, 
-  eMSGSIZE, eMULTIHOP, eNAMETOOLONG, eNETDOWN, eNETRESET, eNETUNREACH, 
-  eNFILE, eNOBUFS, eNODATA, eNODEV, eNOENT, eNOEXEC, eNOLCK, eNOLINK, 
-  eNOMEM, eNOMSG, eNONET, eNOPROTOOPT, eNOSPC, eNOSR, eNOSTR, eNOSYS, 
-  eNOTBLK, eNOTCONN, eNOTDIR, eNOTEMPTY, eNOTSOCK, eNOTTY, eNXIO, 
-  eOPNOTSUPP, ePERM, ePFNOSUPPORT, ePIPE, 
-  ePROTO, ePROTONOSUPPORT, ePROTOTYPE, 
-  eRANGE, eREMCHG, eREMOTE, eROFS, eSHUTDOWN, 
-  eSOCKTNOSUPPORT, eSPIPE, eSRCH, eSRMNT, eSTALE, eTIME, eTIMEDOUT, 
+eOK, e2BIG, eACCES, eADDRINUSE, eADDRNOTAVAIL, eAFNOSUPPORT, eAGAIN,
+  eALREADY, eBADF, eBADMSG, eBUSY, eCHILD, eCONNABORTED,
+  eCONNREFUSED, eCONNRESET, eDEADLK, eDESTADDRREQ, eDOM, eDQUOT,
+  eEXIST, eFAULT, eFBIG, eHOSTDOWN, eHOSTUNREACH, eIDRM, eILSEQ,
+  eINPROGRESS, eINTR, eINVAL, eIO, eISCONN, eISDIR, eLOOP, eMFILE, eMLINK,
+  eMSGSIZE, eMULTIHOP, eNAMETOOLONG, eNETDOWN, eNETRESET, eNETUNREACH,
+  eNFILE, eNOBUFS, eNODATA, eNODEV, eNOENT, eNOEXEC, eNOLCK, eNOLINK,
+  eNOMEM, eNOMSG, eNOPROTOOPT, eNOSPC, eNOSR, eNOSTR, eNOSYS,
+  eNOTBLK, eNOTCONN, eNOTDIR, eNOTEMPTY, eNOTSOCK, eNOTTY, eNXIO,
+  eOPNOTSUPP, ePERM, ePFNOSUPPORT, ePIPE,
+  ePROTO, ePROTONOSUPPORT, ePROTOTYPE,
+  eRANGE, eREMOTE, eROFS, eSHUTDOWN,
+  eSOCKTNOSUPPORT, eSPIPE, eSRCH, eSTALE, eTIME, eTIMEDOUT,
   eTOOMANYREFS, eTXTBSY, eUSERS, eWOULDBLOCK, eXDEV                    :: Errno
+{- eADV, eCOMM, eNONET, eREMCHG, eSRMNT :: Errno -}
 --
 -- the cCONST_XXX identifiers are cpp symbols whose value is computed by
--- configure 
+-- configure
 --
 eOK             = Errno 0
 #ifdef __NHC__
@@ -170,7 +173,7 @@ e2BIG           = Errno #{const E2BIG}
 eACCES          = Errno #{const EACCES}
 eADDRINUSE      = Errno #{const EADDRINUSE}
 eADDRNOTAVAIL   = Errno #{const EADDRNOTAVAIL}
-eADV            = Errno #{const EADV}
+--eADV            = Errno #{const EADV}
 eAFNOSUPPORT    = Errno #{const EAFNOSUPPORT}
 eAGAIN          = Errno #{const EAGAIN}
 eALREADY        = Errno #{const EALREADY}
@@ -179,7 +182,7 @@ eBADMSG         = Errno #{const EBADMSG}
 --eBADRPC         = Errno #{const EBADRPC}
 eBUSY           = Errno #{const EBUSY}
 eCHILD          = Errno #{const ECHILD}
-eCOMM           = Errno #{const ECOMM}
+--eCOMM           = Errno #{const ECOMM}
 eCONNABORTED    = Errno #{const ECONNABORTED}
 eCONNREFUSED    = Errno #{const ECONNREFUSED}
 eCONNRESET      = Errno #{const ECONNRESET}
@@ -221,7 +224,7 @@ eNOLCK          = Errno #{const ENOLCK}
 eNOLINK         = Errno #{const ENOLINK}
 eNOMEM          = Errno #{const ENOMEM}
 eNOMSG          = Errno #{const ENOMSG}
-eNONET          = Errno #{const ENONET}
+--eNONET          = Errno #{const ENONET}
 eNOPROTOOPT     = Errno #{const ENOPROTOOPT}
 eNOSPC          = Errno #{const ENOSPC}
 eNOSR           = Errno #{const ENOSR}
@@ -246,7 +249,7 @@ ePROTO          = Errno #{const EPROTO}
 ePROTONOSUPPORT = Errno #{const EPROTONOSUPPORT}
 ePROTOTYPE      = Errno #{const EPROTOTYPE}
 eRANGE          = Errno #{const ERANGE}
-eREMCHG         = Errno #{const EREMCHG}
+--eREMCHG         = Errno #{const EREMCHG}
 eREMOTE         = Errno #{const EREMOTE}
 eROFS           = Errno #{const EROFS}
 --eRPCMISMATCH    = Errno #{const ERPCMISMATCH}
@@ -255,7 +258,7 @@ eSHUTDOWN       = Errno #{const ESHUTDOWN}
 eSOCKTNOSUPPORT = Errno #{const ESOCKTNOSUPPORT}
 eSPIPE          = Errno #{const ESPIPE}
 eSRCH           = Errno #{const ESRCH}
-eSRMNT          = Errno #{const ESRMNT}
+--eSRMNT          = Errno #{const ESRMNT}
 eSTALE          = Errno #{const ESTALE}
 eTIME           = Errno #{const ETIME}
 eTIMEDOUT       = Errno #{const ETIMEDOUT}
@@ -331,7 +334,7 @@ throwErrnoIf    :: (a -> Bool)  -- ^ predicate to apply to the result value
                 -> String       -- ^ textual description of the location
                 -> IO a         -- ^ the 'IO' operation to be executed
                 -> IO a
-throwErrnoIf pred loc f  = 
+throwErrnoIf pred loc f  =
   do
     res <- f
     if pred res then throwErrno loc else return res
@@ -347,7 +350,7 @@ throwErrnoIf_ pred loc f  = void $ throwErrnoIf pred loc f
 -- interrupted POSIX system calls.
 --
 throwErrnoIfRetry            :: (a -> Bool) -> String -> IO a -> IO a
-throwErrnoIfRetry pred loc f  = 
+throwErrnoIfRetry pred loc f  =
   do
     res <- f
     if pred res
@@ -369,7 +372,7 @@ throwErrnoIfRetryMayBlock
                 -> IO b         -- ^ action to execute before retrying if
                                 -- an immediate retry would block
                 -> IO a
-throwErrnoIfRetryMayBlock pred loc f on_block  = 
+throwErrnoIfRetryMayBlock pred loc f on_block  =
   do
     res <- f
     if pred res
@@ -390,7 +393,7 @@ throwErrnoIfRetry_ pred loc f  = void $ throwErrnoIfRetry pred loc f
 -- | as 'throwErrnoIfRetryMayBlock', but discards the result.
 --
 throwErrnoIfRetryMayBlock_ :: (a -> Bool) -> String -> IO a -> IO b -> IO ()
-throwErrnoIfRetryMayBlock_ pred loc f on_block 
+throwErrnoIfRetryMayBlock_ pred loc f on_block
   = void $ throwErrnoIfRetryMayBlock pred loc f on_block
 
 -- | Throw an 'IOError' corresponding to the current value of 'getErrno'
@@ -508,7 +511,7 @@ errnoToIOError loc errno maybeHdl maybeName = unsafePerformIO $ do
         | errno == eACCES          = PermissionDenied
         | errno == eADDRINUSE      = ResourceBusy
         | errno == eADDRNOTAVAIL   = UnsupportedOperation
-        | errno == eADV            = OtherError
+--        | errno == eADV            = OtherError
         | errno == eAFNOSUPPORT    = UnsupportedOperation
         | errno == eAGAIN          = ResourceExhausted
         | errno == eALREADY        = AlreadyExists
@@ -517,7 +520,7 @@ errnoToIOError loc errno maybeHdl maybeName = unsafePerformIO $ do
 --        | errno == eBADRPC         = OtherError
         | errno == eBUSY           = ResourceBusy
         | errno == eCHILD          = NoSuchThing
-        | errno == eCOMM           = ResourceVanished
+--        | errno == eCOMM           = ResourceVanished
         | errno == eCONNABORTED    = OtherError
         | errno == eCONNREFUSED    = NoSuchThing
         | errno == eCONNRESET      = ResourceVanished
@@ -559,7 +562,7 @@ errnoToIOError loc errno maybeHdl maybeName = unsafePerformIO $ do
         | errno == eNOLINK         = ResourceVanished
         | errno == eNOMEM          = ResourceExhausted
         | errno == eNOMSG          = NoSuchThing
-        | errno == eNONET          = NoSuchThing
+--        | errno == eNONET          = NoSuchThing
         | errno == eNOPROTOOPT     = UnsupportedOperation
         | errno == eNOSPC          = ResourceExhausted
         | errno == eNOSR           = ResourceExhausted
@@ -584,7 +587,7 @@ errnoToIOError loc errno maybeHdl maybeName = unsafePerformIO $ do
         | errno == ePROTONOSUPPORT = ProtocolError
         | errno == ePROTOTYPE      = ProtocolError
         | errno == eRANGE          = UnsupportedOperation
-        | errno == eREMCHG         = ResourceVanished
+--        | errno == eREMCHG         = ResourceVanished
         | errno == eREMOTE         = IllegalOperation
         | errno == eROFS           = PermissionDenied
 --        | errno == eRPCMISMATCH    = ProtocolError
@@ -593,7 +596,7 @@ errnoToIOError loc errno maybeHdl maybeName = unsafePerformIO $ do
         | errno == eSOCKTNOSUPPORT = UnsupportedOperation
         | errno == eSPIPE          = UnsupportedOperation
         | errno == eSRCH           = NoSuchThing
-        | errno == eSRMNT          = UnsatisfiedConstraints
+--        | errno == eSRMNT          = UnsatisfiedConstraints
         | errno == eSTALE          = ResourceVanished
         | errno == eTIME           = TimeExpired
         | errno == eTIMEDOUT       = TimeExpired
