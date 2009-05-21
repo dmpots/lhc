@@ -65,7 +65,7 @@ main = defaultMainWithHooks simpleUserHooks { postInst = myPostInst }
             let x = unwords ["cd",n
                             ,"&&","runghc Setup configure",cf
                             ,"&&","runghc Setup build"
-                            ,"&&","sudo runghc Setup copy"
+                            ,"&&","runghc Setup copy"
                             ,"&&","runghc Setup register"]
             putStrLn $ x
             system x
