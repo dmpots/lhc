@@ -142,10 +142,12 @@ reduceEq (Update hp val)
          forM_ hps $ \(Heap hp) -> addReduced (HeapEntry hp) valRhs
          return mempty
 
+-- FIXME: Throw an exception if 'lhs' couldn't be found.
 lookupEq :: Lhs -> M Rhs
 lookupEq lhs
     = asks $ \(eqs, _sharingMap) -> Map.findWithDefault mempty lhs eqs
 
+-- FIXME: Throw an exception if 'lhs' couldn't be found.
 isShared :: Lhs -> M Bool
 isShared lhs
     = asks $ \(_eqs, sharingMap) -> Map.findWithDefault False lhs sharingMap
