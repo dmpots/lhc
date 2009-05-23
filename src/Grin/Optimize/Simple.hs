@@ -28,6 +28,8 @@ simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit (Variable v1) :>>= v2 :-> t)
     = do v1' <- doSubst v1
          subst v2 v1' (simpleExpression t)
+simpleExpression (a :>>= v1 :-> Unit (Variable v2)) | v1 == v2
+    = simpleExpression a
 simpleExpression ((a :>>= b :-> c) :>>= d)
     = simpleExpression (a :>>= b :-> c :>>= d)
 simpleExpression ((a :>>= b :-> c) :>> d)
