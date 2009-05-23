@@ -116,10 +116,10 @@ compValue (Grin.Vector vs)
 runCase :: EvalValue -> [(Grin.Value, CompValue)] -> CompValue
 runCase val cases
     = worker cases
-    where worker (x@(Grin.Variable{}, e) : y : ys)
-              = worker (y:x:ys)
-          worker [(Grin.Variable name, e)]
+    where worker [(Grin.Variable name, e)]
               = local (Map.insert name val) e
+          worker ((Grin.Variable name, e):_)
+              = error "Default matches would always be last."
           worker ((b,c):xs)
               = case doesMatch val b of
                   Nothing -> worker xs
