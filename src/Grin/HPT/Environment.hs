@@ -4,6 +4,7 @@ module Grin.HPT.Environment
     , Equations
     , Rhs(..)
     , RhsValue(..)
+    , HeapPointer
     , Lhs(..)
     , singleton
     ) where
@@ -20,7 +21,7 @@ import Control.Monad.Writer
 type HeapPointer = Int
 data Lhs = HeapEntry HeapPointer
          | VarEntry Renamed
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Show)
 
 data RhsValue
     = Extract Renamed Renamed Int

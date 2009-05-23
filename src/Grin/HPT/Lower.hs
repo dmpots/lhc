@@ -82,7 +82,8 @@ mkUpdate ptr scrut val tags
                                  return $ Node tag FunctionNode n args' | t@(Tag tag FunctionNode n args) <- tags, n == 0 ]
          constrTags <- sequence [ do args' <- replicateM (length args) newVariable
                                      return $ Node tag nt n args' | t@(Tag tag nt n args) <- tags, not (n == 0 && nt == FunctionNode) ]
-         let doUpdate = Case val [ tag :> Application (Builtin "update") [ptr,val] | tag <- constrTags ]
+         --let doUpdate = Case val [ tag :> Application (Builtin "update") [ptr,val] | tag <- constrTags ]
+         let doUpdate = Application (Builtin "update") [ptr,val]
          if null fnTags || null constrTags
             then return $ Unit Empty
             else return $ doUpdate
