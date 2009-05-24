@@ -27,6 +27,7 @@ import qualified Grin.Lowering.Apply as Apply
 
 import qualified Grin.Stage2.FromStage1 as Stage2
 import qualified Grin.Stage2.Pretty as Stage2
+import qualified Grin.Stage2.Optimize.Simple as Stage2.Simple
 
 -- TODO: We need proper command line parsing.
 tryMain :: IO ()
@@ -80,7 +81,9 @@ build action file args
              (evalLowered, hpt') = HPT.lower hpt applyLowered
              opt' = iterate Simple.optimize evalLowered !! 2
              out = opt'
-         let stage2 = Stage2.convert hpt' out
+         let stage2_raw = Stage2.convert hpt' out
+             stage2_opt = iterate Stage2.Simple.optimize stage2_raw !! 2
+             stage2_out = stage2_opt
          case action of
            Build -> print (ppGrin out)
            Eval  -> Compile.runGrin out "main::Main.main" args >> return ()
@@ -92,7 +95,9 @@ build action file args
                          --outputAnnotation target "_eval.html" Map.empty evalLowered
                          outputGrin target "" out
                          --outputAnnotation target ".html" Map.empty out
-                         outputGrin2 target "" stage2
+                         outputGrin2 target "_raw" stage2_raw
+                         outputGrin2 target "_opt" stage2_opt
+                         outputGrin2 target "" stage2_out
 
                          putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
 
