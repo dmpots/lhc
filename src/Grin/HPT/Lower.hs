@@ -14,13 +14,14 @@ import Control.Monad.Writer
 import Grin.HPT.Environment
 import Grin.HPT.Solve
 
-type M a = ReaderT HeapAnalysis (State Int) a
+type M a = State (HeapAnalysis, Int) a
 
-lower :: HeapAnalysis -> Grin -> Grin
+lower :: HeapAnalysis -> Grin -> (Grin, HeapAnalysis)
 lower hpt grin
-    = evalState (runReaderT worker hpt) (grinUnique grin)
+    = case runState worker (hpt, grinUnique grin) of
+        (grin, (hpt',_newUnique)) -> (grin, hpt')
     where worker = do fns <- mapM lowerFuncDef (grinFunctions grin)
-                      unique <- get
+                      unique <- gets snd
                       return grin{ grinFunctions = fns
                                  , grinUnique    = unique }
 
@@ -40,11 +41,13 @@ lowerExpression (a :>> b)
          return $ a' :>> b'
 lowerExpression (Application (Builtin "eval") [a])
     = do f <- newVariable
-         HeapAnalysis hpt <- ask
+         HeapAnalysis hpt <- gets fst
          case Map.lookup (VarEntry a) hpt of
            Just (Rhs rhs) -> do let Rhs rhs' = mconcat [ hpt Map.! HeapEntry hp | Heap hp <- rhs ]
+                                addHPTInfo (VarEntry f) (Rhs rhs')
                                 alts <- mapM (mkApplyAlt []) rhs'
                                 v <- newVariable
+                                addHPTInfo (VarEntry v) (Rhs [ val | val@(Tag tag nt missing _args) <- rhs', not (missing == 0 && nt == FunctionNode)  ])
                                 u <- mkUpdate a f v rhs'
                                 return $ Application (Builtin "fetch") [a] :>>= f :->
                                          Case f alts :>>= v :->
@@ -52,7 +55,7 @@ lowerExpression (Application (Builtin "eval") [a])
                                          Unit (Variable v)
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application (Builtin "apply") [a,b])
-    = do HeapAnalysis hpt <- ask
+    = do HeapAnalysis hpt <- gets fst
          case Map.lookup (VarEntry a) hpt of
            Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [b]) rhs
                                 return $ Case a alts
@@ -97,8 +100,12 @@ mkApplyAlt extraArgs (Tag tag nt n argsRhs)
          return $ Node tag nt n args :> Unit (Node tag nt (n - length extraArgs) (args ++ extraArgs))
 mkApplyAlt _ val = error $ "Grin.HPT.Lower.mkApplyAlt: expected tag: " ++ show val
 
+addHPTInfo :: Lhs -> Rhs -> M ()
+addHPTInfo lhs rhs
+    = modify $ \(HeapAnalysis hpt, unique) -> (HeapAnalysis (Map.insertWith mappend lhs rhs hpt), unique)
+
 newVariable :: M Renamed
-newVariable = do unique <- get
-                 put (unique + 1)
+newVariable = do unique <- gets snd
+                 modify $ \st -> (fst st, unique + 1)
                  return $ Anonymous unique
 

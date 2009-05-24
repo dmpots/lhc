@@ -74,7 +74,7 @@ build action file args
              opt = iterate Simple.optimize grin !! 2
              applyLowered = Apply.lower opt
              (iterations, hpt) = HPT.analyze applyLowered
-             evalLowered = HPT.lower hpt applyLowered
+             (evalLowered, hpt') = HPT.lower hpt applyLowered
              opt' = iterate Simple.optimize evalLowered !! 2
              out = opt'
          case action of
