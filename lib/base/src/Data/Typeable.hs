@@ -577,7 +577,7 @@ data Cache = Cache { next_key :: !(IORef Key),  -- Not used by GHC (calls genSym
                      ap_tbl   :: !(HT.HashTable KeyPr Key) }
 
 {-# NOINLINE cache #-}
-#ifdef __GLASGOW_HASKELL__
+#if defined(__GLASGOW_HASKELL__) && !defined(__LHC__)
 foreign import ccall unsafe "RtsTypeable.h getOrSetTypeableStore"
     getOrSetTypeableStore :: Ptr a -> IO (Ptr a)
 #endif
@@ -590,7 +590,7 @@ cache = unsafePerformIO $ do
                 let ret = Cache {       next_key = key_loc,
                                         tc_tbl = empty_tc_tbl, 
                                         ap_tbl = empty_ap_tbl }
-#ifdef __GLASGOW_HASKELL__ && !defined(__LHC__)
+#if defined(__GLASGOW_HASKELL__) && !defined(__LHC__)
                 block $ do
                         stable_ref <- newStablePtr ret
                         let ref = castStablePtrToPtr stable_ref
