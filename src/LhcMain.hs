@@ -25,6 +25,9 @@ import qualified Grin.HtmlAnnotate as Html
 import qualified Grin.HPT as HPT
 import qualified Grin.Lowering.Apply as Apply
 
+import qualified Grin.Stage2.FromStage1 as Stage2
+import qualified Grin.Stage2.Pretty as Stage2
+
 -- TODO: We need proper command line parsing.
 tryMain :: IO ()
 tryMain = do args <- getArgs
@@ -77,6 +80,7 @@ build action file args
              (evalLowered, hpt') = HPT.lower hpt applyLowered
              opt' = iterate Simple.optimize evalLowered !! 2
              out = opt'
+         let stage2 = Stage2.convert hpt' out
          case action of
            Build -> print (ppGrin out)
            Eval  -> Compile.runGrin out "main::Main.main" args >> return ()
@@ -88,6 +92,7 @@ build action file args
                          --outputAnnotation target "_eval.html" Map.empty evalLowered
                          outputGrin target "" out
                          --outputAnnotation target ".html" Map.empty out
+                         outputGrin2 target "" stage2
 
                          putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
 
@@ -100,6 +105,11 @@ build action file args
 outputGrin file variant grin
     = do let outputFile = replaceExtension file ("grin"++variant)
          writeFile outputFile (show $ ppGrin grin)
+         return ()
+
+outputGrin2 file variant grin
+    = do let outputFile = replaceExtension file ("grin2"++variant)
+         writeFile outputFile (show $ Stage2.ppGrin grin)
          return ()
 
 outputAnnotation file variant annotation grin
