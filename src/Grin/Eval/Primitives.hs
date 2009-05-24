@@ -53,22 +53,12 @@ runExternal name args
                    returnIO (Lit (Lint 512))
                  ("fdReady", [fd,write,msecs,isSock]) ->
                    returnIO (Lit (Lint 1))
-                 ("rtsSupportsBoundThreads", []) ->
-                   returnIO (Lit (Lint 1))
-                 ("stg_sig_install", [signo, actioncode, ptr]) ->
-                   returnIO (Lit (Lint 0))
                  ("getProgArgv", [Lit (Lint argcPtr), Lit (Lint argvPtr)]) ->
                    do args <- getCommandArgs
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argcPtr) (fromIntegral (length args) :: CInt)
                       cs <- liftIO $ newArray =<< mapM newCString args
                       liftIO $ poke (nullPtr `plusPtr` fromIntegral argvPtr) cs
                       return $ Vector [Empty]
-                 ("u_iswlower", [Lit (Lint ch)]) ->
-                   do returnIO $ Lit (Lint (fromIntegral (fromEnum (isLower (chr (fromIntegral ch))))))
-                 ("u_iswalpha", [Lit (Lint ch)]) ->
-                   do returnIO $ Lit (Lint (fromIntegral (fromEnum (isAlpha (chr (fromIntegral ch))))))
-                 ("u_iswspace", [Lit (Lint ch)]) ->
-                   do returnIO $ Lit (Lint (fromIntegral (fromEnum (isSpace (chr (fromIntegral ch))))))
                  (name, args) ->
                    -- If we don't recognize the function, try loading it through the linker.
                    do fnPtr <- liftIO $ dlsym Default name
