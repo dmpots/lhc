@@ -111,6 +111,10 @@ import GHC.Arr          ( Array, STArray )
 
 #endif
 
+#ifdef __LHC__
+import GHC.IOBase       ( readIORef, writeIORef )
+#endif
+
 #ifdef __HUGS__
 import Hugs.Prelude     ( Key(..), TypeRep(..), TyCon(..), Ratio,
                           Handle, Ptr, FunPtr, ForeignPtr, StablePtr )
@@ -606,7 +610,7 @@ cache = unsafePerformIO $ do
 #endif
 
 newKey :: IORef Key -> IO Key
-#ifdef __GLASGOW_HASKELL__
+#if defined(__GLASGOW_HASKELL__) && !defined(__LHC__)
 newKey _ = do i <- genSym; return (Key i)
 #else
 newKey kloc = do { k@(Key i) <- readIORef kloc ;
@@ -614,7 +618,7 @@ newKey kloc = do { k@(Key i) <- readIORef kloc ;
                    return k }
 #endif
 
-#ifdef __GLASGOW_HASKELL__
+#if defined(__GLASGOW_HASKELL__) && !defined(__LHC__)
 foreign import ccall unsafe "genSymZh"
   genSym :: IO Int
 #endif

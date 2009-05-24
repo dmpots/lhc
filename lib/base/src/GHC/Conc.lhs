@@ -777,7 +777,12 @@ registerDelay usecs
   | threaded = waitForDelayEventSTM usecs
   | otherwise = error "registerDelay: requires -threaded"
 
+#if defined(__LHC__)
+threaded :: Bool
+threaded = False
+#else
 foreign import ccall unsafe "rtsSupportsBoundThreads" threaded :: Bool
+#endif
 
 waitForDelayEvent :: Int -> IO ()
 waitForDelayEvent usecs = do

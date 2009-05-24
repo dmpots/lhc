@@ -782,7 +782,12 @@ foreign import ccall safe "__hscore_PrelHandle_send"
 
 #endif
 
-foreign import ccall "rtsSupportsBoundThreads" threaded :: Bool
+#if defined(__LHC__)
+threaded :: Bool
+threaded = False
+#else
+foreign import ccall unsafe "rtsSupportsBoundThreads" threaded :: Bool
+#endif
 
 foreign import ccall safe "__hscore_PrelHandle_read"
    safe_read_rawBuffer :: FD -> RawBuffer -> Int -> CInt -> IO CInt
