@@ -134,9 +134,11 @@ convertValue fn (Stage1.Empty)      = return $ fn []
 convertValue fn (Stage1.Variable v) = liftM fn (lookupVariable v)
 convertValue fn (Stage1.Node tag nt missing args)
     = do v <- newVariable
-         return $ Constant (Node tag nt missing) :>>= [v] :-> fn (v:args)
+         args' <- mapM lookupVariable args
+         return $ Constant (Node tag nt missing) :>>= [v] :-> fn (v:concat args')
 convertValue fn (Stage1.Vector args)
-    = return $ fn args
+    = do args' <- mapM lookupVariable args
+         return $ fn (concat args')
 
 lookupVariable :: Renamed -> M [Renamed]
 lookupVariable val

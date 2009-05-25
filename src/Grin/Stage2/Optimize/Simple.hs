@@ -47,6 +47,8 @@ simpleExpression (Case val alts)
     = do val' <- doSubst val
          alts' <- mapM simpleAlt alts
          return $ Case val' alts'
+simpleExpression (Fetch n p)
+    = liftM (Fetch n) (doSubst p)
 simpleExpression (Constant c)
     = return $ Constant c
 
