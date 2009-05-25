@@ -47,6 +47,7 @@ data Expression
                   , expArgs     :: [Renamed] }
     | Case        { expValue    :: Renamed
                   , expAlts     :: [Alt] }
+    | Fetch       Int Renamed
     | Store       [Renamed]
     | Unit        [Renamed]
     | Constant    Value
