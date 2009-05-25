@@ -2,6 +2,7 @@
 module Grin.Stage2.Pretty
     ( ppGrin
     , ppExpression
+    , ppRenamed
     ) where
 
 import CompactString
@@ -73,6 +74,8 @@ ppExpression qual (Application fn args)
     = hsep (ppRenamed qual fn:map (ppRenamed qual) args)
 ppExpression qual (Store v)
     = blue (text "store") <+> ppValues qual v
+ppExpression qual (Fetch n p)
+    = blue (text "fetch") <> brackets (int n) <+> ppRenamed qual p
 ppExpression qual (a :>>= [] :-> c)
     = ppExpression qual a <$$>
       ppExpression qual c
