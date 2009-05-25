@@ -356,7 +356,10 @@ foreign import ccall unsafe "HsBase.h __hscore_fstat"
 foreign import ccall unsafe "HsBase.h isatty"
    c_isatty :: CInt -> IO CInt
 
-#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
+#if defined(__LHC__)
+foreign import ccall unsafe "unistd.h lseek"
+   c_lseek :: CInt -> COff -> CInt -> IO COff
+#elif defined(mingw32_HOST_OS) || defined(__MINGW32__)
 foreign import ccall unsafe "HsBase.h __hscore_lseek"
    c_lseek :: CInt -> Int64 -> CInt -> IO Int64
 #else

@@ -93,6 +93,10 @@ module Foreign.C.Error (
   throwErrnoPathIfNull,
   throwErrnoPathIfMinus1,
   throwErrnoPathIfMinus1_,
+
+  sEEK_CUR,
+  sEEK_SET,
+  sEEK_END,
 ) where
 
 
@@ -115,6 +119,9 @@ import Data.Maybe
 import GHC.IOBase
 import GHC.Num
 import GHC.Base
+#if __LHC__
+import Foreign.Storable         ( Storable(poke,peek) )
+#endif
 #elif __HUGS__
 import Hugs.Prelude             ( Handle, IOError, ioError )
 import System.IO.Unsafe         ( unsafePerformIO )
@@ -128,6 +135,18 @@ import Foreign.Storable         ( Storable(poke,peek) )
 #ifdef __HUGS__
 {-# CFILES cbits/PrelIOUtils.c #-}
 #endif
+
+
+-- FIXME: These shouldn't be defined here.
+sEEK_CUR :: CInt
+sEEK_CUR = #{const SEEK_CUR}
+
+sEEK_SET :: CInt
+sEEK_SET = #{const SEEK_SET}
+
+sEEK_END :: CInt
+sEEK_END = #{const SEEK_END}
+
 
 -- "errno" type
 -- ------------
@@ -290,7 +309,7 @@ getErrno :: IO Errno
 -- We must call a C function to get the value of errno in general.  On
 -- threaded systems, errno is hidden behind a C macro so that each OS
 -- thread gets its own copy.
-#ifdef __NHC__
+#if defined(__NHC__)
 getErrno = do e <- peek _errno; return (Errno e)
 foreign import ccall unsafe "errno.h &errno" _errno :: Ptr CInt
 #else
@@ -303,7 +322,7 @@ foreign import ccall unsafe "HsBase.h __hscore_get_errno" get_errno :: IO CInt
 resetErrno :: IO ()
 
 -- Again, setting errno has to be done via a C function.
-#ifdef __NHC__
+#if defined(__NHC__)
 resetErrno = poke _errno 0
 #else
 resetErrno = set_errno 0

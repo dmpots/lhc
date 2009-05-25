@@ -1839,10 +1839,10 @@ throwErrnoIfMinus1RetryOnBlock loc f on_block  =
 -- -----------------------------------------------------------------------------
 -- wrappers to platform-specific constants:
 
-foreign import ccall unsafe "__hscore_supportsTextMode"
-  tEXT_MODE_SEEK_ALLOWED :: Bool
+-- FIXME, this is False on Windows.
+tEXT_MODE_SEEK_ALLOWED :: Bool
+tEXT_MODE_SEEK_ALLOWED = True
 
-foreign import ccall unsafe "__hscore_bufsiz"   dEFAULT_BUFFER_SIZE :: Int
-foreign import ccall unsafe "__hscore_seek_cur" sEEK_CUR :: CInt
-foreign import ccall unsafe "__hscore_seek_set" sEEK_SET :: CInt
-foreign import ccall unsafe "__hscore_seek_end" sEEK_END :: CInt
+dEFAULT_BUFFER_SIZE :: Int
+dEFAULT_BUFFER_SIZE = 512
+
