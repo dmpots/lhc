@@ -57,6 +57,11 @@ convertExpression (a Stage1.:>> b)
     = do a' <- convertExpression a
          b' <- convertExpression b
          return $ a' :>>= [] :-> b'
+convertExpression (Stage1.Application (Builtin "fetch") [p])
+    = do size <- heapNodeSize p
+         [p'] <- lookupVariable p
+         vars <- replicateM size newVariable
+         return $ foldr (\(v,n) r -> Stage2.Fetch n p' :>>= [v] :-> r) (Unit vars) (zip vars [0..])
 convertExpression (Stage1.Application fn args)
     = do args' <- mapM lookupVariable args
          return $ Application fn (concat args')
@@ -77,12 +82,6 @@ convertBind val fn
          vars <- replicateM size newVariable
          local (\(hpt,nmap) -> (hpt,Map.insert val vars nmap)) $ fn vars
 
-convertHeapBind :: Renamed -> Renamed -> ([Renamed] -> M a) -> M a
-convertHeapBind ptr val fn
-    = do size <- heapNodeSize ptr
-         vars <- replicateM size newVariable
-         local (\(hpt,nmap) -> (hpt,Map.insert val vars nmap)) $ fn vars
-
 nodeSize :: Renamed -> M Int
 nodeSize val
     = do HeapAnalysis hpt <- asks fst
@@ -92,9 +91,9 @@ nodeSize val
 heapNodeSize :: Renamed -> M Int
 heapNodeSize val
     = do HeapAnalysis hpt <- asks fst
-         let Rhs vals = hpt Map.! VarEntry val
+         let Rhs vals = find (VarEntry val) hpt
              hps      = map (\(Heap hp) -> hp) vals
-             allVals  = [ val | hp <- hps, let Rhs vals = hpt Map.! HeapEntry hp, val <- vals ]
+             allVals  = [ val | hp <- hps, let Rhs vals = find (HeapEntry hp) hpt, val <- vals ]
          return $ maximum (0:map rhsValueSize allVals)
 
 rhsValueSize (Base) = 1
@@ -102,7 +101,9 @@ rhsValueSize (Tag _tag _nt _missing args) = 1 + length args
 rhsValueSize (VectorTag args) = length args
 rhsValueSize (Heap{}) = 1
 rhsValueSize v = error $ "Grin.Stage2.FromStage1.nodeSize: Invalid rhs value: " ++ show v
-         
+
+find key m = Map.findWithDefault (error $ "Couldn't find key: " ++ show key) key m
+
 newVariable :: M Renamed
 newVariable
     = do u <- get
