@@ -22,10 +22,19 @@ convert hpt grin
       in case runState (runReaderT convertFuncs initReader) initState of
            (funcs, newUnique)
              -> Grin { grinNodes     = Stage1.grinNodes grin
-                     , grinCAFs      = []
+                     , grinCAFs      = map convertCAF (Stage1.grinCAFs grin)
                      , grinFunctions = funcs
                      , grinUnique    = newUnique
                      }
+
+convertCAF :: Stage1.CAF -> Stage2.CAF
+convertCAF caf
+    = CAF { cafName  = Stage1.cafName caf
+          , cafValue = case Stage1.cafValue caf of
+                         Stage1.Node tag nt missing _args -> Node tag nt missing
+                         other -> error $ "Grin.Stage2.FromStage1.convertCaf: Weird caf: " ++ show other
+          }
+
 
 type NodeMap = Map.Map Renamed [Renamed]
 type M a = ReaderT (HeapAnalysis,NodeMap) (State Int) a
