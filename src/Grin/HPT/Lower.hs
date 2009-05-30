@@ -47,7 +47,9 @@ lowerExpression (Application (Builtin "eval") [a])
                                 addHPTInfo (VarEntry f) (Rhs rhs')
                                 alts <- mapM (mkApplyAlt []) rhs'
                                 v <- newVariable
-                                addHPTInfo (VarEntry v) (Rhs [ val | val@(Tag tag nt missing _args) <- rhs', not (missing == 0 && nt == FunctionNode)  ])
+                                let expand (Tag tag FunctionNode 0 _) = hpt Map.! (VarEntry tag)
+                                    expand rhs = Rhs [rhs]
+                                addHPTInfo (VarEntry v) (mconcat $ map expand rhs')
                                 u <- mkUpdate a f v rhs'
                                 return $ Application (Builtin "fetch") [a] :>>= f :->
                                          Case f alts :>>= v :->
