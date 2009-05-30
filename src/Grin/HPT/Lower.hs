@@ -65,8 +65,11 @@ lowerExpression (Application (Builtin "apply") [a,b])
 lowerExpression (Application fn args)
     = return $ Application fn args
 lowerExpression (Case scrut alts)
-    = do alts' <- mapM lowerAlt alts
-         return $ Case scrut alts'
+    = do HeapAnalysis hpt <- gets fst
+         case Map.lookup (VarEntry scrut) hpt of
+           Just (Rhs rhs) -> do alts' <- mapM lowerAlt (filter (`isMemberOf` rhs) alts)
+                                return $ Case scrut alts'
+           Nothing -> error "Grin.HPT.Lower.lowerExpression: Urk"
 lowerExpression (Store val)
     = return $ Store val
 lowerExpression (Unit val) = return $ Unit val
@@ -80,6 +83,10 @@ lowerAlt :: Alt -> M Alt
 lowerAlt (a :> b)
     = do b' <- lowerExpression b
          return $ a :> b'
+
+(Node tag nt missing args :> _) `isMemberOf` rhs
+    = (tag, nt, missing) `elem` [ (tag, nt, missing) | Tag tag nt missing _ <- rhs ]
+_ `isMemberOf` rhs = True
 
 mkUpdate :: Renamed -> Renamed -> Renamed ->[RhsValue] -> M Expression
 mkUpdate ptr scrut val tags
