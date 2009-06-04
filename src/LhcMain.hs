@@ -19,6 +19,7 @@ import Grin.Pretty
 import qualified Grin.SimpleCore.DeadCode as Simple
 import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
+import qualified Grin.DeadCode as DeadCode
 import qualified Grin.HtmlAnnotate as Html
 
 --import Grin.Rename
@@ -80,7 +81,8 @@ build action file args
              (iterations, hpt) = HPT.analyze applyLowered
              (evalLowered, hpt') = HPT.lower hpt applyLowered
              opt' = iterate Simple.optimize evalLowered !! 2
-             out = opt'
+             trimmed = DeadCode.removeDeadCode opt'
+             out = trimmed
          let stage2_raw = Stage2.convert hpt' out
              stage2_opt = iterate Stage2.Simple.optimize stage2_raw !! 2
              stage2_out = stage2_opt
@@ -93,6 +95,8 @@ build action file args
                          outputGrin target "_apply" applyLowered
                          outputGrin target "_eval" evalLowered
                          --outputAnnotation target "_eval.html" Map.empty evalLowered
+                         writeFile (replaceExtension file "hpt") (show hpt')
+                         outputGrin target "_trimmed" trimmed
                          outputGrin target "" out
                          --outputAnnotation target ".html" Map.empty out
                          outputGrin2 target "_raw" stage2_raw

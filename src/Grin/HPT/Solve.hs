@@ -15,6 +15,10 @@ import Grin.HPT.Environment
 data HeapAnalysis
     = HeapAnalysis (Map.Map Lhs Rhs)
 
+instance Show HeapAnalysis where
+    show (HeapAnalysis eqs)
+        = unlines [ show lhs ++ " = " ++ show rhs | (lhs,rhs) <- Map.toList eqs ]
+
 type SharingMap = Map.Map Lhs Bool
 
 type M a = ReaderT (Equations,SharingMap) (Writer (Endo Equations, Endo SharingMap)) a
