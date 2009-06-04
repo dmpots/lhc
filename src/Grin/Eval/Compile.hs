@@ -23,8 +23,8 @@ import Data.IORef; import System.IO.Unsafe
 
 
 
-runGrin :: Grin -> String -> [String] -> IO EvalValue
-runGrin grin entry commandArgs
+runGrin :: Grin -> [String] -> IO EvalValue
+runGrin grin commandArgs
     = let globalScope = GlobalScope { globalCAFs  = Map.fromList cafs
                                     , globalFuncs = Map.fromList (funcs ++ prims) }
           cafs = zip (map cafName (grinCAFs grin)) [0..]
@@ -33,11 +33,7 @@ runGrin grin entry commandArgs
           apply = lookupFunction (Builtin $ fromString "evalApply") globalScope
       in runComp $ do mapM_ storeValue =<< mapM (\caf -> compValue (cafValue caf) globalScope) (grinCAFs grin)
                       setCommandArgs ("lhc":commandArgs)
-                      entry <- lookupVariable renamedEntry globalScope
-                      apply [entry, realWorld]
-    where renamedEntry = case [ cafName caf | caf <- grinCAFs grin, Just name <- [alias (cafName caf)], name == fromString entry ] of
-                           []       -> error $ "Grin.Eval.Basic.evaluate: couldn't find entry point: " ++ entry
-                           (name:_) -> name
+                      lookupFunction (grinEntryPoint grin) globalScope []
 
 runComp comp
     = runReaderT (evalStateT (unComp comp) initState) Map.empty

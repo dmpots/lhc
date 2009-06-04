@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, OverloadedStrings #-}
 module Grin.FromCore
     ( coreToGrin
     ) where
@@ -31,13 +31,25 @@ coreToGrin tdefs defs
                 bindCAFs cafs $
                 defsToFuncs defs' $ \funcs ->
                 defsToCAFs cafs $ \cafs' ->
+                genEntryPoint >>= \entryPoint ->
                 get >>= \u ->
-                asks scope >>= \varScope -> 
-                return (GHCism.lower varScope Grin { grinNodes     = nodes
-                                                   , grinCAFs      = cafs'
-                                                   , grinFunctions = funcs
-                                                   , grinUnique    = u
+                asks scope >>= \varScope ->
+                return (GHCism.lower varScope Grin { grinNodes      = nodes
+                                                   , grinCAFs       = cafs'
+                                                   , grinFunctions  = entryPoint : funcs
+                                                   , grinEntryPoint = funcDefName entryPoint
+                                                   , grinUnique     = u
                                                    })
+          genEntryPoint = do mainCaf <- lookupVariable "main::Main.main"
+                             realWorld <- newVariable
+                             name <- newVariable
+                             v <- newVariable
+                             return FuncDef { funcDefName = name
+                                            , funcDefArgs = []
+                                            , funcDefBody = Application (Builtin "realWorld#") [] :>>= realWorld :->
+                                                            Application (Builtin "eval") [mainCaf] :>>= v :->
+                                                            Application (Builtin "apply") [v,realWorld]
+                                            }
       in evalState (runReaderT gen emptyEnv) 0
 
 tdefsToNodes :: [SimpleType] -> ([NodeDef] -> M a) -> M a

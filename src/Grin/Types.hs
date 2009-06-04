@@ -16,10 +16,11 @@ import Control.Monad  (ap)
 -- Invariants:
 --   The nodes referred to by the functions are a subset of the nodes in 'grinNodes'.
 data Grin
-    = Grin { grinNodes     :: [NodeDef]
-           , grinCAFs      :: [CAF]
-           , grinFunctions :: [FuncDef]
-           , grinUnique    :: Int
+    = Grin { grinNodes      :: [NodeDef]
+           , grinCAFs       :: [CAF]
+           , grinFunctions  :: [FuncDef]
+           , grinEntryPoint ::Renamed
+           , grinUnique     :: Int
            }
 
 data CAF

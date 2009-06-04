@@ -76,8 +76,8 @@ lowerExpression (Application (Builtin "readMutVar#") [ptr, realWorld])
     = do v <- newVariable
          return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
 
-lowerExpression (Application (Builtin "realWorld#") [])
-    = return $ Unit Empty -- FIXME: Use a special RealWorld value?
+--lowerExpression (Application (Builtin "realWorld#") [])
+--    = return $ Unit Empty -- FIXME: Use a special RealWorld value?
 lowerExpression (Application (Builtin "int2Word#") [v])
     = return $ Unit (Variable v)
 lowerExpression (Application (Builtin "word2Int#") [v])

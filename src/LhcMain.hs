@@ -86,7 +86,7 @@ build action file args
              stage2_out = stage2_opt
          case action of
            Build -> print (ppGrin out)
-           Eval  -> Compile.runGrin out "main::Main.main" args >> return ()
+           Eval  -> Compile.runGrin out args >> return ()
            Compile -> do let target = replaceExtension file "lhc"
                          outputGrin target "_raw" grin
                          outputGrin target "_simple" opt
@@ -125,8 +125,7 @@ execute :: FilePath -> [String] -> IO ()
 execute path args
     = do inp <- L.readFile path
          let grin = decode (dropHashes inp)
-         --eval grin "main::Main.main" args
-         Compile.runGrin grin "main::Main.main" args
+         Compile.runGrin grin args
          return ()
     where dropHashes inp | L.pack "#" `L.isPrefixOf` inp = L.unlines (drop 1 (L.lines inp))
                          | otherwise = inp
