@@ -1,8 +1,9 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Grin.Optimize.Simple
     ( optimize
     ) where
 
+import CompactString
 import Grin.Types
 
 import Control.Monad.Reader
@@ -54,6 +55,8 @@ simpleExpression (Store v)
     = liftM Store $ simpleValue v
 simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
+simpleExpression (Case var [])
+    = return $ Application (Builtin "unreachable") []
 simpleExpression (Case var [Variable v :> alt])
     = simpleExpression (Unit (Variable var) :>>= v :-> alt)
 simpleExpression (Case var alts) | and [ case alt of Unit ret -> ret == cond; _ -> False | cond :> alt <- alts]
