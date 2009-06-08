@@ -30,6 +30,7 @@ data CAF
 
 data FuncDef
     = FuncDef { funcDefName :: Renamed
+              , funcDefReturns :: Int
               , funcDefArgs :: [Renamed]
               , funcDefBody :: Expression
               }

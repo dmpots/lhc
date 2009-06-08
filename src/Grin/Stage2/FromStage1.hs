@@ -9,8 +9,7 @@ import Grin.Stage2.Types as Stage2
 import Grin.HPT.Environment
 import Grin.HPT.Solve
 
-import Control.Monad.Reader
-import Control.Monad.State
+import Control.Monad.RWS
 import qualified Data.Map as Map
 import Data.Monoid
 
@@ -19,11 +18,14 @@ convert hpt grin
     = let initReader = (hpt,Map.empty)
           initState  = Stage1.grinUnique grin
           convertFuncs = mapM convertFuncDef (Stage1.grinFunctions grin)
-      in case runState (runReaderT convertFuncs initReader) initState of
-           (funcs, newUnique)
+      in case runRWS convertFuncs initReader initState of
+           (funcs, newUnique, stringCAFs)
              -> Grin { grinNodes     = Stage1.grinNodes grin
-                     , grinCAFs      = map convertCAF (Stage1.grinCAFs grin)
+                     , grinCAFs      = map convertCAF (Stage1.grinCAFs grin) ++
+                                       [ CAF { cafName = name, cafValue = Lit (Lstring string) }
+                                         | (name, string) <- stringCAFs ]
                      , grinFunctions = funcs
+                     , grinEntryPoint = Stage1.grinEntryPoint grin
                      , grinUnique    = newUnique
                      }
 
@@ -37,12 +39,14 @@ convertCAF caf
 
 
 type NodeMap = Map.Map Renamed [Renamed]
-type M a = ReaderT (HeapAnalysis,NodeMap) (State Int) a
+type M a = RWS (HeapAnalysis,NodeMap) [(Renamed,String)] Int a
 
 convertFuncDef :: Stage1.FuncDef -> M Stage2.FuncDef
 convertFuncDef def
     = do body <- convertExpression (Stage1.funcDefBody def)
+         returns <- nodeSize (Stage1.funcDefName def)
          return $ FuncDef { funcDefName = Stage1.funcDefName def
+                          , funcDefReturns = returns
                           , funcDefArgs = Stage1.funcDefArgs def
                           , funcDefBody = body
                           }
@@ -127,6 +131,10 @@ convertAlt vector (Stage1.Vector args Stage1.:> alt)
          return $ Empty :> Unit vector :>>= args :-> alt'
 
 convertValue :: ([Renamed] -> Expression) -> Stage1.Value -> M Expression
+convertValue fn (Stage1.Lit (Lstring string))
+    = do v <- newVariable
+         tell [(v,string)]
+         return $ fn [v]
 convertValue fn (Stage1.Lit lit)    = do v <- newVariable
                                          return $ Constant (Lit lit) :>>= [v] :-> fn [v]
 convertValue fn (Stage1.Hole size)  = return $ fn []

@@ -55,8 +55,8 @@ ppCAF qual (CAF name value)
     = ppRenamed qual name <+> equals <+> ppValue qual value
 
 ppFuncDef :: QualMap -> FuncDef -> Doc
-ppFuncDef qual (FuncDef name args body)
-    = hsep (ppRenamed qual name : map (ppRenamed qual) args) <+> equals <$$>
+ppFuncDef qual (FuncDef name returns args body)
+    = hsep (brackets (int returns) <+> ppRenamed qual name : map (ppRenamed qual) args) <+> equals <$$>
       indent 2 (ppBeginExpression qual body)
 
 ppBeginExpression :: QualMap -> Expression -> Doc
