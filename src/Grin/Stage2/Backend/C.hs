@@ -134,6 +134,10 @@ ppFuncDef func
 
 ppExpression :: [Renamed] -> Expression -> Doc
 -- More than one bind can occur in case expressions. Just take the first.
+{-
+ppExpression (bind:_) (Constant (Lit (Lrational r)))
+    = parens (parens (text "double*") <> char '&' <> ppRenamed bind) <> brackets (int 0) <+> equals <+> double (fromRational r) <> semi
+-}
 ppExpression (bind:_) (Constant value)
     = bind =: valueToDoc value
 ppExpression [bind] (Application (Builtin "realWorld#") [])
@@ -258,6 +262,14 @@ ppExpression _ (Application (Builtin "update") (ptr:values))
 ppExpression (st:bind:_) (Application (External "fdReady") args)
     = vsep [ bind =: int 1
            , st   =: ppRenamed (last args) ]
+{-
+ppExpression (st:bind:_) (Application (External "isDoubleNaN") [double,realworld])
+    = vsep [ bind =: (text "isnan" <> parens (parens (parens (text "double*") <> char '&' <> ppRenamed double) <> brackets (int 0) ))
+           , st   =: ppRenamed realworld ]
+ppExpression (st:bind:_) (Application (External "isDoubleInfinite") [double,realworld])
+    = vsep [ bind =: (text "isinf" <> parens (parens (parens (text "double*") <> char '&' <> ppRenamed double) <> brackets (int 0) ))
+           , st   =: ppRenamed realworld ]
+-}
 ppExpression (st:_) (Application (External "getProgArgv") [argcPtr, argvPtr, realWorld])
     = vsep [ ppRenamed argcPtr <+> equals <+> char '&' <> text "global_argc" <> semi
            , ppRenamed argvPtr <+> equals <+> char '&' <> text "global_argv" <> semi
@@ -306,7 +318,7 @@ valueToDoc (Node tag nt missing)
 valueToDoc (Lit (Lint i))
     = int (fromIntegral i)
 valueToDoc (Lit (Lchar c)) = int (ord c)
-valueToDoc val = error (show val)
+valueToDoc val = error $ "Grin.Stage2.Backend.C.valueToDoc: Can't translate: " ++ show val
 
 
 

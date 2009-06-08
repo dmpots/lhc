@@ -114,7 +114,7 @@ baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"uncheckedShiftRL#","neChar#","gcdInt#","narrow16Int#","timesWord#"
                       ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#"
                       ,"leWord#","/=#","writeCharArray#","xor#", "realWorld#"
-                      ,"waitWrite#" ]
+                      ,"waitWrite#", "negateDouble#", "<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##" ]
 vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
                       , "word2Integer#","integer2Int#", "newPinnedByteArray#"
                       ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"
