@@ -14,45 +14,9 @@ import System.Process
 import System.FilePath
 import Data.Char
 import qualified Data.Map as Map
-{-
-import qualified Data.ByteString.Char8 as BS
-import Language.C
 
-deriving instance Show CTranslUnit
-deriving instance Show CExtDecl
-deriving instance Show CStrLit
-deriving instance Show CFunDef
-deriving instance Show CDecl
-deriving instance Show CInit
-deriving instance Show CExpr
-deriving instance Show CBuiltin
-deriving instance Show CConst
-deriving instance Show CDesignator
-deriving instance Show CStat
-deriving instance Show CDeclr
-deriving instance Show CDeclSpec
-deriving instance Show CTypeQual
-deriving instance Show CTypeSpec
-deriving instance Show CEnum
-deriving instance Show CStructUnion
-deriving instance Show CDerivedDeclr
-deriving instance Show CStructTag
-deriving instance Show CArrSize
-deriving instance Show CAsmStmt
-deriving instance Show CBlockItem
-deriving instance Show CAttr
-deriving instance Show CAsmOperand
--}
 fixedSize :: Int
 fixedSize = 20
-
-{-
-syntaxCheck :: Grin -> ()
-syntaxCheck grin
-    = case parseC (BS.pack $ show $ grinToC grin) (Position "internal" 1 0) of
-        Left err -> error (show err)
-        Right{}  -> ()
--}
 
 compile :: Grin -> FilePath -> IO ()
 compile grin target
