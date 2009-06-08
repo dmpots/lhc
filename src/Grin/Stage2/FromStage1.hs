@@ -52,6 +52,8 @@ convertFuncDef def
                           }
 
 convertExpression :: Stage1.Expression -> M Stage2.Expression
+convertExpression (Stage1.Application (Builtin "unreachable") [] Stage1.:>>= _)
+    = return $ Application (Builtin "unreachable") []
 convertExpression (a Stage1.:>>= v Stage1.:-> b)
     = do a' <- convertExpression a
          convertBind v $ \v' ->
