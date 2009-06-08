@@ -6,7 +6,8 @@ module Grin.Stage2.Types
     ) where
 
 import qualified Grin.Types as Stage1
-import Grin.Types (Renamed(..),NodeType(..),NodeDef(..),Type(..))
+import Grin.Types (Renamed(..),NodeType(..),NodeDef(..),Type(..),uniqueId, alias
+                  ,isBuiltin,isExternal)
 
 import CompactString
 
@@ -20,6 +21,7 @@ data Grin
     = Grin { grinNodes     :: [NodeDef]
            , grinCAFs      :: [CAF]
            , grinFunctions :: [FuncDef]
+           , grinEntryPoint :: Renamed
            , grinUnique    :: Int
            }
 
