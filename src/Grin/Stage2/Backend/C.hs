@@ -49,12 +49,12 @@ returnArguments :: [CAF]
 returnArguments = [ CAF{ cafName = Aliased n "lhc_return", cafValue = Lit (Lint 0)} | n <- [1..10] ]
 
 header :: Doc
-header = vsep [ text "#include" <+> char '<' <> text "stdlib.h" <> char '>'
-              , text "#include" <+> char '<' <> text "stdio.h" <> char '>'
-              , text "#include" <+> char '<' <> text "unistd.h" <> char '>'
-              , text "#include" <+> char '<' <> text "string.h" <> char '>'
-              , text "#include" <+> char '<' <> text "errno.h" <> char '>'
-              , text "#include" <+> char '<' <> text "gc.h" <> char '>'
+header = vsep [ include "stdlib.h"
+              , include "stdio.h"
+              , include "unistd.h"
+              , include "string.h"
+              , include "errno.h"
+              , include "gc.h"
               , typedef <+> unsigned <+> long <+> u64 <> semi
               , typedef <+> unsigned <+> text "int" <+> u32 <> semi
               , typedef <+> unsigned <+> text "short" <+> u16 <> semi
@@ -127,30 +127,25 @@ ppExpression binds (a :>>= binds' :-> b)
 ppExpression (bind:_) (Application (Builtin "noDuplicate#") [arg])
     = bind =: ppRenamed arg
 ppExpression (bind:_) (Application (Builtin "==#") [a,b])
-    = text "if" <> parens (parens s64 <> ppRenamed a <+> text "==" <+> parens s64 <> ppRenamed b) <$$>
-      indent 2 (bind =: int 1) <$$>
-      text "else" <$$>
-      indent 2 (bind =: int 0)
+    = ifStatement (parens s64 <> ppRenamed a <+> text "==" <+> parens s64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin ">#") [a,b])
-    = text "if" <> parens (parens s64 <> ppRenamed a <+> text ">" <+> parens s64 <> ppRenamed b) <$$>
-      indent 2 (bind =: int 1) <$$>
-      text "else" <$$>
-      indent 2 (bind =: int 0)
+    = ifStatement (parens s64 <> ppRenamed a <+> text ">" <+> parens s64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin ">=#") [a,b])
-    = text "if" <> parens (parens s64 <> ppRenamed a <+> text ">=" <+> parens s64 <> ppRenamed b) <$$>
-      indent 2 (bind =: int 1) <$$>
-      text "else" <$$>
-      indent 2 (bind =: int 0)
+    = ifStatement (parens s64 <> ppRenamed a <+> text ">=" <+> parens s64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "<=#") [a,b])
-    = text "if" <> parens (parens s64 <> ppRenamed a <+> text "<=" <+> parens s64 <> ppRenamed b) <$$>
-      indent 2 (bind =: int 1) <$$>
-      text "else" <$$>
-      indent 2 (bind =: int 0)
+    = ifStatement (parens s64 <> ppRenamed a <+> text "<=" <+> parens s64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "<#") [a,b])
-    = text "if" <> parens (parens s64 <> ppRenamed a <+> text "<" <+> parens s64 <> ppRenamed b) <$$>
-      indent 2 (bind =: int 1) <$$>
-      text "else" <$$>
-      indent 2 (bind =: int 0)
+    = ifStatement (parens s64 <> ppRenamed a <+> text "<" <+> parens s64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "ord#") [a])
     = bind =: ppRenamed a
 ppExpression (bind:_) (Application (Builtin "chr#") [a])
@@ -289,6 +284,8 @@ valueToDoc val = error $ "Grin.Stage2.Backend.C.valueToDoc: Can't translate: " +
 
 
 
+
+
 puts :: String -> Doc
 puts txt = text "puts" <> parens (escString txt) <> semi
 
@@ -336,6 +333,17 @@ sanitize cs = text (map sanitizeChar $ show $ pretty cs)
 sanitizeChar :: Char -> Char
 sanitizeChar c | isAlphaNum c = c
                | otherwise    = '_'
+
+ifStatement :: Doc -> Doc -> Doc -> Doc
+ifStatement cond true false
+    = text "if" <> parens cond <$$>
+      indent 2 true <$$>
+      text "else" <$$>
+      indent 2 false
+
+include :: FilePath -> Doc
+include headerFile
+    = text "#include" <+> char '<' <> text headerFile <> char '>'
 
 comment :: String -> Doc
 comment str = text "/*" <+> text str <+> text "*/"
