@@ -96,6 +96,12 @@ alias :: Renamed -> Maybe CompactString
 alias (Aliased _ name) = Just name
 alias _ = Nothing
 
+uniqueId :: Renamed -> Int
+uniqueId (Aliased uid _name) = uid
+uniqueId (Anonymous uid)     = uid
+uniqueId (Builtin prim)      = error $ "Grin.Types.uniqueId: Primitive: " ++ show prim
+uniqueId (External fn)       = error $ "Grin.Types.uniqueId: External: " ++ show fn
+
 data Value
     = Node Renamed NodeType Int [Renamed]
     | Vector [Renamed]
