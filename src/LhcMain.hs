@@ -29,6 +29,8 @@ import qualified Grin.Lowering.Apply as Apply
 import qualified Grin.Stage2.FromStage1 as Stage2
 import qualified Grin.Stage2.Pretty as Stage2
 import qualified Grin.Stage2.Optimize.Simple as Stage2.Simple
+--import qualified Grin.Stage2.Backend.LLVM as Backend.LLVM
+import qualified Grin.Stage2.Backend.C as Backend.C
 
 -- TODO: We need proper command line parsing.
 tryMain :: IO ()
@@ -86,6 +88,7 @@ build action file args
          let stage2_raw = Stage2.convert hpt' out
              stage2_opt = iterate Stage2.Simple.optimize stage2_raw !! 2
              stage2_out = stage2_opt
+             --llvmModule = Backend.LLVM.fromGrin stage2_out
          case action of
            Build -> print (ppGrin out)
            Eval  -> Compile.runGrin out args >> return ()
@@ -102,6 +105,8 @@ build action file args
                          outputGrin2 target "_raw" stage2_raw
                          outputGrin2 target "_opt" stage2_opt
                          outputGrin2 target "" stage2_out
+                         --writeFile (replaceExtension target ".ll") (show $ Backend.LLVM.ppModule llvmModule)
+                         Backend.C.compile stage2_out (dropExtension target)
 
                          putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
 
