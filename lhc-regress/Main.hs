@@ -123,13 +123,15 @@ runTestCase cfg tc
                   cfgLHCOptions cfg ++
                   testCaseArgs tc
            ghcArgs = ["-fforce-recomp","-fext-core","-O2","-c",testCasePath tc]
-       when (cfgVerbose cfg >= 4) $ putStrLn $ unwords ("ghc":ghcArgs)
-       (ret,out,err) <- execProcess "lhc" ghcArgs B.empty
+       when (cfgVerbose cfg >= 4) $ putStrLn $ unwords (cfgLHCPath cfg:ghcArgs)
+       (ret,out,err) <- execProcess (cfgLHCPath cfg) ghcArgs B.empty
+       execProcess (cfgLHCPath cfg) ["compile", testCasePath tc `replaceExtension` "hcr"] B.empty
        case ret of
-         ExitFailure c -> return $ CompileError $ unlines $ ["ghc failed with: " ++ show c, B.unpack err]
+         ExitFailure c -> return $ CompileError $ unlines $ ["lhc failed with: " ++ show c, B.unpack err]
          ExitSuccess
-           -> do when (cfgVerbose cfg >= 4) $ putStrLn $ unwords (cfgLHCPath cfg:args)
-                 (ret,out,err) <- execProcess (cfgLHCPath cfg) args B.empty
+           -> do when (cfgVerbose cfg >= 4) $ putStrLn $ unwords (dropExtension (testCasePath tc) : testCaseArgs tc)
+                 --(ret,out,err) <- execProcess (cfgLHCPath cfg) args B.empty
+                 (ret,out,err) <- execProcess (dropExtension (testCasePath tc)) (testCaseArgs tc) B.empty
                  case (testCaseStdout tc, testCaseStderr tc) of
                    (Just expectedOut,_) | expectedOut /= out -> return $ ProgramError "Unexpected stdout" $ B.unpack out
                    (_,Just expectedErr) | expectedErr /= err -> return $ ProgramError "Unexpected stderr" $ B.unpack err
