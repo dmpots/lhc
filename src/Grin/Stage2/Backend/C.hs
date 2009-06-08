@@ -62,7 +62,7 @@ compile grin target
          return ()
     where cCode = grinToC grin
           cFile = replaceExtension target "c"
-          cmdLine = unwords ["gcc", "-w", "--debug", "-ggdb", cFile, "-o", target]
+          cmdLine = unwords ["gcc", "-I/usr/include/gc/", "-lgc", "-w", "--debug", "-ggdb", cFile, "-o", target]
 
 grinToC :: Grin -> Doc
 grinToC grin
@@ -90,6 +90,7 @@ header = vsep [ text "#include" <+> char '<' <> text "stdlib.h" <> char '>'
               , text "#include" <+> char '<' <> text "unistd.h" <> char '>'
               , text "#include" <+> char '<' <> text "string.h" <> char '>'
               , text "#include" <+> char '<' <> text "errno.h" <> char '>'
+              , text "#include" <+> char '<' <> text "gc.h" <> char '>'
               , typedef <+> unsigned <+> long <+> u64 <> semi
               , typedef <+> unsigned <+> text "int" <+> u32 <> semi
               , typedef <+> unsigned <+> text "short" <+> u16 <> semi
@@ -316,7 +317,7 @@ puts :: String -> Doc
 puts txt = text "puts" <> parens (escString txt) <> semi
 
 alloc :: Doc -> Doc
-alloc size = text "malloc" <> parens size
+alloc size = text "GC_MALLOC" <> parens size
 
 writeArray :: Renamed -> Int -> Renamed -> Doc
 writeArray arr nth val
