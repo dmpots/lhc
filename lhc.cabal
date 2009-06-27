@@ -126,6 +126,8 @@ flag threaded
   default:            False
 flag lhc-regress
   default:            False
+flag lhc-pkg
+  default:            True
 
 flag with-libs
   default:            False
@@ -142,7 +144,7 @@ Executable lhc
                      Grin.Eval.Compile, Grin.Eval.Methods, Grin.Eval.Primitives,
                      Grin.Eval.Types, Grin.FromCore, Grin.HPT.Environment,
                      Grin.HPT.Lower, Grin.HPT.Solve, Grin.HPT,
-                     Grin.HtmlAnnotate, Grin.Lowering.Apply,
+                     Grin.Lowering.Apply,
                      Grin.Lowering.GHCism, Grin.Optimize.Simple, Grin.Pretty,
                      Grin.SimpleCore.DeadCode, Grin.SimpleCore.Types,
                      Grin.SimpleCore, Grin.Types
@@ -170,6 +172,10 @@ Executable lhc-regress
                     test-framework-hunit, test-framework-quickcheck
 
 Executable lhc-pkg
+  if flag(lhc-pkg)
+    Buildable:      True
+  else
+    Buildable:      False
   hs-source-dirs: lhc-pkg/
   main-is: Main.hs
   Extensions: CPP, ForeignFunctionInterface
