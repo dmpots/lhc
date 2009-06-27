@@ -37,6 +37,8 @@ solve eqs
                     in if prev == next then (iter, HeapAnalysis next) else loop (iter+1) (appEndo newShared shared) next
       in loop 1 (nonlinearVariables eqs) (Map.map (const mempty) eqs)
 
+-- Scan for shared variables. A variable is shared if it is used more than once.
+-- Detecting shared heap points is done later when we solve the equations.
 nonlinearVariables :: Equations -> SharingMap
 nonlinearVariables eqs
     = appEndo (execWriter (mapM_ rhsFn (Map.elems eqs))) Map.empty
