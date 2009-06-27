@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn #-}
 module Grin.SimpleCore.Types where
 
 import CompactString

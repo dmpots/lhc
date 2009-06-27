@@ -3,7 +3,6 @@ module Grin.Optimize.Simple
     ( optimize
     ) where
 
-import CompactString
 import Grin.Types
 
 import Control.Monad.Reader
@@ -11,8 +10,7 @@ import qualified Data.Map as Map
 
 
 
-newtype Opt a = Opt {unOpt :: Reader Subst a}
-    deriving (MonadReader Subst, Monad)
+type Opt a = Reader Subst a
 type Subst = Map.Map Renamed Renamed
 
 
@@ -23,7 +21,7 @@ optimize grin
 
 simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
-    = def{ funcDefBody = runReader (unOpt (simpleExpression (funcDefBody def))) Map.empty }
+    = def{ funcDefBody = runReader (simpleExpression (funcDefBody def)) Map.empty }
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit (Variable v1) :>>= v2 :-> t)

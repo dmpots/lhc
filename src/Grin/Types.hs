@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn #-}
 module Grin.Types
     ( module Grin.Types
     , module Grin.SimpleCore.Types

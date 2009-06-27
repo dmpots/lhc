@@ -13,13 +13,11 @@ import Grin.Eval.Methods
 import qualified Data.Map as Map
 import Control.Monad.Reader
 
-import CompactString
 import Grin.Types hiding (Value(..))
 
 import qualified Data.Map as Map
 import Control.Monad.State
 import Data.Char
-import Data.IORef; import System.IO.Unsafe
 
 
 
@@ -30,7 +28,6 @@ runGrin grin commandArgs
           cafs = zip (map cafName (grinCAFs grin)) [0..]
           funcs = [ (funcDefName def, compFuncDef def globalScope) | def <- grinFunctions grin ]
           prims = listPrimitives globalScope
-          apply = lookupFunction (Builtin $ fromString "evalApply") globalScope
       in runComp $ do mapM_ storeValue =<< mapM (\caf -> compValue (cafValue caf) globalScope) (grinCAFs grin)
                       setCommandArgs ("lhc":commandArgs)
                       lookupFunction (grinEntryPoint grin) globalScope []
@@ -40,18 +37,6 @@ runComp comp
     where initState = EvalState { stateHeap = Map.empty
                                 , stateFree = 0
                                 , stateArgs = ["lhc"] }
-
-{-# NOINLINE indent #-}
-indent :: IORef Int
-indent = unsafePerformIO (newIORef 0)
-
-withIndent str fn
-    = do n <- liftIO $ readIORef indent
-         liftIO $ putStrLn $ replicate n ' ' ++ str
-         liftIO $ writeIORef indent (n+2)
-         ret <- fn
-         liftIO $ writeIORef indent n
-         return ret
 
 compFuncDef :: FuncDef -> Gen CompFunction
 compFuncDef func
@@ -74,7 +59,6 @@ compExpression (Application name args)
     = do fn <- lookupFunction name
          args' <- mapM lookupVariable args
          return $ do args'' <- mapM id args'
-                     --withIndent ("Running: " ++ show name ++ " " ++ show args ++ " " ++ show args'') $
                      fn args''
 compExpression (Unit value)
     = compValue value
@@ -138,12 +122,6 @@ doesMatch _ Grin.Empty
 doesMatch from to
     = Nothing
 
-
-bindLambda :: EvalValue -> Grin.Value -> CompValue -> CompValue
-bindLambda from to
-    = case doesMatch from to of
-        Nothing -> error $ "bindLambda: " ++ show (from, to)
-        Just fn -> fn
 
 bindLambdas :: [(EvalValue, Grin.Value)] -> Maybe (CompValue -> CompValue)
 bindLambdas [] = Just id

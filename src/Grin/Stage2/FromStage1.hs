@@ -131,6 +131,10 @@ convertAlt vector (Stage1.Node tag nt missing args Stage1.:> alt)
 convertAlt vector (Stage1.Vector args Stage1.:> alt)
     = do alt' <- convertExpression alt
          return $ Empty :> Unit vector :>>= args :-> alt'
+convertAlt vector (Stage1.Empty Stage1.:> alt)
+    = error $ "Grin.Stage2.FromStage1.convertAlt: Empty case condition."
+convertAlt vector (Stage1.Hole{} Stage1.:> alt)
+    = error $ "Grin.Stage2.FromStage1.convertAlt: Invalid case condition."
 
 convertValue :: ([Renamed] -> Expression) -> Stage1.Value -> M Expression
 convertValue fn (Stage1.Lit (Lstring string))

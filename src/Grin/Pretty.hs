@@ -36,6 +36,7 @@ ppNodeDef qual (NodeDef name nodeType args)
 
 ppType PtrType  = blue (text "*")
 ppType WordType = white (text "#")
+ppType NodeType = white (text "!")
 
 ppNodeType qual nt n name
     = green (worker qual nt n name)

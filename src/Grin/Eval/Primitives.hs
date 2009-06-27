@@ -63,6 +63,7 @@ runExternal name args
                    -- If we don't recognize the function, try loading it through the linker.
                    do fnPtr <- liftIO $ dlsym Default name
                       let toCArg (Lit (Lint i)) = argCInt (fromIntegral i)
+                          toCArg _              = error $ "Grin.Eval.Primitive.runExternal: Unrecognized argument type."
                       ret <- liftIO $ callFFI fnPtr retCInt (map toCArg args)
                       returnIO $ Lit (Lint (fromIntegral ret))
 

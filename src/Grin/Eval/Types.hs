@@ -7,7 +7,6 @@ import qualified Grin.Types as Grin
 import qualified Data.Map as Map
 import Control.Monad.Reader
 
-import CompactString
 import Grin.Types hiding (Value(..))
 
 import qualified Data.Map as Map

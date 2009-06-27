@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Grin.Eval.Methods where
 
-import CompactString
 import Grin.Types hiding (Value)
 import qualified Grin.Types as Grin
 import Grin.Eval.Types

@@ -7,7 +7,6 @@ import Grin.Types
 
 import qualified Data.Map as Map
 import Control.Monad.State
-import Control.Monad.Reader
 import Control.Monad.Writer
 
 

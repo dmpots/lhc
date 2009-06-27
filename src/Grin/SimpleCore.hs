@@ -68,6 +68,7 @@ tdefToSimpleTypes (Core.Newtype{}) = []
 cdefToSimpleType :: Core.Cdef -> SimpleType
 cdefToSimpleType (Core.Constr qual _ tys) = SimpleType { simpleTypeName = qualToCompact qual
                                                        , simpleTypeArity = length tys }
+cdefToSimpleType (Core.GadtConstr{}) = error "GADTs aren't yet supported!"
 
 sdefDeps :: Core.Exp -> [(String, String)]
 sdefDeps exp
@@ -263,9 +264,6 @@ lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
                 , map qualToCompact lambdaScope
                 , length realArgs )
 
-
-noType :: Core.Ty
-noType = error "Urk, types shouldn't be needed"
 
 freeVariables :: Core.Exp -> Set.Set (Core.Qual Core.Id)
 freeVariables (Core.Var qual)                  = Set.singleton qual

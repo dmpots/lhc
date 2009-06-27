@@ -6,7 +6,6 @@ module Grin.Lowering.Apply
 import CompactString
 import Grin.Types
 
-import Data.Monoid
 import Control.Monad.Writer
 import Control.Monad.State
 

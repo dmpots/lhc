@@ -2,7 +2,6 @@ module Grin.DeadCode
     ( removeDeadCode
     ) where
 
-import CompactString
 import Grin.Types
 
 import qualified Data.Map as Map

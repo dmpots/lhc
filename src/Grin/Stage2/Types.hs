@@ -13,9 +13,9 @@ import CompactString
 
 import Grin.SimpleCore.Types (Lit(..))
 
-import Data.Binary
-import Data.DeriveTH
-import Control.Monad  (ap)
+--import Data.Binary
+--import Data.DeriveTH
+--import Control.Monad  (ap)
 
 data Grin
     = Grin { grinNodes     :: [NodeDef]
@@ -64,7 +64,7 @@ data Value
     | Empty
     deriving (Show,Eq)
 
-
+{-
 $(derive makeBinary ''Value)
 $(derive makeBinary ''CAF)
 $(derive makeBinary ''FuncDef)
@@ -72,5 +72,5 @@ $(derive makeBinary ''Expression)
 $(derive makeBinary ''Alt)
 $(derive makeBinary ''Lambda)
 $(derive makeBinary ''Grin)
-
+-}
 
