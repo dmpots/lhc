@@ -55,10 +55,6 @@ nonlinearVariables eqs
           worker (Tag tag _nt _nargs args)  = pushIdent tag >> mapM_ rhsFn args
           worker (VectorTag args)           = mapM_ rhsFn args
 
-
-isSubsetOf :: (Monoid a, Eq a) => a -> a -> Bool
-a `isSubsetOf` b = b == (a `mappend` b)
-
 addReduced :: Lhs -> Rhs -> M ()
 addReduced lhs rhs
     = do orig <- lookupEq lhs

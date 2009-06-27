@@ -7,6 +7,7 @@ module Grin.HPT.Environment
     , HeapPointer
     , Lhs(..)
     , singleton
+    , isSubsetOf
     ) where
 
 import CompactString
@@ -67,6 +68,27 @@ instance Monoid Rhs where
                       LT -> y:worker ys (x:xs)
                       GT -> x:worker (y:ys) xs
                       EQ -> x:worker ys xs
+
+-- FIXME: check that this function is equal to 'b == (a `mappend` b)'.
+isSubsetOf :: Rhs -> Rhs -> Bool
+Rhs lRhs `isSubsetOf` Rhs rRhs
+    = let result = worker lRhs rRhs
+          correct = Rhs rRhs == (Rhs lRhs `mappend` Rhs rRhs) in
+      if False && result /= correct
+      then error $ "isSubSetOf: " ++ unlines [show (result,correct), show (Rhs lRhs), show (Rhs rRhs)]
+      else result
+    where worker [] y  = True
+          worker x [] = False
+          worker (x@(Tag tag1 _ _ args1):xs) (y@(Tag tag2 _ _ args2):ys)
+              = case tag1 `compare` tag2 of
+                  LT -> False
+                  GT -> worker (x:xs) ys
+                  EQ -> and (zipWith isSubsetOf args1 args2) && worker xs ys
+          worker (x:xs) (y:ys)
+              = case x `compare` y of
+                  LT -> False
+                  GT -> worker (x:xs) ys
+                  EQ -> worker xs ys
 
 zipJoin :: Monoid a => [a] -> [a] -> [a]
 zipJoin [] []         = []
