@@ -10,9 +10,10 @@ import Test.HUnit
 import Data.List
 
 import UnitTests
+import Properties
 
 main = defaultMain tests
 
-tests = [ testGroup "Unit tests"
-           unitTests
+tests = [ testGroup "Unit tests" unitTests
+        , testGroup "Properties" properties
         ]
