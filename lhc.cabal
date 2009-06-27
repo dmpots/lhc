@@ -164,9 +164,9 @@ Executable lhc-regress
   else
     Buildable:      False
   main-is:          Main.hs
-  other-modules:    TestCase, Setup
-  hs-source-dirs:   lhc-regress/
-  build-depends:    base >= 4 && < 5, process, extensible-exceptions
+  hs-source-dirs:   lhc-regress/ src/ tests/
+  build-depends:    base >= 4 && < 5, process, extensible-exceptions, HUnit, QuickCheck, test-framework,
+                    test-framework-hunit, test-framework-quickcheck
 
 Executable lhc-pkg
   hs-source-dirs: lhc-pkg/
