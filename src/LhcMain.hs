@@ -20,7 +20,6 @@ import qualified Grin.SimpleCore.DeadCode as Simple
 import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
 import qualified Grin.DeadCode as DeadCode
-import qualified Grin.HtmlAnnotate as Html
 
 --import Grin.Rename
 import qualified Grin.HPT as HPT
@@ -97,11 +96,9 @@ build action file args
                          outputGrin target "_simple" opt
                          outputGrin target "_apply" applyLowered
                          outputGrin target "_eval" evalLowered
-                         --outputAnnotation target "_eval.html" Map.empty evalLowered
                          writeFile (replaceExtension file "hpt") (show hpt')
                          outputGrin target "_trimmed" trimmed
                          outputGrin target "" out
-                         --outputAnnotation target ".html" Map.empty out
                          outputGrin2 target "_raw" stage2_raw
                          outputGrin2 target "_opt" stage2_opt
                          outputGrin2 target "" stage2_out
@@ -125,10 +122,6 @@ outputGrin2 file variant grin
     = do let outputFile = replaceExtension file ("grin2"++variant)
          writeFile outputFile (show $ Stage2.ppGrin grin)
          return ()
-
-outputAnnotation file variant annotation grin
-    = do let outputFile = replaceExtension file ("grin"++variant)
-         writeFile outputFile (Html.annotate annotation grin)
 
 execute :: FilePath -> [String] -> IO ()
 execute path args
