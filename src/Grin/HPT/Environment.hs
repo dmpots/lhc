@@ -69,14 +69,9 @@ instance Monoid Rhs where
                       GT -> x:worker (y:ys) xs
                       EQ -> x:worker ys xs
 
--- FIXME: check that this function is equal to 'b == (a `mappend` b)'.
 isSubsetOf :: Rhs -> Rhs -> Bool
 Rhs lRhs `isSubsetOf` Rhs rRhs
-    = let result = worker lRhs rRhs
-          correct = Rhs rRhs == (Rhs lRhs `mappend` Rhs rRhs) in
-      if False && result /= correct
-      then error $ "isSubSetOf: " ++ unlines [show (result,correct), show (Rhs lRhs), show (Rhs rRhs)]
-      else result
+    = worker lRhs rRhs
     where worker [] y  = True
           worker x [] = False
           worker (x@(Tag tag1 _ _ args1):xs) (y@(Tag tag2 _ _ args2):ys)
