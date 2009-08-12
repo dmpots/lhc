@@ -31,15 +31,15 @@ coreToGrin tdefs defs
                 bindCAFs cafs $
                 defsToFuncs defs' $ \funcs ->
                 defsToCAFs cafs $ \cafs' ->
-                genEntryPoint >>= \entryPoint ->
-                get >>= \u ->
-                asks scope >>= \varScope ->
-                return (GHCism.lower varScope Grin { grinNodes      = nodes
-                                                   , grinCAFs       = cafs'
-                                                   , grinFunctions  = entryPoint : funcs
-                                                   , grinEntryPoint = funcDefName entryPoint
-                                                   , grinUnique     = u
-                                                   })
+                do entryPoint <- genEntryPoint
+                   u <- get
+                   varScope <- asks scope
+                   return (GHCism.lower varScope Grin { grinNodes      = nodes
+                                                      , grinCAFs       = cafs'
+                                                      , grinFunctions  = entryPoint : funcs
+                                                      , grinEntryPoint = funcDefName entryPoint
+                                                      , grinUnique     = u
+                                                      })
           genEntryPoint = do mainCaf <- lookupVariable "main::Main.main"
                              realWorld <- newVariable
                              name <- newVariable
