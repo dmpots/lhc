@@ -59,10 +59,10 @@ instance Monoid Rhs where
                       LT -> Tag tag1 nt1 missing1 args1 : worker xs (Tag tag2 nt2 missing2 args2:ys)
                       GT -> Tag tag2 nt2 missing2 args2 : worker (Tag tag1 nt1 missing1 args1:xs) ys
                       EQ -> Tag tag1 nt1 (min missing1 missing2) (zipJoin args1 args2):worker xs ys
-              worker (y@Tag{}:ys) (x:xs)
+{-              worker (y@Tag{}:ys) (x:xs)
                   = x:worker (y:ys) xs
               worker (y:ys) (x@Tag{}:xs)
-                  = y:worker ys (x:xs)
+                  = y:worker ys (x:xs)-}
               worker (y:ys) (x:xs)
                   = case y `compare` x of
                       LT -> y:worker ys (x:xs)
