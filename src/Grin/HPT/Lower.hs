@@ -8,6 +8,7 @@ import Grin.Types
 import qualified Data.Map as Map
 import Control.Monad.State
 import Control.Monad.Writer
+import Data.List (delete)
 
 
 import Grin.HPT.Environment
@@ -44,7 +45,7 @@ lowerExpression (Application (Builtin "eval") [a])
          case Map.lookup (VarEntry a) hpt of
            Just (Rhs rhs) -> do let Rhs rhs' = mconcat [ hpt Map.! HeapEntry hp | Heap hp <- rhs ]
                                 addHPTInfo (VarEntry f) (Rhs rhs')
-                                alts <- mapM (mkApplyAlt []) rhs'
+                                alts <- mapM (mkApplyAlt rhs' []) rhs'
                                 v <- newVariable
                                 let expand (Tag tag FunctionNode 0 _) = hpt Map.! (VarEntry tag)
                                     expand rhs = Rhs [rhs]
@@ -58,7 +59,7 @@ lowerExpression (Application (Builtin "eval") [a])
 lowerExpression (Application (Builtin "apply") [a,b])
     = do HeapAnalysis hpt <- gets fst
          case Map.lookup (VarEntry a) hpt of
-           Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [b]) rhs
+           Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt rhs [b]) (delete Indirection rhs)
                                 return $ Case a alts
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application fn args)
@@ -87,26 +88,35 @@ lowerAlt (a :> b)
     = (tag, nt, missing) `elem` [ (tag, nt, missing) | Tag tag nt missing _ <- rhs ]
 _ `isMemberOf` rhs = True
 
+
 mkUpdate :: Renamed -> Renamed -> Renamed ->[RhsValue] -> M Expression
 mkUpdate ptr scrut val tags
-    = do fnTags <- sequence [ do args' <- replicateM (length args) newVariable
-                                 return $ Node tag FunctionNode n args' | t@(Tag tag FunctionNode n args) <- tags, n == 0 ]
-         constrTags <- sequence [ do args' <- replicateM (length args) newVariable
-                                     return $ Node tag nt n args' | t@(Tag tag nt n args) <- tags, not (n == 0 && nt == FunctionNode) ]
-         --let doUpdate = Case val [ tag :> Application (Builtin "update") [ptr,val] | tag <- constrTags ]
-         let doUpdate = Application (Builtin "update") [ptr,val]
-         if null fnTags || null constrTags
-            then return $ Unit Empty
-            else return $ doUpdate
+    = do v <- newVariable
+         t <- newVariable
+         addHPTInfo (VarEntry v) (singleton Base)
+         addHPTInfo (VarEntry t) (singleton Base)
+         let doUpdate = Store (Variable val) :>>= v :-> 
+                        Unit (Node (Aliased (-1) "Indirection") ConstructorNode 0 []) :>>= t :->
+                        Application (Builtin "update") [ptr,t,v]
+         alts' <- sequence [ do args' <- replicateM (length args) newVariable
+                                return $ Node tag FunctionNode 0 args' :> doUpdate | (Tag tag FunctionNode 0 args) <- tags ]
+         def <- newVariable
+         return $ Case scrut (alts' ++ [Variable def :> Unit Empty])
 
-mkApplyAlt :: [Renamed] -> RhsValue -> M Alt
-mkApplyAlt extraArgs (Tag tag FunctionNode n argsRhs) | n == length extraArgs
+mkApplyAlt :: [RhsValue] -> [Renamed] -> RhsValue -> M Alt
+mkApplyAlt self [] (Indirection)
+    = do hp <- newHeapEntry (mconcat $ map singleton self)
+         p <- newVariable
+         addHPTInfo (VarEntry p) (singleton $ Heap hp)
+         return $ Node (Aliased (-1) "Indirection") ConstructorNode 0 [p] :> Application (Builtin "fetch") [p]
+
+mkApplyAlt _ extraArgs (Tag tag FunctionNode n argsRhs) | n == length extraArgs
     = do args <- replicateM (length argsRhs) newVariable
          return $ Node tag FunctionNode n args :> Application tag (args ++ extraArgs)
-mkApplyAlt extraArgs (Tag tag nt n argsRhs)
+mkApplyAlt _ extraArgs (Tag tag nt n argsRhs)
     = do args <- replicateM (length argsRhs) newVariable
          return $ Node tag nt n args :> Unit (Node tag nt (n - length extraArgs) (args ++ extraArgs))
-mkApplyAlt _ val = error $ "Grin.HPT.Lower.mkApplyAlt: expected tag: " ++ show val
+mkApplyAlt _ _ val = error $ "Grin.HPT.Lower.mkApplyAlt: unexpected tag: " ++ show val
 
 addHPTInfo :: Lhs -> Rhs -> M ()
 addHPTInfo lhs rhs
@@ -117,3 +127,9 @@ newVariable = do unique <- gets snd
                  modify $ \st -> (fst st, unique + 1)
                  return $ Anonymous unique
 
+newHeapEntry :: Rhs -> M HeapPointer
+newHeapEntry rhs
+    = do unique <- gets snd
+         modify $ \st -> (fst st, unique + 1)
+         addHPTInfo (HeapEntry unique) rhs
+         return $ unique

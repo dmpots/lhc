@@ -8,6 +8,8 @@ import Grin.Stage2.Types as Stage2
 
 import Grin.HPT.Environment
 import Grin.HPT.Solve
+--import Grin.HPT.QuickSolve
+--import Grin.HPT.Environment (Lhs(..))
 
 import Control.Monad.RWS
 import qualified Data.Map as Map
@@ -94,20 +96,24 @@ nodeSize :: Renamed -> M Int
 nodeSize val
     = do HeapAnalysis hpt <- asks fst
          let Rhs vals = Map.findWithDefault mempty (VarEntry val) hpt
+--         let Data vals = Map.findWithDefault mempty (VarEntry val) hpt
          return $ maximum (0:map rhsValueSize vals)
 
 heapNodeSize :: Renamed -> M Int
 heapNodeSize val
     = do HeapAnalysis hpt <- asks fst
          let Rhs vals = find (VarEntry val) hpt
+--         let Data vals = find (VarEntry val) hpt
              hps      = map (\(Heap hp) -> hp) vals
              allVals  = [ val | hp <- hps, let Rhs vals = find (HeapEntry hp) hpt, val <- vals ]
+--               allVals  = [ val | hp <- hps, let Data vals = find (HeapEntry hp) hpt, val <- vals ]
          return $ maximum (0:map rhsValueSize allVals)
 
 rhsValueSize (Base) = 1
 rhsValueSize (Tag _tag _nt _missing args) = 1 + length args
 rhsValueSize (VectorTag args) = length args
 rhsValueSize (Heap{}) = 1
+rhsValueSize Indirection = 2
 rhsValueSize v = error $ "Grin.Stage2.FromStage1.nodeSize: Invalid rhs value: " ++ show v
 
 find key m = Map.findWithDefault (error $ "Couldn't find key: " ++ show key) key m

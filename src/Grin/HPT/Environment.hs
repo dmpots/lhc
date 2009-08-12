@@ -36,6 +36,7 @@ data RhsValue
     | Base
     | Heap HeapPointer
     | Tag Renamed NodeType Int [Rhs]
+    | Indirection
     | VectorTag [Rhs]
     deriving (Eq,Ord,Show)
 

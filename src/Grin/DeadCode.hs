@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Grin.DeadCode
     ( removeDeadCode
     ) where
@@ -25,7 +26,7 @@ removeDeadCode grin
               }
     where find m k = case Map.lookup k m of
                        Just v  -> v
-                       Nothing -> error $ "Couldn't find key: " ++ show k
+                       Nothing -> error $ "Grin.DeadCode.removeDeadCode: Couldn't find key: " ++ show k
           entryPoint = grinEntryPoint grin
 
 
@@ -33,7 +34,10 @@ grinDepends :: Grin -> Map.Map Renamed (Set.Set Renamed)
 grinDepends grin
     = Map.fromList [ (funcDefName def, defDepends def) | def <- grinFunctions grin ] `Map.union`
       Map.fromList [ (cafName caf, valueDepends (cafValue caf)) | caf <- grinCAFs grin ] `Map.union`
-      Map.fromList [ (nodeName node, Set.empty) | node <- grinNodes grin ]
+      Map.fromList [ (nodeName node, Set.empty) | node <- grinNodes grin ] `Map.union`
+      Map.singleton (Builtin "Indirection") Set.empty `Map.union`
+      Map.singleton (Aliased (-1) "Indirection") Set.empty `Map.union`
+      Map.singleton (Anonymous (-1)) Set.empty
 
 defDepends :: FuncDef -> Set.Set Renamed
 defDepends def

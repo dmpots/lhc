@@ -116,7 +116,7 @@ ppExpression binds (Unit variables)
 ppExpression [bind] (StoreHole size)
     = vsep $ [ bind =: alloc (int $ size * 8)]
 ppExpression [bind] (Store variables)
-    = vsep $ [ bind =: alloc (int $ fixedSize * 8)] ++
+    = vsep $ [ bind =: alloc (int $ (max 2 (length variables+1)) * 8)] ++
              [ writeArray bind n var | (n,var) <- zip [0..] variables ]
 ppExpression binds (Case scrut alts)
     = ppCase binds scrut alts
@@ -260,7 +260,6 @@ ppExpression (st:bind:_) (Application (External fn) args)
     = vsep [bind =: (text fn <> argList)
            ,st   =: ppRenamed (last args) ]
     where argList = parens $ hsep $ punctuate comma $ map ppRenamed (init args)
-
 
 ppExpression binds e = puts (show (Grin.ppExpression Map.empty e))
 
