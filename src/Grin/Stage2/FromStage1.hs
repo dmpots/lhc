@@ -77,6 +77,8 @@ convertExpression (Stage1.Case scrut alts)
            [] -> return $ Application (Builtin "unreachable") []
            _  ->do alts'  <- mapM (convertAlt vector) alts
                    return $ Case (head vector) alts'
+convertExpression (Stage1.Store (Stage1.Hole size))
+    = return $ StoreHole size
 convertExpression (Stage1.Store val)
     = convertValue Store val
 convertExpression (Stage1.Unit val)
@@ -143,7 +145,7 @@ convertValue fn (Stage1.Lit (Lstring string))
          return $ fn [v]
 convertValue fn (Stage1.Lit lit)    = do v <- newVariable
                                          return $ Constant (Lit lit) :>>= [v] :-> fn [v]
-convertValue fn (Stage1.Hole size)  = return $ fn []
+convertValue fn Stage1.Hole{}       = error "Grin.Stage2.FromStage1.convertValue: There shouldn't be a hole here."
 convertValue fn (Stage1.Empty)      = return $ fn []
 convertValue fn (Stage1.Variable v) = liftM fn (lookupVariable v)
 convertValue fn (Stage1.Node tag nt missing args)
@@ -159,12 +161,3 @@ lookupVariable val
     = do nmap <- asks snd
          return $ Map.findWithDefault [val] val nmap
 
-{-
-data Value
-    = Node Renamed NodeType Int [Renamed]
-    | Vector [Renamed]
-    | Lit Lit
-    | Variable Renamed
-    | Hole Int
-    | Empty
--}

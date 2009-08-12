@@ -52,6 +52,7 @@ data Expression
                   , expAlts     :: [Alt] }
     | Fetch       Int Renamed
     | Store       [Renamed]
+    | StoreHole   Int
     | Unit        [Renamed]
     | Constant    Value
 

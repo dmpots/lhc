@@ -75,6 +75,8 @@ ppExpression qual (Application fn args)
     = hsep (ppRenamed qual fn:map (ppRenamed qual) args)
 ppExpression qual (Store v)
     = blue (text "store") <+> ppValues qual v
+ppExpression qual (StoreHole n)
+    = blue (text "store") <+> hsep (replicate n (text "_"))
 ppExpression qual (Fetch n p)
     = blue (text "fetch") <> brackets (int n) <+> ppRenamed qual p
 ppExpression qual (a :>>= [] :-> c)

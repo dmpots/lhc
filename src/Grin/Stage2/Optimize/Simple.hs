@@ -37,6 +37,8 @@ simpleExpression (a :>>= b :-> c)
          return (a' :>>= b :-> c')
 simpleExpression (Application fn values)
     = liftM (Application fn) $ doSubsts values
+simpleExpression (StoreHole size)
+    = return $ StoreHole size
 simpleExpression (Store vs)
     = liftM Store $ mapM doSubst vs
 simpleExpression (Unit values)

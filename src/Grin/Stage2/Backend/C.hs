@@ -113,6 +113,8 @@ ppExpression (bind:_) (Fetch nth variable)
     = bind =: (ppRenamed variable <> brackets (int nth))
 ppExpression binds (Unit variables)
     = vsep (zipWith (=:) binds (map ppRenamed variables))
+ppExpression [bind] (StoreHole size)
+    = vsep $ [ bind =: alloc (int $ size * 8)]
 ppExpression [bind] (Store variables)
     = vsep $ [ bind =: alloc (int $ fixedSize * 8)] ++
              [ writeArray bind n var | (n,var) <- zip [0..] variables ]
