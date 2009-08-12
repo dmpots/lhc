@@ -81,6 +81,7 @@ ppCAF CAF{cafName = name, cafValue = Lit (Lstring str)}
     = u64 <> char '*' <+> ppRenamed name <+> equals <+> parens (u64<>char '*') <+> escString (str++"\0") <> semi
 ppCAF CAF{cafName = name, cafValue = Lit (Lint i)}
     = u64 <> char '*' <+> ppRenamed name <+> equals <+> parens (u64<>char '*') <+> int (fromIntegral i) <> semi
+ppCAF caf = error $ "Grin.Stage2.Backend.ppCAF: Invalid CAF: " ++ show (cafName caf)
 
 ppFuncDefProtoType :: FuncDef -> Doc
 ppFuncDefProtoType func
@@ -98,10 +99,8 @@ ppFuncDef func
 
 ppExpression :: [Renamed] -> Expression -> Doc
 -- More than one bind can occur in case expressions. Just take the first.
-{-
 ppExpression (bind:_) (Constant (Lit (Lrational r)))
     = parens (parens (text "double*") <> char '&' <> ppRenamed bind) <> brackets (int 0) <+> equals <+> double (fromRational r) <> semi
--}
 ppExpression (bind:_) (Constant value)
     = bind =: valueToDoc value
 ppExpression [bind] (Application (Builtin "realWorld#") [])
@@ -268,8 +267,10 @@ castToDouble ptr
 
 ppCase binds scrut alts
     = switch (parens (u64) <+> ppRenamed scrut) $
-        vsep (map ppAlt alts)
-    where ppAlt (value :> exp)
+        vsep (map ppAlt alts) <$$> def (last alts)
+    where def (Empty :> _)  = empty
+          def _             = text "default:" <$$> indent 2 (puts $ "No match for case: " ++ show scrut)
+          ppAlt (value :> exp)
               = case value of
                   Empty
                     -> text "default:" <$$> rest
