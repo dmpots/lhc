@@ -340,6 +340,10 @@ ppRenamed (Anonymous i)
     = text "anon_" <> int i
 ppRenamed (Aliased i name)
     = text "named_" <> sanitize name <> char '_' <> int i
+ppRenamed (Builtin "undefined")
+    = text "0"
+ppRenamed (Builtin builtin)
+    = error $ "Grin.Stage2.Backend.C.ppRenamed: Unknown primitive: " ++ show builtin
 
 sanitize :: CompactString -> Doc
 sanitize cs = text (map sanitizeChar $ show $ pretty cs)

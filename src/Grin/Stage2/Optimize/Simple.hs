@@ -26,7 +26,7 @@ simpleFuncDef def
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit v1 :>>= v2 :-> b)
     = do v1' <- doSubsts v1
-         subst (zip v2 v1') (simpleExpression b)
+         subst (zip v2 (v1' ++ repeat (Builtin "undefined"))) (simpleExpression b)
 simpleExpression (a :>>= v1 :-> Unit v2) | v1 == v2
     = simpleExpression a
 simpleExpression ((a :>>= b :-> c) :>>= d)
