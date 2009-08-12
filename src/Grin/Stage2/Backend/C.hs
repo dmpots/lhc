@@ -146,6 +146,14 @@ ppExpression (bind:_) (Application (Builtin "<#") [a,b])
     = ifStatement (parens s64 <> ppRenamed a <+> text "<" <+> parens s64 <> ppRenamed b)
                   (bind =: int 1)
                   (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin "<##") [a,b])
+    = ifStatement (castToDouble a <+> text "<" <+> castToDouble b)
+                  (bind =: int 1)
+                  (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin "==##") [a,b])
+    = ifStatement (castToDouble a <+> text "==" <+> castToDouble b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "ord#") [a])
     = bind =: ppRenamed a
 ppExpression (bind:_) (Application (Builtin "chr#") [a])
@@ -221,14 +229,15 @@ ppExpression _ (Application (Builtin "update") (ptr:values))
 ppExpression (st:bind:_) (Application (External "fdReady") args)
     = vsep [ bind =: int 1
            , st   =: ppRenamed (last args) ]
-{-
+ppExpression (st:bind:_) (Application (External "isDoubleNegativeZero") [double,realworld])
+    = vsep [ bind =: int 0
+           , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (External "isDoubleNaN") [double,realworld])
     = vsep [ bind =: (text "isnan" <> parens (parens (parens (text "double*") <> char '&' <> ppRenamed double) <> brackets (int 0) ))
            , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (External "isDoubleInfinite") [double,realworld])
     = vsep [ bind =: (text "isinf" <> parens (parens (parens (text "double*") <> char '&' <> ppRenamed double) <> brackets (int 0) ))
            , st   =: ppRenamed realworld ]
--}
 ppExpression (st:_) (Application (External "getProgArgv") [argcPtr, argvPtr, realWorld])
     = vsep [ ppRenamed argcPtr <+> equals <+> char '&' <> text "global_argc" <> semi
            , ppRenamed argvPtr <+> equals <+> char '&' <> text "global_argv" <> semi
@@ -253,6 +262,9 @@ ppExpression (st:bind:_) (Application (External fn) args)
 
 
 ppExpression binds e = puts (show (Grin.ppExpression Map.empty e))
+
+castToDouble ptr
+    = parens (parens (text "double*") <> char '&' <> ppRenamed ptr) <> brackets (int 0)
 
 ppCase binds scrut alts
     = switch (parens (u64) <+> ppRenamed scrut) $
