@@ -107,11 +107,11 @@ build action file args
 
                          putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
 
-                         lhc <- findExecutable "lhc"
-                         L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
-                                                        , encode out ]
-                         perm <- getPermissions target
-                         setPermissions target perm{executable = True}
+                         --lhc <- findExecutable "lhc"
+                         --L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
+                         --                               , encode out ]
+                         --perm <- getPermissions target
+                         --setPermissions target perm{executable = True}
 
 outputGrin file variant grin
     = do let outputFile = replaceExtension file ("grin"++variant)
