@@ -45,7 +45,7 @@ lowerExpression (Application (Builtin "eval") [a])
          case Map.lookup (VarEntry a) hpt of
            Just (Rhs rhs) -> do let Rhs rhs' = mconcat [ hpt Map.! HeapEntry hp | Heap hp <- rhs ]
                                 addHPTInfo (VarEntry f) (Rhs rhs')
-                                alts <- mapM (mkApplyAlt rhs' []) rhs'
+                                alts <- mapM (mkApplyAlt rhs []) rhs'
                                 v <- newVariable
                                 let expand (Tag tag FunctionNode 0 _) = hpt Map.! (VarEntry tag)
                                     expand rhs = Rhs [rhs]
@@ -59,7 +59,7 @@ lowerExpression (Application (Builtin "eval") [a])
 lowerExpression (Application (Builtin "apply") [a,b])
     = do HeapAnalysis hpt <- gets fst
          case Map.lookup (VarEntry a) hpt of
-           Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt rhs [b]) (delete Indirection rhs)
+           Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [] [b]) (delete Indirection rhs)
                                 return $ Case a alts
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application fn args)
@@ -105,9 +105,9 @@ mkUpdate ptr scrut val tags
 
 mkApplyAlt :: [RhsValue] -> [Renamed] -> RhsValue -> M Alt
 mkApplyAlt self [] (Indirection)
-    = do hp <- newHeapEntry (mconcat $ map singleton self)
+    = do --hp <- newHeapEntry (mconcat $ map singleton self)
          p <- newVariable
-         addHPTInfo (VarEntry p) (singleton $ Heap hp)
+         addHPTInfo (VarEntry p) (mconcat $ map singleton self)
          return $ Node (Aliased (-1) "Indirection") ConstructorNode 0 [p] :> Application (Builtin "fetch") [p]
 
 mkApplyAlt _ extraArgs (Tag tag FunctionNode n argsRhs) | n == length extraArgs
@@ -127,9 +127,3 @@ newVariable = do unique <- gets snd
                  modify $ \st -> (fst st, unique + 1)
                  return $ Anonymous unique
 
-newHeapEntry :: Rhs -> M HeapPointer
-newHeapEntry rhs
-    = do unique <- gets snd
-         modify $ \st -> (fst st, unique + 1)
-         addHPTInfo (HeapEntry unique) rhs
-         return $ unique

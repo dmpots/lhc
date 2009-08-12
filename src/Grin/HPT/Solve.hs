@@ -114,9 +114,7 @@ reduceEq (Eval i)
                                                                   when anyShared $ addReduced (HeapEntry hp) (singleton Indirection `mappend` rhs)
                                                                   return rhs
                             worker other = return $ singleton other
-                        rets <- {-# SCC "Eval.mappend2" #-} liftM mconcat $ mapM worker rhs
-                        --when anyShared $ addReduced (HeapEntry hp) (singleton Indirection `mappend` rets)
-                        return rets
+                        {-# SCC "Eval.mappend2" #-} liftM mconcat $ mapM worker rhs
          {-# SCC "Eval.mappend" #-} liftM mconcat $ mapM fn hps
 reduceEq (Fetch i)
     = do Rhs vals <- lookupEq (VarEntry i)
@@ -132,7 +130,7 @@ reduceEq (Apply a b)
                  | n == 0    = return mempty
                  | otherwise = do bRhs <- lookupEq (VarEntry b)
                                   return $ singleton (Tag conc nt (n-1) (args ++ [bRhs]))
-             f (Indirection) = return mempty -- liftM mconcat $ mapM f vals
+             f (Indirection) = return mempty
              f t             = error $ "reduceEq: apply: " ++ show t
          {-# SCC "Apply.mappend" #-} liftM mconcat $ mapM f vals
 reduceEq (PartialApply a b)
@@ -141,7 +139,7 @@ reduceEq (PartialApply a b)
                  | n == 0    = return mempty
                  | otherwise = do bRhs <- lookupEq (VarEntry b)
                                   return $ singleton (Tag tag nt (n-1) (args ++ [bRhs]))
-             f (Indirection) = return mempty -- liftM mconcat $ mapM f vals
+             f (Indirection) = return mempty
              f t             = error $ "reduceEq: apply: " ++ show t
          {-# SCC "PartialApply.mappend" #-} liftM mconcat $ mapM f vals
 reduceEq (Update hp val)
