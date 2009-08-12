@@ -13,6 +13,7 @@ import Data.Binary
 import Data.DeriveTH
 import Control.Monad  (ap)
 
+import Traverse
 
 -- Invariants:
 --   The nodes referred to by the functions are a subset of the nodes in 'grinNodes'.
@@ -56,8 +57,8 @@ data Type
     | NodeType
     deriving (Eq)
 
-data Lambda = Renamed :-> Expression
-data Alt = Value :> Expression
+data Lambda = Renamed :-> Expression deriving Show
+data Alt = Value :> Expression deriving Show
 
 infixr 1 :->
 infixr 1 :>>=
@@ -72,6 +73,31 @@ data Expression
                   , expAlts     :: [Alt] }
     | Store       Value
     | Unit        Value
+    deriving Show
+
+instance Traverse Expression where
+    tmapM fn exp
+        = case exp of
+            e1 :>>= bind :-> e2
+              -> do e1' <- fn e1
+                    e2' <- fn e2
+                    return (e1' :>>= bind :-> e2')
+            e1 :>> e2
+              -> do e1' <- fn e1
+                    e2' <- fn e2
+                    return (e1' :>> e2')
+            Application{}
+              -> return exp
+            Case scrut alts
+              -> do alts' <- sequence [ do alt' <- fn alt
+                                           return (cond :> alt')
+                                        | cond :> alt <- alts]
+                    return $ Case scrut alts'
+            Store{}
+              -> return exp
+            Unit{}
+              -> return exp
+
 
 type Variable = CompactString
 

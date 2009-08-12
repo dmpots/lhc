@@ -7,8 +7,10 @@ import Grin.Types
 
 import Control.Monad.Reader
 import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.Maybe
 
-
+import Traverse
 
 type Opt a = Reader Subst a
 type Subst = Map.Map Renamed Renamed
@@ -21,7 +23,10 @@ optimize grin
 
 simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
-    = def{ funcDefBody = runReader (simpleExpression (funcDefBody def)) Map.empty }
+    = let simplified = runReader (simpleExpression (funcDefBody def)) Map.empty
+          fetched    = runReader (fetchOpt simplified) Map.empty
+          pruned     = runReader (casePruneOpt fetched) Map.empty
+      in def{ funcDefBody = pruned }
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit (Variable v1) :>>= v2 :-> t)
@@ -93,4 +98,49 @@ doSubsts = mapM doSubst
 
 subst :: Renamed -> Renamed -> Opt a -> Opt a
 subst name value = local $ Map.insert name value
+
+
+
+
+-- do p <- store x 
+--    y <- fetch p
+--    m
+--  >>>
+-- do y <- unit x
+--    m
+type FetchOpt a = Reader Heap a
+type Heap = Map.Map Renamed Expression
+
+fetchOpt :: Expression -> FetchOpt Expression
+fetchOpt e@(Store val :>>= bind :-> _)
+    = local (Map.insert bind (Unit val))
+            (tmapM fetchOpt e)
+fetchOpt e@(Application (Builtin "update") [ptr,val] :>> _)
+    = local (Map.insert ptr (Unit (Variable val)))
+            (tmapM fetchOpt e)
+fetchOpt e@(Application (Builtin "fetch") [ptr])
+    = do mbVal <- asks $ Map.lookup ptr
+         case mbVal of
+           Nothing -> return e
+           Just e' -> return e'
+fetchOpt e = tmapM fetchOpt e
+
+
+
+type CasePruneOpt a = Reader Cases a
+type Cases = Map.Map Renamed (Set.Set Renamed)
+
+casePruneOpt :: Expression -> CasePruneOpt Expression
+casePruneOpt e@(Unit (Node tag _ _ _) :>>= v :-> _)
+    = local (Map.insertWith Set.union v (Set.singleton tag))
+            (tmapM casePruneOpt e)
+casePruneOpt e@(Case scrut alts)
+    = do mbVals <- asks $ Map.lookup scrut
+         case mbVals of
+           Nothing   -> tmapM casePruneOpt e
+           Just vals -> let worker (Node tag _ _ _ :> _) | tag `Set.notMember` vals = Nothing
+                            worker alt = Just alt
+                        in tmapM casePruneOpt (Case scrut (mapMaybe worker alts))
+casePruneOpt e = tmapM casePruneOpt e
+
 
