@@ -32,6 +32,7 @@ Library {
       Data.Typeable
       Data.Dynamic
       Data.IORef
+      Data.Ratio
       Text.ParserCombinators.ReadP
       Text.ParserCombinators.ReadPrec
       Text.Read.Lex
