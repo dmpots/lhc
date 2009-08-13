@@ -98,10 +98,18 @@ mkUpdate ptr scrut val tags
          let doUpdate = Store (Variable val) :>>= v :-> 
                         Unit (Node (Aliased (-1) "Indirection") ConstructorNode 0 []) :>>= t :->
                         Application (Builtin "update") [ptr,t,v]
-         alts' <- sequence [ do args' <- replicateM (length args) newVariable
-                                return $ Node tag FunctionNode 0 args' :> doUpdate | (Tag tag FunctionNode 0 args) <- tags ]
-         def <- newVariable
-         return $ Case scrut (alts' ++ [Variable def :> Unit Empty])
+         let worker (Tag tag FunctionNode 0 args)
+                 = do args' <- replicateM (length args) newVariable
+                      return $ Node tag FunctionNode 0 args' :> doUpdate
+             worker (Tag tag nt missingArgs args)
+                 = do args' <- replicateM (length args) newVariable
+                      return $ Node tag nt missingArgs args' :> Unit Empty
+             worker (Indirection)
+                 = do p <- newVariable
+                      return $ Node (Aliased (-1) "Indirection") ConstructorNode 0 [p] :> Unit Empty
+             worker tag = error $ "Grin.HPT.Lower.mkUpdate: Unknown rhs value: " ++ show tag
+         alts' <- mapM worker tags
+         return $ Case scrut alts'
 
 mkApplyAlt :: [RhsValue] -> [Renamed] -> RhsValue -> M Alt
 mkApplyAlt self [] (Indirection)
