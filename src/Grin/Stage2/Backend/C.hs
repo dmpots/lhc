@@ -265,7 +265,7 @@ ppExpression (st:bind:_) (Application (External fn) args)
            ,st   =: ppRenamed (last args) ]
     where argList = parens $ hsep $ punctuate comma $ map ppRenamed (init args)
 
-ppExpression binds e = puts (show (Grin.ppExpression Map.empty e))
+ppExpression binds e = puts (show (Grin.ppExpression Map.empty e)) <$$> text "exit(1);"
 
 castToDouble ptr
     = parens (parens (text "double*") <> char '&' <> ppRenamed ptr) <> brackets (int 0)
@@ -274,7 +274,7 @@ ppCase binds scrut alts
     = switch (parens (u64) <+> ppRenamed scrut) $
         vsep (map ppAlt alts) <$$> def (last alts)
     where def (Empty :> _)  = empty
-          def _             = text "default:" <$$> indent 2 (puts $ "No match for case: " ++ show scrut)
+          def _             = text "default:" <$$> indent 2 (puts ("No match for case: " ++ show scrut) <$$> text "exit(1);")
           ppAlt (value :> exp)
               = case value of
                   Empty
