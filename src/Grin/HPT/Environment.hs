@@ -136,7 +136,7 @@ baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
 vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
                       , "word2Integer#","integer2Int#", "newPinnedByteArray#"
                       ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"
-                      ,"mkWeak#"]
+                      ,"mkWeak#", "readCharArray#"]
 unsupportedBuiltins = ["raise#","atomicModifyMutVar#","writeTVar#"
                       ,"raiseIO#","fork#","atomically#"]
 

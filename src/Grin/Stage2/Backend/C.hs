@@ -195,6 +195,9 @@ ppExpression (bind:_) (Application (Builtin "remInt#") [a,b])
     = bind =: parens (parens s64 <+> ppRenamed a <+> text "%" <+> parens s64 <+> ppRenamed b)
 ppExpression (bind:_) (Application (Builtin "indexCharOffAddr#") [addr,idx])
     = bind =: (parens (parens (u8<>char '*') <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
+ppExpression (st:bind:_) (Application (Builtin "readCharArray#") [arr,idx,realWorld])
+    = vsep [ bind =: (parens (parens (u8<>char '*') <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx))
+           , st   =: ppRenamed realWorld ]
 ppExpression (st:_) (Application (Builtin "writeCharArray#") [arr,idx,chr,realWorld])
     = vsep [ parens (parens (u8<>char '*') <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
              equals <+> parens u8 <+> ppRenamed chr <> semi
