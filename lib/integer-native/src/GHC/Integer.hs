@@ -119,7 +119,15 @@ lcmInteger :: Integer -> Integer -> Integer
 lcmInteger a b = a
 
 gcdInteger :: Integer -> Integer -> Integer
-gcdInteger (Integer a) (Integer b) = Integer (a `gcdInt#` b)
+gcdInteger (Integer a) (Integer b) = Integer (a `gcdInt` b)
+
+-- We can't throw an error here, so it is up to our caller to
+-- not call us with both arguments being 0.
+-- gcdInt 0# 0# = error "GHC.Integer.gcdInteger: gcd 0 0 is undefined"
+gcdInt a b   = worker (absInt a) (absInt b)
+    where worker a 0# = a
+          worker a b = worker b (a `remInt#` b)
+          absInt x = if x <# 0# then negateInt# x else x
 
 andInteger :: Integer -> Integer -> Integer
 andInteger (Integer a) (Integer b)

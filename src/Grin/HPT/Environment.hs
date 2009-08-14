@@ -129,7 +129,7 @@ baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"uncheckedIShiftL#", "negateInt#"
                       ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
                       ,"ord#","chr#","or#","narrow32Word#","uncheckedShiftL#","plusWord#"
-                      ,"uncheckedShiftRL#","neChar#","gcdInt#","narrow16Int#","timesWord#"
+                      ,"uncheckedShiftRL#","neChar#","narrow16Int#","timesWord#"
                       ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#"
                       ,"leWord#","/=#","writeCharArray#","xor#", "realWorld#"
                       ,"waitWrite#", "negateDouble#", "<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##" ]
