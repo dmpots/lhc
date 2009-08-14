@@ -70,9 +70,12 @@ convertExpression (Stage1.Application (Builtin "fetch") [p])
          [p'] <- lookupVariable p
          vars <- replicateM size newVariable
          return $ foldr (\(v,n) r -> Stage2.Fetch n p' :>>= [v] :-> r) (Unit vars) (zip vars [0..])
-convertExpression (Stage1.Application fn args)
+convertExpression (Stage1.Application fn@(Builtin "update") args)
     = do args' <- mapM lookupVariable args
          return $ Application fn (concat args')
+convertExpression (Stage1.Application fn args)
+    = do args' <- mapM lookupVariable args
+         return $ Application fn (map head args')
 convertExpression (Stage1.Case scrut alts)
     = do vector <- lookupVariable scrut
          case vector of
