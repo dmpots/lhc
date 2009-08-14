@@ -16,6 +16,8 @@ Library {
    Exposed-modules:
       GHC.Integer
       GHC.Integer.Internals
+      GHC.Integer.PureInteger
+      GHC.Integer.Int
 
    Hs-source-dirs: src
    ghc-options: -package-name integer

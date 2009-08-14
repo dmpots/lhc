@@ -3,5 +3,7 @@ module GHC.Integer.Internals where
 import GHC.Prim
 import GHC.Types
 
-data Integer = Integer Int#
+import GHC.Integer.PureInteger
+
+data Integer = Integer LargeBaseLEList
 

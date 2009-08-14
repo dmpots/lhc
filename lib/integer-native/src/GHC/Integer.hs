@@ -44,76 +44,96 @@ import GHC.Ordering
 import GHC.IntWord64
 import GHC.Integer.Internals
 
+import qualified GHC.Integer.PureInteger as Pure
+
 toInt# :: Integer -> Int#
-toInt# (Integer i) = i
+toInt# (Integer i) = Pure.intFromInteger i
 
 eqInteger :: Integer -> Integer -> Bool
-eqInteger (Integer a) (Integer b) = a ==# b
+eqInteger (Integer a) (Integer b)
+    = case Pure.compareInteger a b of
+        GT -> False
+        EQ -> True
+        LT -> False
 
 neqInteger :: Integer -> Integer -> Bool
-neqInteger (Integer a) (Integer b) = a /=# b
+neqInteger (Integer a) (Integer b)
+    = case Pure.compareInteger a b of
+        GT -> True
+        EQ -> False
+        LT -> True
 
 ltInteger :: Integer -> Integer -> Bool
-ltInteger (Integer a) (Integer b) = a <# b
+ltInteger (Integer a) (Integer b)
+    = case Pure.compareInteger a b of
+        GT -> False
+        EQ -> False
+        LT -> True
 
 leInteger :: Integer -> Integer -> Bool
-leInteger (Integer a) (Integer b) = a <=# b
+leInteger (Integer a) (Integer b)
+    = case Pure.compareInteger a b of
+        GT -> False
+        EQ -> True
+        LT -> True
 
 gtInteger :: Integer -> Integer -> Bool
-gtInteger (Integer a) (Integer b) = a ># b
+gtInteger (Integer a) (Integer b)
+    = case Pure.compareInteger a b of
+        GT -> True
+        EQ -> False
+        LT -> False
 
 geInteger :: Integer -> Integer -> Bool
-geInteger (Integer a) (Integer b) = a >=# b
+geInteger (Integer a) (Integer b)
+    = case Pure.compareInteger a b of
+        GT -> True
+        EQ -> True
+        LT -> False
 
 compareInteger :: Integer -> Integer -> Ordering
 compareInteger (Integer a) (Integer b)
-    = if a ># b
-      then GT
-      else if a ==# b
-           then EQ
-           else LT
+    = Pure.compareInteger a b
 
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
 quotRemInteger (Integer a) (Integer b)
-    = (# Integer (a `quotInt#` b), Integer (a `remInt#` b) #)
+    = case Pure.quotRemInteger a b of
+        (quot, rem) -> (# Integer quot, Integer rem #)
 
 plusInteger :: Integer -> Integer -> Integer
-plusInteger (Integer a) (Integer b) = Integer (a +# b)
+plusInteger (Integer a) (Integer b) = Integer (Pure.addInteger a b)
 
 minusInteger :: Integer -> Integer -> Integer
-minusInteger (Integer a) (Integer b) = Integer (a -# b)
+minusInteger (Integer a) (Integer b) = Integer (Pure.addInteger a (Pure.negateInteger b))
 
 timesInteger :: Integer -> Integer -> Integer
-timesInteger (Integer a) (Integer b) = Integer (a *# b)
+timesInteger (Integer a) (Integer b) = Integer (Pure.multiplyInteger a b)
 
 negateInteger :: Integer -> Integer
-negateInteger (Integer a) = Integer (negateInt# a)
+negateInteger (Integer a) = Integer (Pure.negateInteger a)
 
 absInteger :: Integer -> Integer
-absInteger (Integer n) = Integer (if n ># 0# then n else negateInt# n)
+absInteger (Integer n) = Integer (Pure.absInteger n)
 
 signumInteger :: Integer -> Integer
 signumInteger (Integer i)
-    = if i <# 0#
-      then Integer (negateInt# 1#) else if i ==# 0#
-      then Integer 0#
-      else Integer 1#
+    = Integer (Pure.signumInteger i)
 
 smallInteger :: Int# -> Integer
 smallInteger i
-    = Integer i
+    = Integer (Pure.integerFromInt (I# i))
 
 quotInteger :: Integer -> Integer -> Integer
 quotInteger (Integer a) (Integer b)
-    = Integer (a `quotInt#` b)
+    = Integer (a `Pure.quotInteger` b)
 
 remInteger :: Integer -> Integer -> Integer
 remInteger (Integer a) (Integer b)
-    = Integer (a `remInt#` b)
+    = Integer (a `Pure.remInteger` b)
 
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
-divModInteger (Integer a) (Integer b)
-    = (# Integer (a `divInt#` b), Integer (a `modInt#` b) #)
+divModInteger a b
+    = (# (a `divInteger` b), (a `modInteger` b) #)
 
 lcmInteger :: Integer -> Integer -> Integer
 lcmInteger a b = a
@@ -124,26 +144,24 @@ gcdInteger (Integer a) (Integer b) = Integer (a `gcdInt` b)
 -- We can't throw an error here, so it is up to our caller to
 -- not call us with both arguments being 0.
 -- gcdInt 0# 0# = error "GHC.Integer.gcdInteger: gcd 0 0 is undefined"
-gcdInt a b   = worker (absInt a) (absInt b)
-    where worker a 0# = a
-          worker a b = worker b (a `remInt#` b)
-          absInt x = if x <# 0# then negateInt# x else x
+gcdInt a b   = worker (Pure.absInteger a) (Pure.absInteger b)
+    where worker a b = if Pure.isZeroInteger b then a else worker b (a `Pure.remInteger` b)
 
 andInteger :: Integer -> Integer -> Integer
 andInteger (Integer a) (Integer b)
-    = Integer (word2Int# (int2Word# a `and#` int2Word# b))
+    = Integer (Pure.tcAndInteger a b)
 
 orInteger :: Integer -> Integer -> Integer
 orInteger (Integer a) (Integer b)
-    = Integer (word2Int# (int2Word# a `or#` int2Word# b))
+    = Integer (Pure.tcOrInteger a b)
 
 xorInteger :: Integer -> Integer -> Integer
 xorInteger (Integer a) (Integer b)
-    = Integer (word2Int# (int2Word# a `xor#` int2Word# b))
+    = Integer (Pure.tcXOrInteger a b)
 
 complementInteger :: Integer -> Integer
-complementInteger (Integer x#)
-    = Integer (word2Int# (int2Word# x# `xor#` int2Word# (-1#)))
+complementInteger (Integer i)
+    = Integer (Pure.tcComplementInteger i)
 
 #if WORD_SIZE == 4
 integerToWord64 :: Integer -> Word64#
@@ -160,38 +178,38 @@ int64ToInteger i = smallInteger (int64ToInt# i)
 #endif
 
 wordToInteger :: Word# -> Integer
-wordToInteger w = Integer (word2Int# w)
+wordToInteger w = Integer (Pure.integerFromInt (I# (word2Int# w)))
 
 integerToWord :: Integer -> Word#
-integerToWord (Integer i) = int2Word# i
+integerToWord (Integer i) = int2Word# (Pure.intFromInteger i)
 
 floatFromInteger :: Integer -> Float#
-floatFromInteger (Integer i) = int2Float# i
+floatFromInteger (Integer i) = int2Float# 0#
 
 doubleFromInteger :: Integer -> Double#
-doubleFromInteger (Integer i) = int2Double# i
+doubleFromInteger (Integer i) = int2Double# 0#
 
-divInt# :: Int# -> Int# -> Int#
-x# `divInt#` y#
+divInteger :: Integer -> Integer -> Integer
+x `divInteger` y
         -- Be careful NOT to overflow if we do any additional arithmetic
         -- on the arguments...  the following  previous version of this
         -- code has problems with overflow:
 --    | (x# ># 0#) && (y# <# 0#) = ((x# -# y#) -# 1#) `quotInt#` y#
 --    | (x# <# 0#) && (y# ># 0#) = ((x# -# y#) +# 1#) `quotInt#` y#
-    = if  (x# ># 0#) && (y# <# 0#)
-      then ((x# -# 1#) `quotInt#` y#) -# 1#
-      else if (x# <# 0#) && (y# ># 0#)
-           then ((x# +# 1#) `quotInt#` y#) -# 1#
-           else x# `quotInt#` y#
+    = if (x `gtInteger` smallInteger 0#) && (y `ltInteger` smallInteger 0#)
+      then ((x `minusInteger` smallInteger 1#) `quotInteger` y) `minusInteger` smallInteger 1#
+      else if (x `ltInteger` smallInteger 0#) && (y `gtInteger` smallInteger 0#)
+           then ((x `plusInteger` smallInteger 1#) `quotInteger` y) `minusInteger` smallInteger 1#
+           else x `quotInteger` y
 
-modInt# :: Int# -> Int# -> Int#
-x# `modInt#` y#
-    = if (x# ># 0#) && (y# <# 0#) ||
-         (x# <# 0#) && (y# ># 0#)
-      then if r# /=# 0# then r# +# y# else 0#
-      else r#
+modInteger :: Integer -> Integer -> Integer
+x `modInteger` y
+    = if (x `gtInteger` smallInteger 0#) && (y `ltInteger` smallInteger 0#) ||
+         (x `ltInteger` smallInteger 0#) && (y `gtInteger` smallInteger 0#)
+      then if r `neqInteger` smallInteger 0# then r `plusInteger` y else smallInteger 0#
+      else r
     where
-    r# = x# `remInt#` y#
+    r = x `remInteger` y
 
 True && True = True
 _    && _    = False
