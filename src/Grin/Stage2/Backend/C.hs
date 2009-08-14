@@ -71,6 +71,7 @@ ppMain entryPoint
     = text "int" <+> text "main" <> parens (text "int argc" <> comma <+> text "char *argv[]") <+> char '{' <$$>
       indent 2 ( text "global_argc = argc;" <$$>
                  text "global_argv = argv;" <$$>
+                 text "GC_set_max_heap_size(1024*1024*1024);" <$$>
                  ppRenamed entryPoint <> parens empty <> semi <$$> text "return 0" <> semi) <$$>
       char '}'
 
