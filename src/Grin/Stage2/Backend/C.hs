@@ -116,7 +116,7 @@ ppExpression binds (Unit variables)
     = vsep (zipWith (=:) binds (map ppRenamed variables))
 ppExpression [bind] (StoreHole size)
     = vsep $ [ bind =: alloc (int $ size * 8)]
-ppExpression [bind] (Store variables)
+ppExpression (bind:_) (Store variables)
     = vsep $ [ bind =: alloc (int $ (max 2 (length variables+1)) * 8)] ++
              [ writeArray bind n var | (n,var) <- zip [0..] variables ]
 ppExpression binds (Case scrut alts)
