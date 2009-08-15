@@ -269,7 +269,7 @@ ppExpression (st:bind:_) (Application (External fn) args)
            ,st   =: ppRenamed (last args) ]
     where argList = parens $ hsep $ punctuate comma $ map ppRenamed (init args)
 
-ppExpression binds e = puts (show (Grin.ppExpression Map.empty e)) <$$> text "exit(1);"
+ppExpression binds e = puts (show (Grin.ppExpression e)) <$$> text "exit(1);"
 
 castToDouble ptr
     = parens (parens (text "double*") <> char '&' <> ppRenamed ptr) <> brackets (int 0)
