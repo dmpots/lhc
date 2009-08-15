@@ -109,17 +109,25 @@ subst name value = local $ Map.insert name value
 -- do y <- unit x
 --    m
 type FetchOpt a = Reader Heap a
-type Heap = Map.Map Renamed Expression
+type Heap = Map.Map (Either Renamed Renamed) Expression
 
 fetchOpt :: Expression -> FetchOpt Expression
 fetchOpt e@(Store val :>>= bind :-> _)
-    = local (Map.insert bind (Unit val))
+    = local (Map.insert (Left bind) (Unit val))
+            (tmapM fetchOpt e)
+fetchOpt e@(Application (Builtin "fetch") [val] :>>= bind :-> _)
+    = local (Map.insert (Right bind) (Unit (Variable val)))
             (tmapM fetchOpt e)
 fetchOpt e@(Application (Builtin "update") [ptr,val] :>> _)
-    = local (Map.insert ptr (Unit (Variable val)))
+    = local (Map.insert (Left ptr) (Unit (Variable val)))
             (tmapM fetchOpt e)
 fetchOpt e@(Application (Builtin "fetch") [ptr])
-    = do mbVal <- asks $ Map.lookup ptr
+    = do mbVal <- asks $ Map.lookup (Left ptr)
+         case mbVal of
+           Nothing -> return e
+           Just e' -> return e'
+fetchOpt e@(Store (Variable val))
+    = do mbVal <- asks $ Map.lookup (Right val)
          case mbVal of
            Nothing -> return e
            Just e' -> return e'
