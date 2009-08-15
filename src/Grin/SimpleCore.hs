@@ -59,7 +59,8 @@ coreToSimpleCore (Core.Module (pkgname,modname) tdefs vdefs)
                       , moduleDefs    = simpleDefs }
     where allDefs = concatMap (\x -> case x of Core.Nonrec d -> [d]; Core.Rec ds -> ds) vdefs
           emptyScope = Scope { currentScope  = Map.empty
-                             , currentModule = (pkgname, modname) }
+                             , currentModule = (pkgname, modname)
+                             , currentContext= Lazy }
 
 tdefToSimpleTypes :: Core.Tdef -> [SimpleType]
 tdefToSimpleTypes (Core.Data _ _ cdefs) = map cdefToSimpleType cdefs
@@ -87,8 +88,17 @@ isPrimitiveQual (pkg,mod,_ident)
 
 --type ScopeEnv = Map.Map (Core.Qual Core.Id) Renamed
 data Scope = Scope { currentScope :: Map.Map (Core.Qual Core.Id) Ty
-                   , currentModule :: (Core.Pkgname, Core.Mname) }
+                   , currentModule :: (Core.Pkgname, Core.Mname)
+                   , currentContext :: Context }
+data Context = Strict | Lazy deriving Eq
 type M = RWS Scope [SimpleDef] Int
+
+setContext :: Context -> M a -> M a
+setContext cxt
+    = local (\scope -> scope{ currentContext = cxt })
+
+askContext :: M Context
+askContext = asks currentContext
 
 vdefToSimpleDef :: Core.Vdef -> M ()
 vdefToSimpleDef vdef
@@ -103,16 +113,21 @@ vdefToSimpleDef' name args body
                          , simpleDefBody = body'
                          , simpleDefDeps = sdefDeps body }]
 
-
 expToSimpleExp :: Core.Exp -> M SimpleExp
-expToSimpleExp (Core.Var (pkg,mod,ident)) | pkg == L.pack "ghczmprim" && mod == L.pack "GHCziPrim"
+expToSimpleExp (Core.Var qual@(pkg,mod,ident)) | isPrimitiveQual qual
     = return $ Primitive (qualToCompact (L.empty, L.empty, ident))
 expToSimpleExp (Core.Var var)  = do isUnboxed <- varIsStrictPrimitive var
                                     return $ Var (qualToCompact var) isUnboxed
 expToSimpleExp (Core.Dcon con) = return $ Dcon (qualToCompact con)
 expToSimpleExp (Core.Lit lit)  = return $ Lit $ fromCoreLit lit
-expToSimpleExp e@Core.App{}    = let (f,args) = collectApps e
-                                 in return App `ap` expToSimpleExp f `ap` mapM expToSimpleExp args
+expToSimpleExp e@Core.App{}    = do let (f,args) = collectApps e
+                                    e' <- expToSimpleExp f
+                                    cxt <- askContext
+                                    case e' of
+                                      Primitive{} -> return (App e') `ap` mapM expToSimpleExp args
+                                      External{}  -> return (App e') `ap` mapM expToSimpleExp args
+                                      _  | cxt == Strict -> return (App e') `ap` mapM expToSimpleExp args
+                                         | otherwise     -> return (App e') `ap` mapM lambdaLiftExp args
 expToSimpleExp (Core.Appt a _) = expToSimpleExp a
 expToSimpleExp (Core.Lamt _ e) = expToSimpleExp e
 -- We remove lambdas by translating them to let expressions.
@@ -134,10 +149,10 @@ expToSimpleExp (Core.Let (Core.Rec defs) e)
     = bindDefs defs $ return LetRec `ap` mapM lambdaLift defs `ap` expToSimpleExp e
 expToSimpleExp (Core.Case e bind ty [Core.Adefault cond]) | typeIsStrictPrimitive (snd bind)
     = bindVariable bind $
-      return (LetStrict (qualToCompact (fst bind))) `ap` expToSimpleExp e `ap` expToSimpleExp cond
+      return (LetStrict (qualToCompact (fst bind))) `ap` setContext Strict (expToSimpleExp e) `ap` expToSimpleExp cond
 expToSimpleExp (Core.Case e bind ty alts)
     = bindVariable bind $
-      do e' <- expToSimpleExp e
+      do e' <- setContext Strict $ expToSimpleExp e
          alts' <- mapM altToSimpleAlt alts
          let constr = if typeIsStrictPrimitive (snd bind) then CaseStrict else Case
          return $ constr e' (qualToCompact $ fst bind) alts'
@@ -263,6 +278,32 @@ lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
                 , qualToCompact toplevelName
                 , map qualToCompact lambdaScope
                 , length realArgs )
+
+lambdaLiftExp :: Core.Exp -> M SimpleExp
+lambdaLiftExp e@Core.Var{} = expToSimpleExp e
+lambdaLiftExp e@Core.Lit{} = expToSimpleExp e
+lambdaLiftExp e@Core.Dcon{} = expToSimpleExp e
+lambdaLiftExp e@Core.App{} | (Core.Var qual, _args) <- collectApps e
+                           , isPrimitiveQual qual
+    = expToSimpleExp e
+lambdaLiftExp exp
+    = do (pkg, mod) <- asks currentModule
+         scope <- asks currentScope
+         unique <- newUnique
+         let allFreeVars = freeVariables exp `Set.intersection` Map.keysSet scope
+             lambdaScope = Set.toList allFreeVars
+         lambdaScopeTyped <- mapM (\var -> do t <- varType var; return (var, t)) lambdaScope
+         let
+             realArgs = map qualToCompact lambdaScope
+             toplevelName = (pkg,mod,L.pack "@lifted_exp@_" `L.append` L.pack (show unique))
+
+         bindVariables (lambdaScopeTyped) $
+           vdefToSimpleDef' (qualToCompact toplevelName) realArgs exp
+
+         return $ App (Var (qualToCompact toplevelName) False) [ Var (qualToCompact arg) False | arg <- lambdaScope ]
+         {-return ( qualToCompact toplevelName
+                , map qualToCompact lambdaScope
+                , length realArgs )-}
 
 
 freeVariables :: Core.Exp -> Set.Set (Core.Qual Core.Id)
