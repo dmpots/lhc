@@ -260,7 +260,7 @@ pNat :: IdF PInt; pNat x = x--; pNeg = negate
 
 infixr 5 !:
 (!:) :: DInt -> [DInt] -> [DInt]
-(!:) !d !ds = d : ds
+d !: ds =  d `seq` ds `seq` (d : ds)
 strictMap :: (DInt -> DInt) -> [DInt] -> [DInt]
 strictMap f = m
   where
