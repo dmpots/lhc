@@ -44,7 +44,8 @@ languageTests
                   , "IrrefutableLambda"
                   , "KindInference"
                   , "Kleisli"
-                  , "PureInteger" ]
+                  , "PureInteger"
+                  , "Laziness" ]
 
 shootoutTests
     = [ lhcTest dir name | name <- tests ]
