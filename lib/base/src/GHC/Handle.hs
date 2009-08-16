@@ -27,13 +27,13 @@ module GHC.Handle (
 
   newEmptyBuffer, allocateBuffer, readCharFromBuffer, writeCharIntoBuffer,
   flushWriteBufferOnly, flushWriteBuffer, flushReadBuffer,
-  fillReadBuffer, fillReadBufferWithoutBlocking,
+  fillReadBuffer, tryFillReadBuffer, -- fillReadBufferWithoutBlocking,
   readRawBuffer, readRawBufferPtr,
-  readRawBufferNoBlock, readRawBufferPtrNoBlock,
+  --readRawBufferNoBlock, readRawBufferPtrNoBlock,
   writeRawBuffer, writeRawBufferPtr,
 
 #ifndef mingw32_HOST_OS
-  unlockFile,
+--  unlockFile,
 #endif
 
   ioe_closedHandle, ioe_EOF, ioe_notReadable, ioe_notWritable,
@@ -78,6 +78,7 @@ import GHC.Exception
 import GHC.Enum
 import GHC.Num          ( Integer, Num(..) )
 import GHC.Show
+import GHC.Ptr
 #if defined(DEBUG_DUMP)
 import GHC.Pack
 #endif
@@ -471,7 +472,14 @@ flushWriteBuffer fd is_stream buf@Buffer{ bufBuf=b, bufRPtr=r, bufWPtr=w }  =
      else return buf{ bufRPtr=0, bufWPtr=0 }
 
 fillReadBuffer :: FD -> Bool -> Bool -> Buffer -> IO Buffer
-fillReadBuffer fd is_line is_stream
+fillReadBuffer fd is_line is_stream buffer
+    = do mbBuffer <- tryFillReadBuffer fd is_line is_stream buffer
+         case mbBuffer of
+           Just buffer -> return buffer
+           Nothing     -> ioe_EOF
+
+tryFillReadBuffer :: FD -> Bool -> Bool -> Buffer -> IO (Maybe Buffer)
+tryFillReadBuffer fd is_line is_stream
       buf@Buffer{ bufBuf=b, bufRPtr=r, bufWPtr=w, bufSize=size } =
   -- buffer better be empty:
   assert (r == 0 && w == 0) $ do
@@ -484,11 +492,11 @@ fillReadBuffer fd is_line is_stream
 -- is more useful than line buffering in most cases.
 
 fillReadBufferLoop :: FD -> Bool -> Bool -> Buffer -> RawBuffer -> Int -> Int
-                   -> IO Buffer
+                   -> IO (Maybe Buffer)
 fillReadBufferLoop fd is_line is_stream buf b w size = do
   let bytes = size - w
   if bytes == 0  -- buffer full?
-     then return buf{ bufRPtr=0, bufWPtr=w }
+     then return (Just buf{ bufRPtr=0, bufWPtr=w })
      else do
 #ifdef DEBUG_DUMP
   puts ("fillReadBufferLoop: bytes = " ++ show bytes ++ "\n")
@@ -501,13 +509,13 @@ fillReadBufferLoop fd is_line is_stream buf b w size = do
 #endif
   if res' == 0
      then if w == 0
-             then ioe_EOF
-             else return buf{ bufRPtr=0, bufWPtr=w }
+             then return Nothing
+             else return (Just buf{ bufRPtr=0, bufWPtr=w })
      else if res' < bytes && not is_line
              then fillReadBufferLoop fd is_line is_stream buf b (w+res') size
-             else return buf{ bufRPtr=0, bufWPtr=w+res' }
+             else return (Just buf{ bufRPtr=0, bufWPtr=w+res' })
  
-
+{-
 fillReadBufferWithoutBlocking :: FD -> Bool -> Buffer -> IO Buffer
 fillReadBufferWithoutBlocking fd is_stream
       buf@Buffer{ bufBuf=b, bufRPtr=r, bufWPtr=w, bufSize=size } =
@@ -523,7 +531,7 @@ fillReadBufferWithoutBlocking fd is_stream
   puts ("fillReadBufferLoopNoBlock:  res' = " ++ show res' ++ "\n")
 #endif
   return buf{ bufRPtr=0, bufWPtr=res' }
- 
+-}
 -- Low level routines for reading/writing to (raw)buffers:
 
 #ifndef mingw32_HOST_OS
@@ -562,34 +570,18 @@ indicates that there's no data, we call threadWaitRead.
 
 readRawBuffer :: String -> FD -> Bool -> RawBuffer -> Int -> CInt -> IO CInt
 readRawBuffer loc fd is_nonblock buf off len
-  | is_nonblock  = unsafe_read -- unsafe is ok, it can't block
-  | otherwise    = do r <- throwErrnoIfMinus1 loc 
-                                (unsafe_fdReady (fromIntegral fd) 0 0 0)
-                      if r /= 0
-                        then read
-                        else do threadWaitRead (fromIntegral fd); read
+  = unsafe_read
   where
-    do_read call = throwErrnoIfMinus1RetryMayBlock loc call 
-                            (threadWaitRead (fromIntegral fd))
-    read        = if threaded then safe_read else unsafe_read
+    do_read call = throwErrnoIfMinus1Retry loc call 
     unsafe_read = do_read (read_rawBuffer fd buf off len)
-    safe_read   = do_read (safe_read_rawBuffer fd buf off len)
 
 readRawBufferPtr :: String -> FD -> Bool -> Ptr CChar -> Int -> CInt -> IO CInt
 readRawBufferPtr loc fd is_nonblock buf off len
-  | is_nonblock  = unsafe_read -- unsafe is ok, it can't block
-  | otherwise    = do r <- throwErrnoIfMinus1 loc 
-                                (unsafe_fdReady (fromIntegral fd) 0 0 0)
-                      if r /= 0 
-                        then read
-                        else do threadWaitRead (fromIntegral fd); read
+  = unsafe_read
   where
-    do_read call = throwErrnoIfMinus1RetryMayBlock loc call 
-                            (threadWaitRead (fromIntegral fd))
-    read        = if threaded then safe_read else unsafe_read
+    do_read call = throwErrnoIfMinus1Retry loc call 
     unsafe_read = do_read (read_off fd buf off len)
-    safe_read   = do_read (safe_read_off fd buf off len)
-
+{-
 readRawBufferNoBlock :: String -> FD -> Bool -> RawBuffer -> Int -> CInt -> IO CInt
 readRawBufferNoBlock loc fd is_nonblock buf off len
   | is_nonblock  = unsafe_read -- unsafe is ok, it can't block
@@ -613,37 +605,33 @@ readRawBufferPtrNoBlock loc fd is_nonblock buf off len
    do_read call = throwErrnoIfMinus1RetryOnBlock loc call (return 0)
    unsafe_read  = do_read (read_off fd buf off len)
    safe_read    = do_read (safe_read_off fd buf off len)
-
+-}
 writeRawBuffer :: String -> FD -> Bool -> RawBuffer -> Int -> CInt -> IO CInt
 writeRawBuffer loc fd is_nonblock buf off len
-  | is_nonblock = unsafe_write -- unsafe is ok, it can't block
-  | otherwise   = do r <- unsafe_fdReady (fromIntegral fd) 1 0 0
-                     if r /= 0 
-                        then write
-                        else do threadWaitWrite (fromIntegral fd); write
+  = unsafe_write
   where  
-    do_write call = throwErrnoIfMinus1RetryMayBlock loc call
-                        (threadWaitWrite (fromIntegral fd)) 
-    write        = if threaded then safe_write else unsafe_write
+    do_write call = throwErrnoIfMinus1Retry loc call
     unsafe_write = do_write (write_rawBuffer fd buf off len)
-    safe_write   = do_write (safe_write_rawBuffer (fromIntegral fd) buf off len)
 
 writeRawBufferPtr :: String -> FD -> Bool -> Ptr CChar -> Int -> CInt -> IO CInt
 writeRawBufferPtr loc fd is_nonblock buf off len
-  | is_nonblock = unsafe_write -- unsafe is ok, it can't block
-  | otherwise   = do r <- unsafe_fdReady (fromIntegral fd) 1 0 0
-                     if r /= 0 
-                        then write
-                        else do threadWaitWrite (fromIntegral fd); write
+  = unsafe_write
   where
-    do_write call = throwErrnoIfMinus1RetryMayBlock loc call
-                        (threadWaitWrite (fromIntegral fd)) 
-    write         = if threaded then safe_write else unsafe_write
+    do_write call = throwErrnoIfMinus1Retry loc call
     unsafe_write  = do_write (write_off fd buf off len)
-    safe_write    = do_write (safe_write_off (fromIntegral fd) buf off len)
 
-foreign import ccall unsafe "__hscore_PrelHandle_read"
-   read_rawBuffer :: CInt -> RawBuffer -> Int -> CInt -> IO CInt
+--foreign import ccall unsafe "__hscore_PrelHandle_read"
+--   read_rawBuffer :: CInt -> RawBuffer -> Int -> CInt -> IO CInt
+
+
+foreign import ccall unsafe "read"
+   c_read_rawBuffer :: CInt -> Ptr () -> CSize -> IO CSize
+
+read_rawBuffer :: FD -> RawBuffer -> Int -> CInt -> IO CInt
+read_rawBuffer fd addr offset len
+    = do let ptr = Ptr (unsafeCoerce# addr)
+         realRead <- c_read_rawBuffer fd (ptr `plusPtr` offset) (fromIntegral len)
+         return (fromIntegral realRead)
 
 foreign import ccall unsafe "__hscore_PrelHandle_read"
    read_off :: CInt -> Ptr CChar -> Int -> CInt -> IO CInt
@@ -736,7 +724,7 @@ blockingReadRawBuffer loc fd True buf off len =
     safe_recv_rawBuffer fd buf off len
 blockingReadRawBuffer loc fd False buf off len = 
   throwErrnoIfMinus1Retry loc $
-    safe_read_rawBuffer fd buf off len
+    read_rawBuffer fd buf off len
 
 blockingReadRawBufferPtr :: String -> CInt -> Bool -> CString -> Int -> CInt
                          -> IO CInt
@@ -745,7 +733,7 @@ blockingReadRawBufferPtr loc fd True buf off len =
     safe_recv_off fd buf off len
 blockingReadRawBufferPtr loc fd False buf off len = 
   throwErrnoIfMinus1Retry loc $
-    safe_read_off fd buf off len
+    read_off fd buf off len
 
 blockingWriteRawBuffer :: String -> CInt -> Bool -> RawBuffer -> Int -> CInt
                        -> IO CInt
@@ -754,7 +742,7 @@ blockingWriteRawBuffer loc fd True buf off len =
     safe_send_rawBuffer fd buf off len
 blockingWriteRawBuffer loc fd False buf off len = 
   throwErrnoIfMinus1Retry loc $
-    safe_write_rawBuffer fd buf off len
+    write_rawBuffer fd buf off len
 
 blockingWriteRawBufferPtr :: String -> CInt -> Bool -> CString -> Int -> CInt
                           -> IO CInt
@@ -763,7 +751,7 @@ blockingWriteRawBufferPtr loc fd True buf off len =
     safe_send_off fd buf off len
 blockingWriteRawBufferPtr loc fd False buf off len = 
   throwErrnoIfMinus1Retry loc $
-    safe_write_off fd buf off len
+    write_off fd buf off len
 
 -- NOTE: "safe" versions of the read/write calls for use by the threaded RTS.
 -- These calls may block, but that's ok.
@@ -789,17 +777,17 @@ threaded = False
 foreign import ccall unsafe "rtsSupportsBoundThreads" threaded :: Bool
 #endif
 
-foreign import ccall safe "__hscore_PrelHandle_read"
-   safe_read_rawBuffer :: FD -> RawBuffer -> Int -> CInt -> IO CInt
+--foreign import ccall safe "__hscore_PrelHandle_read"
+--   safe_read_rawBuffer :: FD -> RawBuffer -> Int -> CInt -> IO CInt
 
-foreign import ccall safe "__hscore_PrelHandle_read"
-   safe_read_off :: FD -> Ptr CChar -> Int -> CInt -> IO CInt
+--foreign import ccall safe "__hscore_PrelHandle_read"
+--   safe_read_off :: FD -> Ptr CChar -> Int -> CInt -> IO CInt
 
-foreign import ccall safe "__hscore_PrelHandle_write"
-   safe_write_rawBuffer :: CInt -> RawBuffer -> Int -> CInt -> IO CInt
+--foreign import ccall safe "__hscore_PrelHandle_write"
+--   safe_write_rawBuffer :: CInt -> RawBuffer -> Int -> CInt -> IO CInt
 
-foreign import ccall safe "__hscore_PrelHandle_write"
-   safe_write_off :: CInt -> Ptr CChar -> Int -> CInt -> IO CInt
+--foreign import ccall safe "__hscore_PrelHandle_write"
+--   safe_write_off :: CInt -> Ptr CChar -> Int -> CInt -> IO CInt
 
 -- ---------------------------------------------------------------------------
 -- Standard Handles
@@ -932,7 +920,7 @@ openFile' filepath mode binary =
 
     h <- fdToHandle_stat fd (Just stat) 
               False  -- set_non_blocking
-              True   -- is_non_blocking
+              False  -- is_non_blocking
               False  -- is_socket
               filepath mode binary
             `catchAny` \e -> do c_close fd; throw e
@@ -956,7 +944,7 @@ openFile' filepath mode binary =
 
 std_flags, output_flags, read_flags, write_flags, rw_flags,
     append_flags :: CInt
-std_flags    = o_NONBLOCK   .|. o_NOCTTY
+std_flags    = o_NOCTTY
 output_flags = std_flags    .|. o_CREAT
 read_flags   = std_flags    .|. o_RDONLY 
 write_flags  = output_flags .|. o_WRONLY
@@ -1015,10 +1003,10 @@ fdToHandle_stat fd mb_stat set_non_blocking is_non_blocking is_socket
            -- On Windows we use explicit exclusion via sopen() to implement
            -- this locking (see __hscore_open()); on Unix we have to
            -- implment it in the RTS.
-           r <- lockFile fd dev ino (fromBool write)
-           when (r == -1)  $
-                ioException (IOError Nothing ResourceBusy "openFile"
-                                   "file is locked" Nothing)
+           --r <- lockFile fd dev ino (fromBool write)
+           --when (r == -1)  $
+           --     ioException (IOError Nothing ResourceBusy "openFile"
+           --                        "file is locked" Nothing)
 #endif
            mkFileHandle fd is_stream filepath ha_type binary
 
@@ -1219,7 +1207,7 @@ hClose_handle_ handle_ = do
   
 #ifndef mingw32_HOST_OS
     -- unlock it
-    unlockFile fd
+    --unlockFile fd
 #endif
 
     -- we must set the fd to -1, because the finalizer is going

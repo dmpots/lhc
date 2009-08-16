@@ -238,14 +238,7 @@ hGetLineBufferedLoop handle_ ref
 
 maybeFillReadBuffer :: FD -> Bool -> Bool -> Buffer -> IO (Maybe Buffer)
 maybeFillReadBuffer fd is_line is_stream buf
-  = catch 
-     (do buf' <- fillReadBuffer fd is_line is_stream buf
-         return (Just buf')
-     )
-     (\e -> do if isEOFError e 
-                  then return Nothing 
-                  else ioError e)
-
+  = tryFillReadBuffer fd is_line is_stream buf
 
 unpack :: RawBuffer -> Int -> Int -> IO [Char]
 unpack _   _      0        = return ""
@@ -375,14 +368,11 @@ lazyRead' h handle_ = do
 lazyReadBuffered :: Handle -> Handle__ -> FD -> IORef Buffer -> Buffer
                  -> IO (Handle__, [Char])
 lazyReadBuffered h handle_ fd ref buf = do
-   catch 
-        (do buf' <- fillReadBuffer fd True{-is_line-} (haIsStream handle_) buf
-            lazyReadHaveBuffer h handle_ fd ref buf'
-        )
-        -- all I/O errors are discarded.  Additionally, we close the handle.
-        (\_ -> do (handle_', _) <- hClose_help handle_
-                  return (handle_', "")
-        )
+   mbBuffer <- tryFillReadBuffer fd True (haIsStream handle_) buf
+   case mbBuffer of
+     Just buf' -> lazyReadHaveBuffer h handle_ fd ref buf'
+     Nothing   -> do (handle_', _) <- hClose_help handle_
+                     return (handle_',"")
 
 lazyReadHaveBuffer :: Handle -> Handle__ -> FD -> IORef Buffer -> Buffer -> IO (Handle__, [Char])
 lazyReadHaveBuffer h handle_ _ ref buf = do
@@ -868,6 +858,9 @@ readChunk fd is_stream ptr bytes0 = loop 0 bytes0
 -- is closed, 'hGetBufNonBlocking' will behave as if EOF was reached.
 --
 hGetBufNonBlocking :: Handle -> Ptr a -> Int -> IO Int
+hGetBufNonBlocking = hGetBuf
+--hGetBufNonBlocking _ _ _ = ioError (userError "GHC.IO.hGetBufNonBlocking: LHC doesn't support non-blocking IO.")
+{-
 hGetBufNonBlocking h ptr count
   | count == 0 = return 0
   | count <  0 = illegalBufferSize h "hGetBufNonBlocking" count
@@ -936,7 +929,7 @@ readChunkNonBlocking fd is_stream ptr bytes = do
     -- we don't have non-blocking read support on Windows, so just invoke
     -- the ordinary low-level read which will block until data is available,
     -- but won't wait for the whole buffer to fill.
-
+-}
 slurpFile :: FilePath -> IO (Ptr (), Int)
 slurpFile fname = do
   handle <- openFile fname ReadMode

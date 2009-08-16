@@ -732,6 +732,7 @@ asyncWriteBA fd isSock len off bufB =
 -- | Block the current thread until data is available to read on the
 -- given file descriptor (GHC only).
 threadWaitRead :: Fd -> IO ()
+threadWaitRead _ = return (){-
 threadWaitRead fd
 #ifndef mingw32_HOST_OS
   | threaded  = waitForReadEvent fd
@@ -740,10 +741,11 @@ threadWaitRead fd
         case fromIntegral fd of { I# fd# ->
         case waitRead# fd# s of { s' -> (# s', () #)
         }}
-
+-}
 -- | Block the current thread until data can be written to the
 -- given file descriptor (GHC only).
 threadWaitWrite :: Fd -> IO ()
+threadWaitWrite _ = return () {-
 threadWaitWrite fd
 #ifndef mingw32_HOST_OS
   | threaded  = waitForWriteEvent fd
@@ -752,7 +754,7 @@ threadWaitWrite fd
         case fromIntegral fd of { I# fd# ->
         case waitWrite# fd# s of { s' -> (# s', () #)
         }}
-
+-}
 -- | Suspends the current thread for a given number of microseconds
 -- (GHC only).
 --
