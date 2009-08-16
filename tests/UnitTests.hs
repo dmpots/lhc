@@ -32,7 +32,8 @@ basicTests
                   , "HelloWorld"
                   , "enum"
                   , "fastest_fib"
-                  , "IORef" ]
+                  , "IORef"
+                  , "Echo" ]
 
 languageTests
     = [ lhcTest dir name | name <- tests ]
