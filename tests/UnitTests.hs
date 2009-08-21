@@ -97,7 +97,7 @@ lhcTest path name
          mustfail <- doesFileExist (replaceExtension testFile "mustfail")
          handleFailures mustfail $ do
            execProcess "lhc" ["--make", "-O2", "-c", "-fforce-recomp", testFile] B.empty
-           execProcess "lhc" ["compile", replaceExtension testFile "hcr"] B.empty
+           execProcess "lhc" ["benchmark", replaceExtension testFile "hcr"] B.empty
            (_,output,_) <- execProcess (dropExtension testFile) (words $ B.unpack args) input
            let failed = output /= expectedOutput
            when failed $
