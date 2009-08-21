@@ -111,7 +111,8 @@ reduceEq (Eval i)
          anyShared <- liftM or $ mapM (isShared . HeapEntry) hps
          let fn hp = do Rhs rhs <- lookupEq (HeapEntry hp)
                         let worker (Tag fn FunctionNode 0 _) = do rhs <- lookupEq (VarEntry fn)
-                                                                  when anyShared $ addReduced (HeapEntry hp) (singleton Indirection `mappend` rhs)
+                                                                  when (anyShared && rhs /= mempty) $
+                                                                    addReduced (HeapEntry hp) (singleton Indirection `mappend` rhs)
                                                                   return rhs
                             worker other = return $ singleton other
                         {-# SCC "Eval.mappend2" #-} liftM mconcat $ mapM worker rhs
