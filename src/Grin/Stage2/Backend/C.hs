@@ -14,6 +14,8 @@ import Text.PrettyPrint.ANSI.Leijen
 import System.Process
 import System.FilePath
 import Data.Char
+import System.IO
+import System.Exit
 
 fixedSize :: Int
 fixedSize = 20
@@ -28,8 +30,11 @@ compile' :: [String] -> Grin -> FilePath -> IO ()
 compile' gccArgs grin target
     = do writeFile (replaceExtension target "c") (show cCode)
          pid <- runCommand cmdLine
-         waitForProcess pid
-         return ()
+         ret <- waitForProcess pid
+         case ret of
+           ExitSuccess -> return ()
+           _ -> do hPutStrLn stderr "C code failed to compile."
+                   exitWith ret
     where cCode = grinToC grin
           cFile = replaceExtension target "c"
           cmdLine = unwords (["gcc", "-I/usr/include/gc/", "-lgc", cFile, "-o", target] ++ gccArgs)
