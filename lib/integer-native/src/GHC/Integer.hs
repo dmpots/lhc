@@ -140,6 +140,12 @@ divModInteger a b
 lcmInteger :: Integer -> Integer -> Integer
 lcmInteger a b = a
 
+lcm     :: Integer -> Integer -> Integer
+lcm (Integer x) (Integer y)
+    = if Pure.isZeroInteger x || Pure.isZeroInteger y then smallInteger 0#
+      else mkInteger (Pure.absInteger ((x `Pure.quotInteger` (gcdInt x y)) `Pure.multiplyInteger` y))
+
+
 gcdInteger :: Integer -> Integer -> Integer
 gcdInteger (Integer a) (Integer b) = mkInteger (a `gcdInt` b)
 
