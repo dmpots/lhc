@@ -134,7 +134,7 @@ baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"leWord#","/=#","writeCharArray#","xor#", "realWorld#"
                       ,"waitWrite#", "negateDouble#", "<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##" ]
 vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
-                      , "word2Integer#","integer2Int#", "newPinnedByteArray#"
+                      , "word2Integer#","integer2Int#", "newByteArray#", "newPinnedByteArray#"
                       ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"
                       ,"mkWeak#", "readCharArray#"]
 unsupportedBuiltins = ["raise#","atomicModifyMutVar#","writeTVar#"
