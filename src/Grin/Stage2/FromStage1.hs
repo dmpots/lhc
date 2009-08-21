@@ -103,13 +103,11 @@ do node <- fetch p
    node `elem` [ Nil, Cons x y ]
 ===>
 do tag <- fetch 0 p
-   [tag,x,y] <- case tag of
-                  Nil  -> do t <- constant Nil
-                             unit [t]
-                  Cons -> do t <- constant Cons
-                             x <- fetch 1 p
-                             y <- fetch 2 p
-                             unit [t,x,y]
+   [x,y] <- case tag of
+              Nil  -> do unit []
+              Cons -> do x <- fetch 1 p
+                         y <- fetch 2 p
+                         unit [x,y]
 -}
 convertFetch p
     = do values <- heapNodeValues p
@@ -124,24 +122,19 @@ convertFetch p
                  then return (Stage2.Fetch 0 p')
                  else return (Application (Builtin "unreachable") [])
             else do v <- newVariable
+                    tmps <- replicateM (size-1) newVariable
                     vars <- replicateM size newVariable
                     alts <- mapM (mkAlt p') taggedValues
-                    return $ Stage2.Fetch 0 p' :>>= [v] :-> Case v alts
+                    return $ Stage2.Fetch 0 p' :>>= [v] :-> Case v alts :>>= tmps :-> Unit (v:tmps)
     where mkAlt p (Tag tag nt missing args)
-              = do tagVar  <- newVariable
-                   argVars <- replicateM (length args) newVariable
-                   let const = Stage2.Constant (Node tag nt missing)
-                       fetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) (Unit (tagVar:argVars)) (zip argVars [1..])
-                       branch = const :>>= [tagVar] :-> fetches
-                   return $ Node tag nt missing :> branch
+              = do argVars <- replicateM (length args) newVariable
+                   let fetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) (Unit (argVars)) (zip argVars [1..])
+                   return $ Node tag nt missing :> fetches
           mkAlt p Indirection
-              = do tagVar <- newVariable
-                   var <- newVariable
+              = do var <- newVariable
                    let indirection = Aliased (-1) "Indirection"
-                       const = Stage2.Constant (Node indirection ConstructorNode 0)
-                       fetch = Stage2.Fetch 1 p :>>= [var] :-> Unit [tagVar,var]
-                       branch = const :>>= [tagVar] :-> fetch
-                   return $ Node indirection ConstructorNode 0 :> branch
+                       fetch = Stage2.Fetch 1 p :>>= [var] :-> Unit [var]
+                   return $ Node indirection ConstructorNode 0 :> fetch
 
 nodeSize :: Renamed -> M Int
 nodeSize val
