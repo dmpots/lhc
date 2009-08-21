@@ -14,7 +14,6 @@ import Text.PrettyPrint.ANSI.Leijen
 import System.Process
 import System.FilePath
 import Data.Char
-import qualified Data.Map as Map
 
 fixedSize :: Int
 fixedSize = 20
@@ -45,10 +44,12 @@ grinToC grin
            , vsep (map ppCAF returnArguments)
            , comment "Function prototypes:"
            , vsep (map ppFuncDefProtoType (grinFunctions grin))
+           , comment "Alloc:"
+           , ppBumpAlloc
            , comment "Functions:"
            , vsep (map ppFuncDef (grinFunctions grin))
            , comment "Main:"
-           , ppMain (grinEntryPoint grin)
+           , ppMain (grinCAFs grin) (grinEntryPoint grin)
            , linebreak
            ]
 
@@ -73,18 +74,44 @@ header = vsep [ include "stdlib.h"
               , text "int global_argc;"
               , text "char **global_argv;" ]
 
-ppMain :: Renamed -> Doc
-ppMain entryPoint
+ppMain :: [CAF] -> Renamed -> Doc
+ppMain cafs entryPoint
     = text "int" <+> text "main" <> parens (text "int argc" <> comma <+> text "char *argv[]") <+> char '{' <$$>
       indent 2 ( text "global_argc = argc;" <$$>
                  text "global_argv = argv;" <$$>
-                 text "GC_set_max_heap_size(1024*1024*1024);" <$$>
+                 text "GC_init();" <$$>
+                 --text "GC_set_max_heap_size(1024*1024*1024);" <$$>
+                 vsep [ vsep [ ppRenamed name <+> equals <+> alloc (int (2 * 8)) <> semi
+                             , ppRenamed name <> brackets (int 0) <+> equals <+> int (uniqueId tag) <> semi]
+                        | CAF{cafName = name, cafValue = Node tag _nt _missing} <- cafs ] <$$>
                  ppRenamed entryPoint <> parens empty <> semi <$$> text "return 0" <> semi) <$$>
       char '}'
 
+ppBumpAlloc :: Doc
+ppBumpAlloc
+    = text "void*" <+> text "alloc" <> parens (text "int" <+> text "size") <+> char '{' <$$>
+      indent 2 (vsep [ text "static void *p = NULL, *limit = NULL;"
+                     , text "void* t;"
+                     , text "int max;"
+                     , text "if (p == NULL) { "
+                     , text "  p = GC_MALLOC(" <> int blockSize <> text " + 10*8);"
+                     , text "  limit = p + " <> int blockSize <> text ";"
+                     , text "}"
+                     , text "if (p+size > limit) {"
+                     , text "  max = " <> int blockSize <> text " > size ? " <> int blockSize <> text " : size;"
+                     , text "  p = GC_MALLOC(max + 10*8);"
+                     , text "  limit = p + max;"
+                     , text "}"
+                     , text "t = p;"
+                     , text "p += size;"
+                     , text "return t;"
+                     ]) <$$>
+      char '}'
+    where blockSize = 1024*4
+
 ppCAF :: CAF -> Doc
 ppCAF CAF{cafName = name, cafValue = Node tag _nt _missing}
-    = u64 <+> ppRenamed name <> brackets empty <+> equals <+> initList (uniqueId tag:replicate (fixedSize-1) 0) <> semi
+    = u64 <> char '*' <+> ppRenamed name <> semi -- brackets empty <+> equals <+> initList (uniqueId tag:replicate (fixedSize-1) 0) <> semi
 ppCAF CAF{cafName = name, cafValue = Lit (Lstring str)}
     = u64 <> char '*' <+> ppRenamed name <+> equals <+> parens (u64<>char '*') <+> escString (str++"\0") <> semi
 ppCAF CAF{cafName = name, cafValue = Lit (Lint i)}
@@ -122,7 +149,7 @@ ppExpression (bind:_) (Fetch nth variable)
 ppExpression binds (Unit variables)
     = vsep (zipWith (=:) binds (map ppRenamed variables))
 ppExpression [bind] (StoreHole size)
-    = vsep $ [ bind =: alloc (int $ size * 8)]
+    = vsep $ [ bind =: alloc (int $ max 2 size * 8)]
 ppExpression (bind:_) (Store variables)
     = vsep $ [ bind =: alloc (int $ (max 2 (length variables+1)) * 8)] ++
              [ writeArray bind n var | (n,var) <- zip [0..] variables ]
@@ -136,7 +163,7 @@ ppExpression binds (a :>>= binds' :-> b)
 ppExpression (bind:_) (Application (Builtin "noDuplicate#") [arg])
     = bind =: ppRenamed arg
 ppExpression (bind:_) (Application (Builtin "==#") [a,b])
-    = ifStatement (parens s64 <> ppRenamed a <+> text "==" <+> parens s64 <> ppRenamed b)
+    = ifStatement (cs64 <> ppRenamed a <+> text "==" <+> cs64 <> ppRenamed b)
                   (bind =: int 1)
                   (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "/=#") [a,b])
@@ -172,19 +199,19 @@ ppExpression (bind:_) (Application (Builtin "ord#") [a])
 ppExpression (bind:_) (Application (Builtin "chr#") [a])
     = bind =: ppRenamed a
 ppExpression (bind:_) (Application (Builtin "negateInt#") [a])
-    = bind =: (text "-" <+> parens s64 <> ppRenamed a)
+    = bind =: (text "-" <+> cs64 <+> cu64 <> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "narrow8Word#") [a])
-    = bind =: (parens u8 <+> ppRenamed a)
+    = bind =: (cu64 <+> cu8 <+> cu64 <+> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "narrow16Word#") [a])
-    = bind =: (parens u16 <+> ppRenamed a)
+    = bind =: (cu64 <+> cu16 <+> cu64 <+> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "narrow32Word#") [a])
-    = bind =: (parens u32 <+> ppRenamed a)
+    = bind =: (cu64 <+> cu32 <+> cu64 <+> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "narrow8Int#") [a])
-    = bind =: (parens s8 <+> ppRenamed a)
+    = bind =: (cu64 <+> cs8 <+> cu64 <+> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "narrow16Int#") [a])
-    = bind =: (parens s16 <+> ppRenamed a)
+    = bind =: (cu64 <+> cs16 <+> cu64 <+> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "narrow32Int#") [val])
-    = bind =: (parens s32 <+> ppRenamed val)
+    = bind =: (cu64 <+> cs32 <+> cu64 <+> ppRenamed val)
 ppExpression (bind:_) (Application (Builtin "timesWord#") [a,b])
     = bind =: parens (parens u64 <+> ppRenamed a <+> text "*" <+> parens u64 <+> ppRenamed b)
 ppExpression (bind:_) (Application (Builtin "plusWord#") [a,b])
@@ -202,23 +229,23 @@ ppExpression (bind:_) (Application (Builtin "quotInt#") [a,b])
 ppExpression (bind:_) (Application (Builtin "remInt#") [a,b])
     = bind =: parens (parens s64 <+> ppRenamed a <+> text "%" <+> parens s64 <+> ppRenamed b)
 ppExpression (bind:_) (Application (Builtin "indexCharOffAddr#") [addr,idx])
-    = bind =: (parens (parens (u8<>char '*') <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
+    = bind =: (cu64 <+> parens (cu8p <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
 ppExpression (st:bind:_) (Application (Builtin "readCharArray#") [arr,idx,realWorld])
-    = vsep [ bind =: (parens (parens (u8<>char '*') <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx))
+    = vsep [ bind =: (cu64 <+> parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realWorld ]
 ppExpression (st:_) (Application (Builtin "writeCharArray#") [arr,idx,chr,realWorld])
-    = vsep [ parens (parens (u8<>char '*') <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
-             equals <+> parens u8 <+> ppRenamed chr <> semi
+    = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
+             equals <+> cu8 <+> cu64 <+> ppRenamed chr <> semi
            , st =: ppRenamed realWorld ]
 ppExpression (st:bind:_) (Application (Builtin "readAddrOffAddr#") [addr, idx, realworld])
     = vsep [ bind =: (ppRenamed addr <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (Builtin "readInt32OffAddr#") [addr,idx, realworld])
-    = vsep [ bind =: (parens (parens (s32<>char '*') <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
+    = vsep [ bind =: (cu64 <+> parens (cs32p <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realworld
            ]
 ppExpression (st:bind:_) (Application (Builtin "readInt8OffAddr#") [addr,idx, realworld])
-    = vsep [ bind =: (parens (parens (s8<>char '*') <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
+    = vsep [ bind =: (cu64 <+> parens (cs8p <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realworld
            ]
 ppExpression (st:bind:_) (Application (Builtin "unsafeFreezeByteArray#") [addr, realworld])
@@ -232,16 +259,19 @@ ppExpression (st:_) (Application (Builtin "touch#") [ptr,realworld])
 ppExpression (st:bind:_) (Application (Builtin "mkWeak#") [key, val, finalizer, realWorld])
     = vsep [ bind =: int 0
            , st   =: ppRenamed realWorld ]
+ppExpression (st:arr:_) (Application (Builtin "newByteArray#") [size,realWorld])
+    = vsep [ st =: ppRenamed realWorld
+           , arr =: alloc ((parens u64) <+> ppRenamed size) ]
 ppExpression (st:arr:_) (Application (Builtin "newPinnedByteArray#") [size,realWorld])
     = vsep [ st =: ppRenamed realWorld
            , arr =: alloc ((parens u64) <+> ppRenamed size) ]
 -- FIXME: The ByteArray isn't aligned.
 ppExpression (st:arr:_) (Application (Builtin "newAlignedPinnedByteArray#") [size,alignment,realWorld])
     = vsep [ st =: ppRenamed realWorld
-           , arr =: alloc ((parens u64) <+> ppRenamed size) ]
+           , arr =: alloc (cu64 <+> ppRenamed size) ]
 ppExpression _ (Application (Builtin "update") (ptr:values))
-    = vsep [ writeArray ptr n value | (n,value) <- zip [0..] values ]
-
+    = --vsep [ text "memset("<>ppRenamed ptr<>text ", 0, GC_size("<>ppRenamed ptr<>text "));"] <$$>
+      vsep [ writeArray ptr n value | (n,value) <- zip [0..] values ]
 ppExpression (st:bind:_) (Application (External "fdReady") args)
     = vsep [ bind =: int 1
            , st   =: ppRenamed (last args) ]
@@ -255,11 +285,11 @@ ppExpression (st:bind:_) (Application (External "isDoubleInfinite") [double,real
     = vsep [ bind =: (text "isinf" <> parens (parens (parens (text "double*") <> char '&' <> ppRenamed double) <> brackets (int 0) ))
            , st   =: ppRenamed realworld ]
 ppExpression (st:_) (Application (External "getProgArgv") [argcPtr, argvPtr, realWorld])
-    = vsep [ ppRenamed argcPtr <+> equals <+> char '&' <> text "global_argc" <> semi
-           , ppRenamed argvPtr <+> equals <+> char '&' <> text "global_argv" <> semi
+    = vsep [ parens (parens (text "int*") <>ppRenamed argcPtr) <> brackets (int 0) <+> equals <+> text "global_argc" <> semi
+           , ppRenamed argvPtr <> brackets (int 0) <+> equals <+> text "global_argv" <> semi
            , st   =: ppRenamed realWorld ]
 ppExpression (st:bind:_) (Application (External "__hscore_get_errno") args)
-    = vsep [ bind =: text "errno"
+    = vsep [ bind =: (cu64 <+> text "errno")
            , st   =: ppRenamed (last args) ]
 ppExpression (st:bind:_) (Application (External "__hscore_PrelHandle_write") [fd,ptr,offset,size,realWorld])
     = vsep [ bind =: (text "write" <> parens (hsep $ punctuate comma $ [ parens u64 <+> ppRenamed fd
@@ -319,14 +349,18 @@ puts :: String -> Doc
 puts txt = text "puts" <> parens (escString txt) <> semi
 
 alloc :: Doc -> Doc
-alloc size = text "GC_MALLOC" <> parens size
+alloc size = text "GC_MALLOC" <> parens (size)
 
 writeArray :: Renamed -> Int -> Renamed -> Doc
 writeArray arr nth val
     = ppRenamed arr <> brackets (int nth) <+> equals <+> parens u64 <+> ppRenamed val <> semi
 
+writeArray' :: Renamed -> Int -> Doc -> Doc
+writeArray' arr nth val
+    = ppRenamed arr <> brackets (int nth) <+> equals <+> parens u64 <+> val <> semi
+
 (=:) :: Renamed -> Doc -> Doc
-variable =: value = ppRenamed variable <+> equals <+> parens (u64 <> char '*') <+> value <> semi
+variable =: value = ppRenamed variable <+> equals <+> cu64p <+> value <> semi
 
 declareVar :: Renamed -> Doc
 declareVar var
@@ -396,5 +430,30 @@ s64      = text "s64"
 s32      = text "s32"
 s16      = text "s16"
 s8       = text "s8"
+
+cu64 = parens u64
+cu64p = parens (u64<>char '*')
+
+cu32 = parens u32
+cu32p = parens (u32<>char '*')
+
+cu16 = parens u16
+cu16p = parens (u16<>char '*')
+
+cu8 = parens u8
+cu8p = parens (u8<>char '*')
+
+cs64 = parens s64
+cs64p = parens (s64<>char '*')
+
+cs32 = parens s32
+cs32p = parens (s32<>char '*')
+
+cs16 = parens s16
+cs16p = parens (s16<>char '*')
+
+cs8 = parens s8
+cs8p = parens (s8<>char '*')
+
 
 
