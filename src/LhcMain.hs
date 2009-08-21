@@ -30,15 +30,15 @@ import qualified Grin.Stage2.Pretty as Stage2
 import qualified Grin.Stage2.Optimize.Simple as Stage2.Simple
 --import qualified Grin.Stage2.Backend.LLVM as Backend.LLVM
 import qualified Grin.Stage2.Backend.C as Backend.C
+import qualified Grin.Stage2.DeadCode  as Stage2
 
 -- TODO: We need proper command line parsing.
 tryMain :: IO ()
 tryMain = do args <- getArgs
              case args of
                ("install":files)      -> mapM_ installCoreFile files >> exitWith ExitSuccess
-               ("build":file:args)    -> build Build file args >> exitWith ExitSuccess
-               ("eval":file:args)     -> build Eval file args >> exitWith ExitSuccess
-               ("compile":file:args)  -> build Compile file args >> exitWith ExitSuccess
+               ("compile":files)  -> build Compile files >> exitWith ExitSuccess
+               ("benchmark":file:[]) -> build Benchmark [file] >> exitWith ExitSuccess
                ("execute":file:args)  -> execute file args >> exitWith ExitSuccess
                _ -> return ()
 
@@ -56,11 +56,11 @@ installCoreFile path
                             createDirectoryIfMissing False (dataDir </> modulePackage smod)
                             encodeFile (dataDir </> modulePackage smod </> moduleName smod) smod
 
-data Action = Build | Eval | Compile
+data Action = Compile | Benchmark
 
-build :: Action -> FilePath -> [String] -> IO ()
-build action file args
-    = do mod <- parseCore file
+build :: Action -> [FilePath] -> IO ()
+build action files@(file:_)
+    = do mods <- mapM parseCore files
          libs <- loadAllLibraries
          let primModule = SimpleModule { modulePackage = "ghczmprim"
                                        , moduleName    = "GHCziPrim"
@@ -74,7 +74,8 @@ build action file args
                                                          ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,#)") 8]
                                        , moduleDefs    = [] }
          let allModules = Map.insert (modulePackage primModule, moduleName primModule) primModule $
-                          Map.insert (modulePackage mod, moduleName mod) mod libs
+                          foldr (\mod -> Map.insert (modulePackage mod, moduleName mod) mod) libs mods
+                          -- libs
              (tdefs, defs) = Simple.removeDeadCode [("main","Main")]  ["main::Main.main"] allModules
              grin = coreToGrin tdefs defs
              opt = iterate Simple.optimize grin !! 2
@@ -86,32 +87,36 @@ build action file args
              out = trimmed
          let stage2_raw = Stage2.convert hpt' out
              stage2_opt = iterate Stage2.Simple.optimize stage2_raw !! 2
-             stage2_out = stage2_opt
+             stage2_trim = Stage2.trimDeadCode stage2_opt
+             stage2_opt' = iterate Stage2.Simple.optimize stage2_trim !! 2
+             stage2_out = stage2_opt'
              --llvmModule = Backend.LLVM.fromGrin stage2_out
          case action of
-           Build -> print (ppGrin out)
-           Eval  -> Compile.runGrin out args >> return ()
-           Compile -> do let target = replaceExtension file "lhc"
-                         outputGrin target "_raw" grin
-                         outputGrin target "_simple" opt
-                         outputGrin target "_apply" applyLowered
-                         outputGrin target "_eval" evalLowered
-                         writeFile (replaceExtension file "hpt") (show hpt')
-                         outputGrin target "_trimmed" trimmed
-                         outputGrin target "" out
-                         outputGrin2 target "_raw" stage2_raw
-                         outputGrin2 target "_opt" stage2_opt
-                         outputGrin2 target "" stage2_out
-                         --writeFile (replaceExtension target ".ll") (show $ Backend.LLVM.ppModule llvmModule)
-                         Backend.C.compile stage2_out (dropExtension target)
+           Benchmark -> do let target = replaceExtension file "lhc"
+                           Backend.C.compileFastCode stage2_out (dropExtension target)
+           Compile   -> do let target = replaceExtension file "lhc"
+                           outputGrin target "_raw" grin
+                           outputGrin target "_simple" opt
+                           outputGrin target "_apply" applyLowered
+                           outputGrin target "_eval" evalLowered
+                           writeFile (replaceExtension file "hpt") (show hpt')
+                           outputGrin target "_trimmed" trimmed
+                           outputGrin target "" out
+                           outputGrin2 target "_raw" stage2_raw
+                           outputGrin2 target "_opt" stage2_opt
+                           outputGrin2 target "_trimmed" stage2_trim
+                           outputGrin2 target "" stage2_out
+                           --writeFile (replaceExtension target ".ll") (show $ Backend.LLVM.ppModule llvmModule)]
+                           Backend.C.compile stage2_out (dropExtension target)
+                           --Stage2.calcLiveNodes stage2_out
 
-                         putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
+                           putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
 
-                         --lhc <- findExecutable "lhc"
-                         --L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
-                         --                               , encode out ]
-                         --perm <- getPermissions target
-                         --setPermissions target perm{executable = True}
+                           --lhc <- findExecutable "lhc"
+                           --L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
+                           --                               , encode out ]
+                           --perm <- getPermissions target
+                           --setPermissions target perm{executable = True}
 
 outputGrin file variant grin
     = do let outputFile = replaceExtension file ("grin"++variant)

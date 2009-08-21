@@ -123,6 +123,11 @@ alias :: Renamed -> Maybe CompactString
 alias (Aliased _ name) = Just name
 alias _ = Nothing
 
+numbered :: Renamed -> Bool
+numbered Aliased{} = True
+numbered Anonymous{} = True
+numbered _ = False
+
 uniqueId :: Renamed -> Int
 uniqueId (Aliased uid _name) = uid
 uniqueId (Anonymous uid)     = uid
