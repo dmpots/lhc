@@ -46,6 +46,8 @@ import GHC.Integer.Internals
 
 import qualified GHC.Integer.PureInteger as Pure
 
+mkInteger i = i `seq` Integer i
+
 toInt# :: Integer -> Int#
 toInt# (Integer i) = Pure.intFromInteger i
 
@@ -98,38 +100,38 @@ compareInteger (Integer a) (Integer b)
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
 quotRemInteger (Integer a) (Integer b)
     = case Pure.quotRemInteger a b of
-        (quot, rem) -> (# Integer quot, Integer rem #)
+        (quot, rem) -> (# mkInteger quot, mkInteger rem #)
 
 plusInteger :: Integer -> Integer -> Integer
-plusInteger (Integer a) (Integer b) = Integer (Pure.addInteger a b)
+plusInteger (Integer a) (Integer b) = mkInteger (Pure.addInteger a b)
 
 minusInteger :: Integer -> Integer -> Integer
-minusInteger (Integer a) (Integer b) = Integer (Pure.addInteger a (Pure.negateInteger b))
+minusInteger (Integer a) (Integer b) = mkInteger (Pure.addInteger a (Pure.negateInteger b))
 
 timesInteger :: Integer -> Integer -> Integer
-timesInteger (Integer a) (Integer b) = Integer (Pure.multiplyInteger a b)
+timesInteger (Integer a) (Integer b) = mkInteger (Pure.multiplyInteger a b)
 
 negateInteger :: Integer -> Integer
-negateInteger (Integer a) = Integer (Pure.negateInteger a)
+negateInteger (Integer a) = mkInteger (Pure.negateInteger a)
 
 absInteger :: Integer -> Integer
-absInteger (Integer n) = Integer (Pure.absInteger n)
+absInteger (Integer n) = mkInteger (Pure.absInteger n)
 
 signumInteger :: Integer -> Integer
 signumInteger (Integer i)
-    = Integer (Pure.signumInteger i)
+    = mkInteger (Pure.signumInteger i)
 
 smallInteger :: Int# -> Integer
 smallInteger i
-    = Integer (Pure.integerFromInt (I# i))
+    = mkInteger (Pure.integerFromInt (I# i))
 
 quotInteger :: Integer -> Integer -> Integer
 quotInteger (Integer a) (Integer b)
-    = Integer (a `Pure.quotInteger` b)
+    = mkInteger (a `Pure.quotInteger` b)
 
 remInteger :: Integer -> Integer -> Integer
 remInteger (Integer a) (Integer b)
-    = Integer (a `Pure.remInteger` b)
+    = mkInteger (a `Pure.remInteger` b)
 
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
 divModInteger a b
@@ -139,7 +141,7 @@ lcmInteger :: Integer -> Integer -> Integer
 lcmInteger a b = a
 
 gcdInteger :: Integer -> Integer -> Integer
-gcdInteger (Integer a) (Integer b) = Integer (a `gcdInt` b)
+gcdInteger (Integer a) (Integer b) = mkInteger (a `gcdInt` b)
 
 -- We can't throw an error here, so it is up to our caller to
 -- not call us with both arguments being 0.
@@ -149,19 +151,19 @@ gcdInt a b   = worker (Pure.absInteger a) (Pure.absInteger b)
 
 andInteger :: Integer -> Integer -> Integer
 andInteger (Integer a) (Integer b)
-    = Integer (Pure.tcAndInteger a b)
+    = mkInteger (Pure.tcAndInteger a b)
 
 orInteger :: Integer -> Integer -> Integer
 orInteger (Integer a) (Integer b)
-    = Integer (Pure.tcOrInteger a b)
+    = mkInteger (Pure.tcOrInteger a b)
 
 xorInteger :: Integer -> Integer -> Integer
 xorInteger (Integer a) (Integer b)
-    = Integer (Pure.tcXOrInteger a b)
+    = mkInteger (Pure.tcXOrInteger a b)
 
 complementInteger :: Integer -> Integer
 complementInteger (Integer i)
-    = Integer (Pure.tcComplementInteger i)
+    = mkInteger (Pure.tcComplementInteger i)
 
 #if WORD_SIZE == 4
 integerToWord64 :: Integer -> Word64#
@@ -178,7 +180,7 @@ int64ToInteger i = smallInteger (int64ToInt# i)
 #endif
 
 wordToInteger :: Word# -> Integer
-wordToInteger w = Integer (Pure.integerFromInt (I# (word2Int# w)))
+wordToInteger w = mkInteger (Pure.integerFromInt (I# (word2Int# w)))
 
 integerToWord :: Integer -> Word#
 integerToWord (Integer i) = int2Word# (Pure.intFromInteger i)

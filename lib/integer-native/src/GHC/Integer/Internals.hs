@@ -5,5 +5,5 @@ import GHC.Types
 
 import GHC.Integer.PureInteger
 
-data Integer = Integer LargeBaseLEList
+newtype Integer = Integer LargeBaseLEList
 
