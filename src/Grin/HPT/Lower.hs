@@ -90,6 +90,7 @@ _ `isMemberOf` rhs = True
 
 
 mkUpdate :: Renamed -> Renamed -> Renamed ->[RhsValue] -> M Expression
+mkUpdate ptr scrut val tags | Indirection `notElem` tags = return $ Unit Empty
 mkUpdate ptr scrut val tags
     = do v <- newVariable
          t <- newVariable
