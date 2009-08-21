@@ -66,10 +66,11 @@ convertExpression (a Stage1.:>> b)
          b' <- convertExpression b
          return $ a' :>>= [] :-> b'
 convertExpression (Stage1.Application (Builtin "fetch") [p])
+    = convertFetch p{-
     = do size <- heapNodeSize p
          [p'] <- lookupVariable p
          vars <- replicateM size newVariable
-         return $ foldr (\(v,n) r -> Stage2.Fetch n p' :>>= [v] :-> r) (Unit vars) (zip vars [0..])
+         return $ foldr (\(v,n) r -> Stage2.Fetch n p' :>>= [v] :-> r) (Unit vars) (zip vars [0..])-}
 convertExpression (Stage1.Application fn@(Builtin "update") args)
     = do args' <- mapM lookupVariable args
          return $ Application fn (concat args')
@@ -95,6 +96,53 @@ convertBind val fn
          vars <- replicateM size newVariable
          local (\(hpt,nmap) -> (hpt,Map.insert val vars nmap)) $ fn vars
 
+
+
+{-
+do node <- fetch p
+   node `elem` [ Nil, Cons x y ]
+===>
+do tag <- fetch 0 p
+   [tag,x,y] <- case tag of
+                  Nil  -> do t <- constant Nil
+                             unit [t]
+                  Cons -> do t <- constant Cons
+                             x <- fetch 1 p
+                             y <- fetch 2 p
+                             unit [t,x,y]
+-}
+convertFetch p
+    = do values <- heapNodeValues p
+         let taggedValues = filter isInteresting values
+             isInteresting Tag{} = True
+             isInteresting Indirection = True
+             isInteresting _ = False
+             size = maximum (0:map rhsValueSize taggedValues)
+         [p'] <- lookupVariable p
+         if null taggedValues
+            then if not (null values)
+                 then return (Stage2.Fetch 0 p')
+                 else return (Application (Builtin "unreachable") [])
+            else do v <- newVariable
+                    vars <- replicateM size newVariable
+                    alts <- mapM (mkAlt p') taggedValues
+                    return $ Stage2.Fetch 0 p' :>>= [v] :-> Case v alts
+    where mkAlt p (Tag tag nt missing args)
+              = do tagVar  <- newVariable
+                   argVars <- replicateM (length args) newVariable
+                   let const = Stage2.Constant (Node tag nt missing)
+                       fetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) (Unit (tagVar:argVars)) (zip argVars [1..])
+                       branch = const :>>= [tagVar] :-> fetches
+                   return $ Node tag nt missing :> branch
+          mkAlt p Indirection
+              = do tagVar <- newVariable
+                   var <- newVariable
+                   let indirection = Aliased (-1) "Indirection"
+                       const = Stage2.Constant (Node indirection ConstructorNode 0)
+                       fetch = Stage2.Fetch 1 p :>>= [var] :-> Unit [tagVar,var]
+                       branch = const :>>= [tagVar] :-> fetch
+                   return $ Node indirection ConstructorNode 0 :> branch
+
 nodeSize :: Renamed -> M Int
 nodeSize val
     = do HeapAnalysis hpt <- asks fst
@@ -103,14 +151,19 @@ nodeSize val
          return $ maximum (0:map rhsValueSize vals)
 
 heapNodeSize :: Renamed -> M Int
-heapNodeSize val
+heapNodeSize hp = do values <- heapNodeValues hp
+                     return $ maximum (0:map rhsValueSize values)
+
+heapNodeValues :: Renamed -> M [RhsValue]
+heapNodeValues val
     = do HeapAnalysis hpt <- asks fst
          let Rhs vals = find (VarEntry val) hpt
 --         let Data vals = find (VarEntry val) hpt
              hps      = map (\(Heap hp) -> hp) vals
-             allVals  = [ val | hp <- hps, let Rhs vals = find (HeapEntry hp) hpt, val <- vals ]
+             Rhs allVals  = mconcat [ vals | hp <- hps, let vals = find (HeapEntry hp) hpt ]
 --               allVals  = [ val | hp <- hps, let Data vals = find (HeapEntry hp) hpt, val <- vals ]
-         return $ maximum (0:map rhsValueSize allVals)
+         return allVals
+-- $ maximum (0:map rhsValueSize allVals)
 
 rhsValueSize (Base) = 1
 rhsValueSize (Tag _tag _nt _missing args) = 1 + length args
