@@ -180,6 +180,9 @@ setupEnv (Application (Builtin "apply") [arg1, arg2])
 setupEnv (Application (Builtin "update") [ptr,val])
     = do addEquation (VarEntry updates) (singleton $ Update ptr val)
          return mempty
+setupEnv (Application (Builtin "updateMutVar") [ptr, val, realWorld])
+    = do addEquation (VarEntry updates) (singleton $ Update ptr val)
+         return $ singleton Base
 
 setupEnv (Application (Builtin fn) args) | fn `elem` baseBuiltins
     = return $ singleton Base

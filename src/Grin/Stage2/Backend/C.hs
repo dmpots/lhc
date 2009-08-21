@@ -275,8 +275,10 @@ ppExpression (st:arr:_) (Application (Builtin "newAlignedPinnedByteArray#") [siz
     = vsep [ st =: ppRenamed realWorld
            , arr =: alloc (cu64 <+> ppRenamed size) ]
 ppExpression _ (Application (Builtin "update") (ptr:values))
-    = --vsep [ text "memset("<>ppRenamed ptr<>text ", 0, GC_size("<>ppRenamed ptr<>text "));"] <$$>
-      vsep [ writeArray ptr n value | (n,value) <- zip [0..] values ]
+    = vsep [ writeArray ptr n value | (n,value) <- zip [0..] values ]
+ppExpression (st:_) (Application (Builtin "updateMutVar") [ptr,val,realWorld])
+    = vsep [ writeArray ptr 0 val
+           , st =: ppRenamed realWorld ]
 ppExpression (st:bind:_) (Application (External "fdReady") args)
     = vsep [ bind =: int 1
            , st   =: ppRenamed (last args) ]

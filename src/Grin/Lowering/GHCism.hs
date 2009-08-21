@@ -60,7 +60,7 @@ lowerExpression (Application (Builtin "newMVar#") [realWorld])
     = do v <- newVariable
          return $ Store Empty :>>= v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "putMVar#") [ptr, val, realWorld])
-    = return $ Application (Builtin "update") [ptr, val] :>> Unit (Variable realWorld)
+    = return $ Application (Builtin "updateMutVar") [ptr, val, realWorld]
 lowerExpression (Application (Builtin "takeMVar#") [ptr, realWorld])
     = do v <- newVariable
          return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
@@ -71,7 +71,7 @@ lowerExpression (Application (Builtin "newMutVar#") [val,realWorld])
     = do v <- newVariable
          return $ Store (Variable val) :>>= v :-> Unit (Vector [realWorld, v])
 lowerExpression (Application (Builtin "writeMutVar#") [ptr, val, realWorld])
-    = return $ Application (Builtin "update") [ptr, val] :>> Unit (Variable realWorld)
+    = return $ Application (Builtin "updateMutVar") [ptr, val, realWorld]
 lowerExpression (Application (Builtin "readMutVar#") [ptr, realWorld])
     = do v <- newVariable
          return $ Application (Builtin "fetch") [ptr] :>>= v :-> Unit (Vector [realWorld, v])
