@@ -1,6 +1,7 @@
 {-# LANGUAGE StandaloneDeriving, OverloadedStrings #-}
 module Grin.Stage2.Backend.C
     ( compile
+    , compileFastCode
     , grinToC
     ) where
 
@@ -19,14 +20,20 @@ fixedSize :: Int
 fixedSize = 20
 
 compile :: Grin -> FilePath -> IO ()
-compile grin target
+compile = compile' ["--debug", "-ggdb"]
+
+compileFastCode :: Grin -> FilePath -> IO ()
+compileFastCode = compile' ["-O2"]
+
+compile' :: [String] -> Grin -> FilePath -> IO ()
+compile' gccArgs grin target
     = do writeFile (replaceExtension target "c") (show cCode)
          pid <- runCommand cmdLine
          waitForProcess pid
          return ()
     where cCode = grinToC grin
           cFile = replaceExtension target "c"
-          cmdLine = unwords ["gcc", "-I/usr/include/gc/", "-lgc", "-w", "--debug", "-ggdb", cFile, "-o", target]
+          cmdLine = unwords (["gcc", "-I/usr/include/gc/", "-lgc", cFile, "-o", target] ++ gccArgs)
 
 grinToC :: Grin -> Doc
 grinToC grin
