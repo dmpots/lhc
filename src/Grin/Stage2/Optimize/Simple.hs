@@ -15,13 +15,19 @@ type Subst = Map.Map Renamed Renamed
 
 
 optimize :: Grin -> Grin
-optimize grin
+optimize = grinSimple
+
+grinSimple :: Grin -> Grin
+grinSimple grin
     = grin{ grinFunctions = map simpleFuncDef (grinFunctions grin)}
 
 
 simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
-    = def{ funcDefBody = runReader (simpleExpression (funcDefBody def)) Map.empty }
+    = def{ funcDefBody = runSimpleExpression (funcDefBody def) }
+
+runSimpleExpression :: Expression -> Expression
+runSimpleExpression e = runReader (simpleExpression e) Map.empty
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit v1 :>>= v2 :-> b)

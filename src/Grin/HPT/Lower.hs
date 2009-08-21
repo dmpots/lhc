@@ -53,7 +53,7 @@ lowerExpression (Application (Builtin "eval") [a])
                                 u <- mkUpdate a f v rhs'
                                 return $ Application (Builtin "fetch") [a] :>>= f :->
                                          Case f alts :>>= v :->
-                                         u :>> -- Application (Builtin "update") [a,v] :>>
+                                         u :>>
                                          Unit (Variable v)
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application (Builtin "apply") [a,b])
