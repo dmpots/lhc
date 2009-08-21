@@ -28,22 +28,14 @@ trimDeadCode grin
            }
     where walkFunc func
               = func { funcDefBody = walkExp (funcDefBody func) }
-          walkExp (Store{} :>>= [bind] :-> e2) | nodeId bind `IntSet.notMember` liveSet
-              = Unit [] :>>= [] :-> walkExp e2
-          walkExp (StoreHole{} :>>= [bind] :-> e2) | nodeId bind `IntSet.notMember` liveSet
-              = Unit [] :>>= [] :-> walkExp e2
-          walkExp (Fetch{} :>>= [bind] :-> e2) | nodeId bind `IntSet.notMember` liveSet
-              = Unit [] :>>= [] :-> walkExp e2
-          walkExp (Constant{} :>>= [bind] :-> e2) | nodeId bind `IntSet.notMember` liveSet
-              = Unit [] :>>= [] :-> walkExp e2
-          walkExp (Application fn args :>>= binds :-> e2) | nodeId fn `IntSet.notMember` liveSet
-              = Unit [] :>>= [] :-> walkExp e2
-          walkExp (Application fn args :>>= [] :-> e2) | not (isBuiltin fn)
-              = Unit [] :>>= [] :-> walkExp e2
+          walkExp (e1@Case{} :>>= binds :-> e2)
+              = walkExp e1 :>>= binds :-> walkExp e2
+          walkExp (e1@(Application fn _args) :>>= binds :-> e2) | isBuiltin fn
+              = walkExp e1 :>>= binds :-> walkExp e2
           walkExp (e1 :>>= binds :-> e2)
-              = if or [ nodeId bind `IntSet.member` liveSet | bind <- binds ] || null binds || True
-                then walkExp e1 :>>= binds :-> walkExp e2
-                else walkExp e2
+              = if all isDead binds
+                then walkExp e2
+                else walkExp e1 :>>= binds :-> walkExp e2
           walkExp (Case scrut alts)
               = if nodeId scrut `IntSet.member` liveSet || True
                 then Case scrut (map walkAlt alts)
@@ -56,6 +48,8 @@ trimDeadCode grin
           walkExp fn = fn
           walkAlt (alt :> exp) = alt :> walkExp exp
           liveSet = liveNodes grin
+          isDead x = nodeId x `IntSet.notMember` liveSet
+          isAlive = not . isDead
 
 liveNodes :: Grin -> IntSet.IntSet
 liveNodes grin
