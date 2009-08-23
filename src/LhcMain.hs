@@ -31,6 +31,7 @@ import qualified Grin.Stage2.Optimize.Simple as Stage2.Simple
 --import qualified Grin.Stage2.Backend.LLVM as Backend.LLVM
 import qualified Grin.Stage2.Backend.C as Backend.C
 import qualified Grin.Stage2.DeadCode  as Stage2
+import qualified Grin.Stage2.Rename    as Stage2
 
 -- TODO: We need proper command line parsing.
 tryMain :: IO ()
@@ -88,7 +89,8 @@ build action files@(file:_)
          let stage2_raw = Stage2.convert hpt' out
              stage2_opt = iterate Stage2.Simple.optimize stage2_raw !! 2
              stage2_trim = Stage2.trimDeadCode stage2_opt
-             stage2_opt' = iterate Stage2.Simple.optimize stage2_trim !! 2
+             stage2_renamed = Stage2.rename stage2_trim
+             stage2_opt' = iterate Stage2.Simple.optimize stage2_renamed !! 2
              stage2_out = stage2_opt'
              --llvmModule = Backend.LLVM.fromGrin stage2_out
          case action of
