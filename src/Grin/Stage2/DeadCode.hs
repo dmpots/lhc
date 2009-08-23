@@ -24,7 +24,7 @@ trimDeadCode :: Grin -> Grin
 trimDeadCode grin
     = grin { grinFunctions = map walkFunc [ fn | fn <- grinFunctions grin, nodeId (funcDefName fn) `IntSet.member` liveSet]
            , grinCAFs      = [ caf | caf <- grinCAFs grin, nodeId (cafName caf) `IntSet.member` liveSet ]
-           , grinNodes     = [ node | node <- grinNodes grin, nodeId (nodeName node) `IntSet.member` liveSet || True ]
+           , grinNodes     = [ node | node <- grinNodes grin, nodeId (nodeName node) `IntSet.member` liveSet ]
            }
     where walkFunc func
               = func { funcDefBody = walkExp (funcDefBody func) }
