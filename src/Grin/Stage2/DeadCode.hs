@@ -30,7 +30,7 @@ trimDeadCode grin
               = func { funcDefBody = walkExp (funcDefBody func) }
           walkExp (e1@Case{} :>>= binds :-> e2)
               = walkExp e1 :>>= binds :-> walkExp e2
-          walkExp (e1@(Application fn _args) :>>= binds :-> e2) | isBuiltin fn
+          walkExp (e1@(Application (Builtin "update") args) :>>= binds :-> e2) | all isAlive args
               = walkExp e1 :>>= binds :-> walkExp e2
           walkExp (e1 :>>= binds :-> e2)
               = if all isDead binds
