@@ -13,10 +13,10 @@ import Control.Monad.Writer
 import Grin.HPT.Environment
 
 data HeapAnalysis
-    = HeapAnalysis (Map.Map Lhs Rhs)
+    = HeapAnalysis (Map.Map Lhs Rhs) SharingMap
 
 instance Show HeapAnalysis where
-    show (HeapAnalysis eqs)
+    show (HeapAnalysis eqs _sharingMap)
         = unlines [ show lhs ++ " = " ++ show rhs | (lhs,rhs) <- Map.toList eqs ]
 
 type SharingMap = Map.Map Lhs Bool
@@ -35,7 +35,7 @@ solve eqs
                   (newDefs, newShared) ->
                     let next = appEndo newDefs prev
                         nextShared = appEndo newShared shared
-                    in if prev == next then (iter, HeapAnalysis next) else loop (iter+1) nextShared next
+                    in if prev == next then (iter, HeapAnalysis next nextShared) else loop (iter+1) nextShared next
       in loop 1 (nonlinearVariables eqs) (Map.map (const mempty) eqs)
 
 -- Scan for shared variables. A variable is shared if it is used more than once.
@@ -81,7 +81,6 @@ reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
                          return $ mconcat rhs'
 
 reduceEq :: RhsValue -> M Rhs
-reduceEq (Indirection) = return $ singleton (Indirection)
 reduceEq Base      = return $ singleton Base
 reduceEq (Heap hp) = return $ singleton $ Heap hp
 reduceEq (Ident i) = lookupEq (VarEntry i)
@@ -112,7 +111,7 @@ reduceEq (Eval i)
          let fn hp = do Rhs rhs <- lookupEq (HeapEntry hp)
                         let worker (Tag fn FunctionNode 0 _) = do rhs <- lookupEq (VarEntry fn)
                                                                   when (anyShared && rhs /= mempty) $
-                                                                    addReduced (HeapEntry hp) (singleton Indirection `mappend` rhs)
+                                                                    addReduced (HeapEntry hp) rhs
                                                                   return rhs
                             worker other = return $ singleton other
                         {-# SCC "Eval.mappend2" #-} liftM mconcat $ mapM worker rhs
@@ -131,7 +130,6 @@ reduceEq (Apply a b)
                  | n == 0    = return mempty
                  | otherwise = do bRhs <- lookupEq (VarEntry b)
                                   return $ singleton (Tag conc nt (n-1) (args ++ [bRhs]))
-             f (Indirection) = return mempty
              f t             = error $ "reduceEq: apply: " ++ show t
          {-# SCC "Apply.mappend" #-} liftM mconcat $ mapM f vals
 reduceEq (PartialApply a b)
@@ -140,7 +138,6 @@ reduceEq (PartialApply a b)
                  | n == 0    = return mempty
                  | otherwise = do bRhs <- lookupEq (VarEntry b)
                                   return $ singleton (Tag tag nt (n-1) (args ++ [bRhs]))
-             f (Indirection) = return mempty
              f t             = error $ "reduceEq: apply: " ++ show t
          {-# SCC "PartialApply.mappend" #-} liftM mconcat $ mapM f vals
 reduceEq (Update hp val)

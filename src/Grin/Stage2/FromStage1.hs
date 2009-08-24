@@ -71,9 +71,15 @@ convertExpression (Stage1.Application (Builtin "fetch") [p])
          [p'] <- lookupVariable p
          vars <- replicateM size newVariable
          return $ foldr (\(v,n) r -> Stage2.Fetch n p' :>>= [v] :-> r) (Unit vars) (zip vars [0..])-}
-convertExpression (Stage1.Application fn@(Builtin "update") args)
-    = do args' <- mapM lookupVariable args
-         return $ Application fn (concat args')
+convertExpression (Stage1.Application fn@(Builtin "update") ~[ptr,val])
+    = do [ptr'] <- lookupVariable ptr
+         values <- lookupVariable val
+         if length values <= minNodeSize
+            then return $ Application fn (ptr':values)
+            else do extra <- newVariable
+                    let (first,second) = splitAt (minNodeSize-1) values
+                    return $ Store second :>>= [extra] :-> Application fn (ptr':first++[extra])
+    where minNodeSize = 4
 convertExpression (Stage1.Application fn args)
     = do args' <- mapM lookupVariable args
          return $ Application fn (map head args')
@@ -86,9 +92,17 @@ convertExpression (Stage1.Case scrut alts)
 convertExpression (Stage1.Store (Stage1.Hole size))
     = return $ StoreHole size
 convertExpression (Stage1.Store val)
-    = convertValue Store val
+    = convertValue worker val
+    where worker args
+              | length args <= minNodeSize
+              = return (Store args)
+              | otherwise
+              = do let (firstArgs, secondArgs) = splitAt (minNodeSize-1) args
+                   extra <- newVariable
+                   return $ Store secondArgs :>>= [extra] :-> Store (firstArgs++[extra])
+          minNodeSize = 4
 convertExpression (Stage1.Unit val)
-    = convertValue Unit val
+    = convertValue (return . Unit) val
 
 convertBind :: Renamed -> ([Renamed] -> M a) -> M a
 convertBind val fn
@@ -100,7 +114,7 @@ convertBind val fn
 
 {-
 do node <- fetch p
-   node `elem` [ Nil, Cons x y ]
+   node `elem` [ Nil, Cons x y, NearBig x y z, Big x y z n ]
 ===>
 do tag <- fetch 0 p
    [x,y] <- case tag of
@@ -108,12 +122,21 @@ do tag <- fetch 0 p
               Cons -> do x <- fetch 1 p
                          y <- fetch 2 p
                          unit [x,y]
+              NearBig -> do x <- fetch 1 p
+                            y <- fetch 2 p
+                            z <- fetch 3 p
+                            unit [x,y,z]
+              Big  -> do x <- fetch 1 p
+                         y <- fetch 2 p
+                         extra <- fetch 3 p
+                         z <- fetch 0 extra
+                         n <- fetch 1 extra
+                         unit [x,y,z,n,i]
 -}
 convertFetch p
     = do values <- heapNodeValues p
          let taggedValues = filter isInteresting values
              isInteresting Tag{} = True
-             isInteresting Indirection = True
              isInteresting _ = False
              size = maximum (0:map rhsValueSize taggedValues)
          [p'] <- lookupVariable p
@@ -127,18 +150,24 @@ convertFetch p
                     alts <- mapM (mkAlt p') taggedValues
                     return $ Stage2.Fetch 0 p' :>>= [v] :-> Case v alts :>>= tmps :-> Unit (v:tmps)
     where mkAlt p (Tag tag nt missing args)
+              | length args <= minNodeSize-1
               = do argVars <- replicateM (length args) newVariable
                    let fetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) (Unit (argVars)) (zip argVars [1..])
                    return $ Node tag nt missing :> fetches
-          mkAlt p Indirection
-              = do var <- newVariable
-                   let indirection = Aliased (-1) "Indirection"
-                       fetch = Stage2.Fetch 1 p :>>= [var] :-> Unit [var]
-                   return $ Node indirection ConstructorNode 0 :> fetch
+              | otherwise
+              = do argVars <- replicateM (length args) newVariable
+                   extra <- newVariable
+                   let (firstArgs, secondArgs) = splitAt (minNodeSize-2) argVars
+                       firstFetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) secondFetches (zip firstArgs [1..])
+                       secondFetches = Stage2.Fetch (minNodeSize-1) p :>>= [extra] :->
+                                       foldr (\(v,n) r -> Stage2.Fetch n extra :>>= [v] :-> r) (Unit argVars) (zip secondArgs [0..])
+                   return $ Node tag nt missing :> firstFetches
+          -- FIXME: The node size should be configurable.
+          minNodeSize = 4
 
 nodeSize :: Renamed -> M Int
 nodeSize val
-    = do HeapAnalysis hpt <- asks fst
+    = do HeapAnalysis hpt _smap <- asks fst
          let Rhs vals = Map.findWithDefault mempty (VarEntry val) hpt
 --         let Data vals = Map.findWithDefault mempty (VarEntry val) hpt
          return $ maximum (0:map rhsValueSize vals)
@@ -149,7 +178,7 @@ heapNodeSize hp = do values <- heapNodeValues hp
 
 heapNodeValues :: Renamed -> M [RhsValue]
 heapNodeValues val
-    = do HeapAnalysis hpt <- asks fst
+    = do HeapAnalysis hpt _smap <- asks fst
          let Rhs vals = find (VarEntry val) hpt
 --         let Data vals = find (VarEntry val) hpt
              hps      = map (\(Heap hp) -> hp) vals
@@ -162,7 +191,6 @@ rhsValueSize (Base) = 1
 rhsValueSize (Tag _tag _nt _missing args) = 1 + length args
 rhsValueSize (VectorTag args) = length args
 rhsValueSize (Heap{}) = 1
-rhsValueSize Indirection = 2
 rhsValueSize v = error $ "Grin.Stage2.FromStage1.nodeSize: Invalid rhs value: " ++ show v
 
 find key m = Map.findWithDefault (error $ "Couldn't find key: " ++ show key) key m
@@ -193,23 +221,25 @@ convertAlt vector (Stage1.Empty Stage1.:> alt)
 convertAlt vector (Stage1.Hole{} Stage1.:> alt)
     = error $ "Grin.Stage2.FromStage1.convertAlt: Invalid case condition."
 
-convertValue :: ([Renamed] -> Expression) -> Stage1.Value -> M Expression
+convertValue :: ([Renamed] -> M Expression) -> Stage1.Value -> M Expression
 convertValue fn (Stage1.Lit (Lstring string))
     = do v <- newVariable
          tell [(v,string)]
-         return $ fn [v]
+         fn [v]
 convertValue fn (Stage1.Lit lit)    = do v <- newVariable
-                                         return $ Constant (Lit lit) :>>= [v] :-> fn [v]
+                                         r <- fn [v]
+                                         return $ Constant (Lit lit) :>>= [v] :-> r
 convertValue fn Stage1.Hole{}       = error "Grin.Stage2.FromStage1.convertValue: There shouldn't be a hole here."
-convertValue fn (Stage1.Empty)      = return $ fn []
-convertValue fn (Stage1.Variable v) = liftM fn (lookupVariable v)
+convertValue fn (Stage1.Empty)      = fn []
+convertValue fn (Stage1.Variable v) = fn =<< lookupVariable v
 convertValue fn (Stage1.Node tag nt missing args)
     = do v <- newVariable
          args' <- mapM lookupVariable args
-         return $ Constant (Node tag nt missing) :>>= [v] :-> fn (v:concat args')
+         r <- fn (v:concat args')
+         return $ Constant (Node tag nt missing) :>>= [v] :-> r
 convertValue fn (Stage1.Vector args)
     = do args' <- mapM lookupVariable args
-         return $ fn (concat args')
+         fn (concat args')
 
 lookupVariable :: Renamed -> M [Renamed]
 lookupVariable val

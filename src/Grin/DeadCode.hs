@@ -34,10 +34,7 @@ grinDepends :: Grin -> Map.Map Renamed (Set.Set Renamed)
 grinDepends grin
     = Map.fromList [ (funcDefName def, defDepends def) | def <- grinFunctions grin ] `Map.union`
       Map.fromList [ (cafName caf, valueDepends (cafValue caf)) | caf <- grinCAFs grin ] `Map.union`
-      Map.fromList [ (nodeName node, Set.empty) | node <- grinNodes grin ] `Map.union`
-      Map.singleton (Builtin "Indirection") Set.empty `Map.union`
-      Map.singleton (Aliased (-1) "Indirection") Set.empty `Map.union`
-      Map.singleton (Anonymous (-1)) Set.empty
+      Map.fromList [ (nodeName node, Set.empty) | node <- grinNodes grin ]
 
 defDepends :: FuncDef -> Set.Set Renamed
 defDepends def

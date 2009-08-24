@@ -87,7 +87,7 @@ ppMain cafs entryPoint
                  text "global_argv = argv;" <$$>
                  text "GC_init();" <$$>
                  --text "GC_set_max_heap_size(1024*1024*1024);" <$$>
-                 vsep [ vsep [ ppRenamed name <+> equals <+> alloc (int (2 * 8)) <> semi
+                 vsep [ vsep [ ppRenamed name <+> equals <+> alloc (int (4 * 8)) <> semi
                              , ppRenamed name <> brackets (int 0) <+> equals <+> int (uniqueId tag) <> semi]
                         | CAF{cafName = name, cafValue = Node tag _nt _missing} <- cafs ] <$$>
                  ppRenamed entryPoint <> parens empty <> semi <$$> text "return 0" <> semi) <$$>
@@ -155,9 +155,9 @@ ppExpression (bind:_) (Fetch nth variable)
 ppExpression binds (Unit variables)
     = vsep (zipWith (=:) binds (map ppRenamed variables))
 ppExpression [bind] (StoreHole size)
-    = vsep $ [ bind =: alloc (int $ max 2 size * 8)]
+    = vsep $ [ bind =: alloc (int $ max 4 size * 8)]
 ppExpression (bind:_) (Store variables)
-    = vsep $ [ bind =: alloc (int $ (max 2 (length variables+1)) * 8)] ++
+    = vsep $ [ bind =: alloc (int $ (max 4 (length variables)) * 8)] ++
              [ writeArray bind n var | (n,var) <- zip [0..] variables ]
 ppExpression binds (Case scrut alts)
     = ppCase binds scrut alts

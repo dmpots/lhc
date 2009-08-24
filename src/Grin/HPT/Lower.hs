@@ -41,7 +41,7 @@ lowerExpression (a :>> b)
          return $ a' :>> b'
 lowerExpression (Application (Builtin "eval") [a])
     = do f <- newVariable
-         HeapAnalysis hpt <- gets fst
+         HeapAnalysis hpt sharingMap <- gets fst
          case Map.lookup (VarEntry a) hpt of
            Just (Rhs rhs) -> do let Rhs rhs' = mconcat [ hpt Map.! HeapEntry hp | Heap hp <- rhs ]
                                 addHPTInfo (VarEntry f) (Rhs rhs')
@@ -50,22 +50,23 @@ lowerExpression (Application (Builtin "eval") [a])
                                 let expand (Tag tag FunctionNode 0 _) = hpt Map.! (VarEntry tag)
                                     expand rhs = Rhs [rhs]
                                 addHPTInfo (VarEntry v) (mconcat $ map expand rhs')
-                                u <- mkUpdate a f v rhs'
+                                let anyShared = or [ Map.findWithDefault False (HeapEntry hp) sharingMap | Heap hp <- rhs ]
+                                u <- mkUpdate anyShared a f v rhs'
                                 return $ Application (Builtin "fetch") [a] :>>= f :->
                                          Case f alts :>>= v :->
                                          u :>>
                                          Unit (Variable v)
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application (Builtin "apply") [a,b])
-    = do HeapAnalysis hpt <- gets fst
+    = do HeapAnalysis hpt _ <- gets fst
          case Map.lookup (VarEntry a) hpt of
-           Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [] [b]) (delete Indirection rhs)
+           Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [] [b]) rhs
                                 return $ Case a alts
            Nothing -> return $ Application (Builtin "urk") []
 lowerExpression (Application fn args)
     = return $ Application fn args
 lowerExpression (Case scrut alts)
-    = do HeapAnalysis hpt <- gets fst
+    = do HeapAnalysis hpt _ <- gets fst
          case Map.lookup (VarEntry scrut) hpt of
            Just (Rhs rhs) -> do alts' <- mapM lowerAlt (filter (`isMemberOf` rhs) alts)
                                 return $ Case scrut alts'
@@ -89,36 +90,21 @@ lowerAlt (a :> b)
 _ `isMemberOf` rhs = True
 
 
-mkUpdate :: Renamed -> Renamed -> Renamed ->[RhsValue] -> M Expression
-mkUpdate ptr scrut val tags | Indirection `notElem` tags = return $ Unit Empty
-mkUpdate ptr scrut val tags
-    = do v <- newVariable
-         t <- newVariable
-         addHPTInfo (VarEntry v) (singleton Base)
-         addHPTInfo (VarEntry t) (singleton Base)
-         let doUpdate = Store (Variable val) :>>= v :-> 
-                        Unit (Node (Aliased (-1) "Indirection") ConstructorNode 0 []) :>>= t :->
-                        Application (Builtin "update") [ptr,t,v]
+mkUpdate :: Bool -> Renamed -> Renamed -> Renamed ->[RhsValue] -> M Expression
+mkUpdate False ptr scrut val tags = return $ Unit Empty
+mkUpdate shared ptr scrut val tags
+    = do let doUpdate = Application (Builtin "update") [ptr,val]
          let worker (Tag tag FunctionNode 0 args)
                  = do args' <- replicateM (length args) newVariable
                       return $ Node tag FunctionNode 0 args' :> doUpdate
              worker (Tag tag nt missingArgs args)
                  = do args' <- replicateM (length args) newVariable
                       return $ Node tag nt missingArgs args' :> Unit Empty
-             worker (Indirection)
-                 = do p <- newVariable
-                      return $ Node (Aliased (-1) "Indirection") ConstructorNode 0 [p] :> Unit Empty
              worker tag = error $ "Grin.HPT.Lower.mkUpdate: Unknown rhs value: " ++ show tag
          alts' <- mapM worker tags
          return $ Case scrut alts'
 
 mkApplyAlt :: [RhsValue] -> [Renamed] -> RhsValue -> M Alt
-mkApplyAlt self [] (Indirection)
-    = do --hp <- newHeapEntry (mconcat $ map singleton self)
-         p <- newVariable
-         addHPTInfo (VarEntry p) (mconcat $ map singleton self)
-         return $ Node (Aliased (-1) "Indirection") ConstructorNode 0 [p] :> Application (Builtin "fetch") [p]
-
 mkApplyAlt _ extraArgs (Tag tag FunctionNode n argsRhs) | n == length extraArgs
     = do args <- replicateM (length argsRhs) newVariable
          return $ Node tag FunctionNode n args :> Application tag (args ++ extraArgs)
@@ -129,7 +115,7 @@ mkApplyAlt _ _ val = error $ "Grin.HPT.Lower.mkApplyAlt: unexpected tag: " ++ sh
 
 addHPTInfo :: Lhs -> Rhs -> M ()
 addHPTInfo lhs rhs
-    = modify $ \(HeapAnalysis hpt, unique) -> (HeapAnalysis (Map.insertWith mappend lhs rhs hpt), unique)
+    = modify $ \(HeapAnalysis hpt smap, unique) -> (HeapAnalysis (Map.insertWith mappend lhs rhs hpt) smap, unique)
 
 newVariable :: M Renamed
 newVariable = do unique <- gets snd
