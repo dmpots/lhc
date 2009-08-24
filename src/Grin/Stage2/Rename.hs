@@ -2,7 +2,7 @@ module Grin.Stage2.Rename
     ( rename
     ) where
 
-import Control.Monad.State
+import Control.Monad.State.Strict
 import qualified Data.Map as Map
 
 import Grin.Stage2.Types
@@ -15,7 +15,7 @@ rename grin = evalState (renameGrin grin) emptyState
 
 type M a = State S a
 -- The substitution map could just as easily be a reader.
-data S = S { stateUnique :: Int
+data S = S { stateUnique :: !Int
            , stateSubst  :: Map.Map Renamed Renamed
            }
 
