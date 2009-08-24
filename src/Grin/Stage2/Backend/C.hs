@@ -243,6 +243,10 @@ ppExpression (st:_) (Application (Builtin "writeCharArray#") [arr,idx,chr,realWo
     = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
              equals <+> cu8 <+> cu64 <+> ppRenamed chr <> semi
            , st =: ppRenamed realWorld ]
+ppExpression (st:_) (Application (Builtin "writeWord8OffAddr#") [arr,idx,word,realWorld])
+    = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
+             equals <+> cu8 <+> cu64 <+> ppRenamed word <> semi
+           , st =: ppRenamed realWorld ]
 ppExpression (st:bind:_) (Application (Builtin "readAddrOffAddr#") [addr, idx, realworld])
     = vsep [ bind =: (ppRenamed addr <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realworld ]

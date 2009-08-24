@@ -123,7 +123,7 @@ setupEnvGrin grin
 baseBuiltins, vectorBuiltins, unsupportedBuiltins :: [CompactString]
 baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"uncheckedIShiftRA#","and#","==#", "remInt#", "noDuplicate#"
-                      ,"narrow8Word#", "writeInt8OffAddr#"
+                      ,"narrow8Word#", "writeInt8OffAddr#", "writeWord8OffAddr#"
                       ,"narrow8Int#", "byteArrayContents#","touch#"
                       ,"uncheckedIShiftL#", "negateInt#"
                       ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
