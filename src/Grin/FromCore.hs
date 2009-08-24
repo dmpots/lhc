@@ -152,7 +152,9 @@ translate cxt simplExp
          do func' <- lookupVariable func
             args' <- mapM lookupVariable args
             e' <- translate cxt e
-            return $ Store (Node func' FunctionNode (arity-length args) args') :>>= bind' :-> e'
+            if arity == 0
+               then return $ Unit (Variable func') :>>= bind' :-> e'
+               else return $ Store (Node func' FunctionNode (arity-length args) args') :>>= bind' :-> e'
        LetStrict bind fn e ->
          bindVariable bind $ \bind' ->
          do fn' <- translate Strict fn
