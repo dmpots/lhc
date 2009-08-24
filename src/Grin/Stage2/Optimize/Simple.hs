@@ -49,8 +49,8 @@ simpleExpression (Store vs)
     = liftM Store $ mapM doSubst vs
 simpleExpression (Unit values)
     = liftM Unit (mapM doSubst values)
-simpleExpression (Case var [_ :> alt])
-    = simpleExpression alt
+--simpleExpression (Case var [_ :> alt])
+--    = simpleExpression alt
 simpleExpression (Case val alts)
     = do val' <- doSubst val
          alts' <- mapM simpleAlt alts
