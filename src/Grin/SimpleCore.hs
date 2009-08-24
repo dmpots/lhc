@@ -283,6 +283,7 @@ lambdaLiftExp :: Core.Exp -> M SimpleExp
 lambdaLiftExp e@Core.Var{} = expToSimpleExp e
 lambdaLiftExp e@Core.Lit{} = expToSimpleExp e
 lambdaLiftExp e@Core.Dcon{} = expToSimpleExp e
+lambdaLiftExp (Core.Appt e _t) = lambdaLiftExp e
 lambdaLiftExp e@Core.App{} | (Core.Var qual, _args) <- collectApps e
                            , isPrimitiveQual qual
     = expToSimpleExp e
