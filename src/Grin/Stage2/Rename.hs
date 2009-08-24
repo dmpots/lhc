@@ -21,9 +21,10 @@ data S = S { stateUnique :: !Int
 
 renameGrin :: Grin -> M Grin
 renameGrin grin
-    = do mapM_ (bind . funcDefName) (grinFunctions grin)
-         mapM_ (bind . nodeName) (grinNodes grin)
+    = do mapM_ (bind . nodeName) (grinNodes grin)
          mapM_ (bind . cafName) (grinCAFs grin)
+         forM_ (grinFunctions grin) $ \func -> do bind (funcDefName func)
+                                                  mapM_ bind (funcDefArgs func)
          defs <- mapM renameFuncDef (grinFunctions grin)
          nodes <- mapM renameNode (grinNodes grin)
          cafs <- mapM renameCAF (grinCAFs grin)
@@ -38,7 +39,7 @@ renameGrin grin
 renameFuncDef :: FuncDef -> M FuncDef
 renameFuncDef def
     = do name <- newName (funcDefName def)
-         args <- mapM bind (funcDefArgs def)
+         args <- mapM newName (funcDefArgs def)
          body <- renameExpression (funcDefBody def)
          return FuncDef{ funcDefName = name
                        , funcDefReturns = funcDefReturns def
