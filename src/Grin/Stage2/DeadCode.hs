@@ -134,7 +134,9 @@ expGraph (Application (Builtin "update") (ptr:vals))
 expGraph (Application fn args)
     = return $ IntSet.fromList (map nodeId (fn:args))
 expGraph (Case scrut alts)
-    = do depss <- mapM altGraph alts
+    = do t <- top
+         modify $ insert t (IntSet.singleton (nodeId scrut))
+         depss <- mapM altGraph alts
          forM_ depss $ \deps ->
           do modify $ insert (nodeId scrut) deps
              forM_ (IntSet.toList deps) $ \dep ->
