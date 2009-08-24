@@ -14,6 +14,7 @@ import Text.PrettyPrint.ANSI.Leijen
 import System.Process
 import System.FilePath
 import Data.Char
+import Text.Printf
 import System.IO
 import System.Exit
 
@@ -378,9 +379,8 @@ declareVars = vsep . map declareVar
 
 escString :: String -> Doc
 escString string = char '"' <> text (concatMap worker string) <> char '"'
-    where worker c | isPrint c = [c]
-                   | otherwise = '\\' : pad 3 (show (ord c))
-          pad n str = take (n-length str) (repeat '0') ++ str
+    where worker c | False = [c]
+                   | otherwise = printf "\\x%02x" (ord c)
 
 initList :: [Int] -> Doc
 initList vals = braces $ hsep $ punctuate comma $ map int vals
