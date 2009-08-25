@@ -49,9 +49,10 @@ lowerExpression (Application (Builtin "eval") [a])
                                 v <- newVariable
                                 let expand (Tag tag FunctionNode 0 _) = hpt Map.! (VarEntry tag)
                                     expand rhs = Rhs [rhs]
-                                addHPTInfo (VarEntry v) (mconcat $ map expand rhs')
+                                    expanded = mconcat $ map expand rhs'
+                                addHPTInfo (VarEntry v) expanded
                                 let anyShared = or [ Map.findWithDefault False (HeapEntry hp) sharingMap | Heap hp <- rhs ]
-                                u <- mkUpdate anyShared a f v rhs'
+                                u <- mkUpdate anyShared a f v rhs' expanded
                                 return $ Application (Builtin "fetch") [a] :>>= f :->
                                          Case f alts :>>= v :->
                                          u :>>
@@ -90,13 +91,21 @@ lowerAlt (a :> b)
 _ `isMemberOf` rhs = True
 
 
-mkUpdate :: Bool -> Renamed -> Renamed -> Renamed ->[RhsValue] -> M Expression
-mkUpdate False ptr scrut val tags = return $ Unit Empty
-mkUpdate shared ptr scrut val tags
-    = do let doUpdate = Application (Builtin "update") [ptr,val]
+mkUpdate :: Bool -> Renamed -> Renamed -> Renamed ->[RhsValue] -> Rhs -> M Expression
+mkUpdate False ptr scrut val tags _ = return $ Unit Empty
+mkUpdate shared ptr scrut val tags (Rhs expanded)
+    = do let doUpdate = do alts <- mapM uWorker expanded
+                           return $ Case val alts
+             uWorker (Tag tag nt missing args)
+                 = do args' <- replicateM (length args) newVariable
+                      node <- newVariable
+                      addHPTInfo (VarEntry node) (singleton $ Tag tag nt missing args)
+                      return (Node tag nt missing args' :> (Unit (Node tag nt missing args') :>>= node :->
+                              Application (Builtin "update") [ptr,node]))
          let worker (Tag tag FunctionNode 0 args)
                  = do args' <- replicateM (length args) newVariable
-                      return $ Node tag FunctionNode 0 args' :> doUpdate
+                      u <- doUpdate
+                      return $ Node tag FunctionNode 0 args' :> u
              worker (Tag tag nt missingArgs args)
                  = do args' <- replicateM (length args) newVariable
                       return $ Node tag nt missingArgs args' :> Unit Empty
