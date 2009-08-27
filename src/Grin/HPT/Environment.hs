@@ -125,13 +125,17 @@ baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"uncheckedIShiftRA#","and#","==#", "remInt#", "noDuplicate#"
                       ,"narrow8Word#", "writeInt8OffAddr#", "writeWord8OffAddr#"
                       ,"narrow8Int#", "byteArrayContents#","touch#"
-                      ,"uncheckedIShiftL#", "negateInt#"
+                      ,"uncheckedIShiftL#", "negateInt#", "not#"
                       ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
                       ,"ord#","chr#","or#","narrow32Word#","uncheckedShiftL#","plusWord#"
                       ,"uncheckedShiftRL#","neChar#","narrow16Int#","timesWord#"
                       ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#"
                       ,"leWord#","/=#","writeCharArray#","xor#", "realWorld#"
-                      ,"waitWrite#", "negateDouble#", "<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##" ]
+                      ,"waitWrite#", "negateDouble#", "negateFloat#", "sqrtDouble#", "expDouble#", "**##"
+                      ,"sinDouble#", "tanDouble#", "cosDouble#", "asinDouble#", "atanDouble#"
+                      ,"acosDouble#", "asinhDouble#", "sinhDouble#", "tanhDouble#", "coshDouble#"
+                      ,"<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##"
+                      ,"coerceDoubleToWord", "coerceWordToDouble", "logDouble#", "int2Double#" ]
 vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
                       , "word2Integer#","integer2Int#", "newByteArray#", "newPinnedByteArray#"
                       ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"
@@ -206,6 +210,10 @@ setupEnv (Application (Builtin "newArray#") [size, elt, realworld])
          return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
 setupEnv (Application (Builtin "readArray#") [arr, nth, realworld])
     = return $ singleton $ VectorTag [singleton Base, singleton $ Fetch arr]
+setupEnv (Application (Builtin "unsafeFreezeArray#") [arr, realworld])
+    = return $ singleton $ VectorTag [singleton Base, singleton $ Ident arr]
+setupEnv (Application (Builtin "indexArray#") [arr, nth])
+    = return $ singleton $ VectorTag [singleton $ Fetch arr ]
 setupEnv (Application (Builtin "writeArray#") [arr, nth, elt, realworld])
     = do addEquation (VarEntry updates) (singleton $ Update arr elt)
          return (singleton Base)

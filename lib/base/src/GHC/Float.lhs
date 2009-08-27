@@ -32,6 +32,8 @@ import GHC.Num
 import GHC.Real
 import GHC.Arr
 
+import Data.Bits
+
 infixr 8  **
 \end{code}
 
@@ -311,7 +313,7 @@ instance  Num Double  where
              | otherwise = negate 1
 
     {-# INLINE fromInteger #-}
-    fromInteger i = D# (doubleFromInteger i)
+    fromInteger i = fromRat (i % 1) -- D# (doubleFromInteger i)
 
 
 instance  Real Double  where
@@ -394,11 +396,10 @@ instance  RealFloat Double  where
     floatDigits _       =  DBL_MANT_DIG     -- ditto
     floatRange _        =  (DBL_MIN_EXP, DBL_MAX_EXP) -- ditto
 
-    decodeFloat (D# x#)
-      = error "decodeFloat" {-case decodeDoubleInteger x#   of
-          (# i, j #) -> (i, I# j)-}
+    decodeFloat d
+      = decodeDouble d
 
-    encodeFloat i (I# j) = error "encodeFloat" {-D# (encodeDoubleInteger i j)-}
+    encodeFloat i j = encodeDouble i j
 
     exponent x          = case decodeFloat x of
                             (m,n) -> if m == 0 then 0 else n + floatDigits x
@@ -415,6 +416,48 @@ instance  RealFloat Double  where
     isNegativeZero x    = 0 /= isDoubleNegativeZero x
     isIEEE _            = True
 
+--castDouble :: Double# -> Word#
+--castDouble d#  = 0## -- (unsafeCoerce# d#)
+
+foreign import ccall "lhc_prim_castDoubleToWord" castDoubleToWord :: Double# -> Word#
+foreign import ccall "lhc_prim_castWordToDouble" castWordToDouble :: Word# -> Double#
+
+encodeDouble :: Integer -> Int -> Double
+encodeDouble significand exp
+    = d
+    where (mantisse, scaledExp) = fromRat'' (significand % 1) d
+          d = encodeDouble' mantisse (exp + scaledExp)
+
+encodeDouble' :: Integer -> Int -> Double
+encodeDouble' significand' (I# exp)
+    = let I# significand = fromInteger (abs significand')
+          significandW = int2Word# significand
+          sign = if significand' < 0 then 1## `shiftL#` 63# else 0##
+          mantisse = significandW `and#` ((1## `shiftL#` 52#) `xor#` not# 0##)
+          exp' = int2Word# (exp +# 0x3ff# +# 52#) `shiftL#` 52#
+          w = sign `or#` exp' `or#` mantisse
+      in D# (castWordToDouble w)
+
+
+-- FIXME: This doesn't work with 32bit Ints.
+decodeDouble :: Double -> (Integer, Int)
+decodeDouble (D# d#)
+    = let sign = (i `and#` (1## `shiftL#` 63#)) `eqWord#` 0##
+          exp :: Int 
+          exp  = I# (word2Int# ((i `shiftL#` 1#) `shiftRL#` 53#))
+          mantissa :: Integer
+          mantissa  = fromIntegral (I# (word2Int# ((i `shiftL#` 12#) `shiftRL#` 12#)))
+          significand = if exp == 0 then mantissa else setBit mantissa 52
+      in (if sign then significand else -significand, exp-0x3ff-52)
+    where i = castDoubleToWord d#
+
+
+{-
+decodeDouble :: Double# -> (Int, Integer)
+decodeDouble d#
+    = case decodeDouble_2Int d# of
+        (# sign, hi, lo, exp #) -> ( I# exp, fromIntegral (W# lo) + fromIntegral (W# hi) * 2^32)
+-}
 instance  Show Double  where
     showsPrec   x = showSignedFloat showFloat x
     showList = showList__ (showsPrec 0) 
@@ -484,6 +527,8 @@ formatRealFloat :: (RealFloat a) => FFFormat -> Maybe Int -> a -> String
 formatRealFloat fmt decs x
    | isNaN x                   = "NaN"
    | isInfinite x              = if x < 0 then "-Infinity" else "Infinity"
+   | x < 0                     = "less than zero"
+   | isNegativeZero x          = "Negative zero"
    | x < 0 || isNegativeZero x = '-':doFmt fmt (floatToDigits (toInteger base) (-x))
    | otherwise                 = doFmt fmt (floatToDigits (toInteger base) x)
  where 
@@ -736,6 +781,12 @@ fromRat (n :% d) | n > 0     = fromRat' (n :% d)
 fromRat' :: (RealFloat a) => Rational -> a
 -- Invariant: argument is strictly positive
 fromRat' x = r
+    where (mantisse, exp) = fromRat'' x r
+          r = encodeFloat mantisse exp
+
+fromRat'' :: (RealFloat a) => Rational -> a -> (Integer, Int)
+-- Invariant: argument is strictly positive
+fromRat'' x r = (round x', p')
   where b = floatRadix r
         p = floatDigits r
         (minExp0, _) = floatRange r
@@ -745,7 +796,6 @@ fromRat' x = r
         p0 = (integerLogBase b (numerator x) - integerLogBase b (denominator x) - p) `max` minExp
         f = if p0 < 0 then 1 % expt b (-p0) else expt b p0 % 1
         (x', p') = scaleRat (toRational b) minExp xMin xMax p0 (x / f)
-        r = encodeFloat (round x') p'
 
 -- Scale x until xMin <= x < xMax, or p (the exponent) <= minExp.
 scaleRat :: Rational -> Int -> Rational -> Rational -> Int -> Rational -> (Rational, Int)
@@ -986,6 +1036,7 @@ showSignedFloat :: (RealFloat a)
   -> a                  -- ^ the value to show
   -> ShowS
 showSignedFloat showPos p x
+   | x < 0 = showString "Less than Zero!"
    | x < 0 || isNegativeZero x
        = showParen (p > 6) (showChar '-' . showPos (-x))
    | otherwise = showPos x

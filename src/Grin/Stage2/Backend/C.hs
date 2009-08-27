@@ -38,7 +38,7 @@ compile' gccArgs grin target
                    exitWith ret
     where cCode = grinToC grin
           cFile = replaceExtension target "c"
-          cmdLine = unwords (["gcc", "-I/usr/include/gc/", "-lgc", cFile, "-o", target] ++ gccArgs)
+          cmdLine = unwords (["gcc", "-lm", "-I/usr/include/gc/", "-lgc", cFile, "-o", target] ++ gccArgs)
 
 grinToC :: Grin -> Doc
 grinToC grin
@@ -52,6 +52,8 @@ grinToC grin
            , vsep (map ppFuncDefProtoType (grinFunctions grin))
            , comment "Alloc:"
            , ppBumpAlloc
+           , comment "RTS:"
+           , ppRTS
            , comment "Functions:"
            , vsep (map ppFuncDef (grinFunctions grin))
            , comment "Main:"
@@ -67,6 +69,7 @@ header = vsep [ include "stdlib.h"
               , include "stdio.h"
               , include "unistd.h"
               , include "string.h"
+              , include "math.h"
               , include "errno.h"
               , include "gc.h"
               , typedef <+> unsigned <+> long <+> u64 <> semi
@@ -91,6 +94,27 @@ ppMain cafs entryPoint
                              , ppRenamed name <> brackets (int 0) <+> equals <+> int (uniqueId tag) <> semi]
                         | CAF{cafName = name, cafValue = Node tag _nt _missing} <- cafs ] <$$>
                  ppRenamed entryPoint <> parens empty <> semi <$$> text "return 0" <> semi) <$$>
+      char '}'
+
+ppRTS :: Doc
+ppRTS = vsep [ ppDWUnion
+             , ppWordToDouble
+             , ppDoubleToWord ]
+
+ppDWUnion
+    = text "typedef union { double d; u64 *w; } DoubleOrWord;" 
+
+ppWordToDouble
+    = text "double wordToDouble(u64 *x) {" <$$>
+      indent 2 (text "DoubleOrWord u;" <$$>
+                text "u.w = x;" <$$>
+                text "return u.d;") <$$>
+      char '}'
+ppDoubleToWord
+    = text "u64 *doubleToWord(double x) {" <$$>
+      indent 2 (text "DoubleOrWord u;" <$$>
+                text "u.d = x;" <$$>
+                text "return u.w;") <$$>
       char '}'
 
 ppBumpAlloc :: Doc
@@ -141,11 +165,15 @@ ppFuncDef func
 ppExpression :: [Renamed] -> Expression -> Doc
 -- More than one bind can occur in case expressions. Just take the first.
 ppExpression (bind:_) (Constant (Lit (Lrational r)))
-    = parens (parens (text "double*") <> char '&' <> ppRenamed bind) <> brackets (int 0) <+> equals <+> double (fromRational r) <> semi
+    = bind =: castToWord (double (fromRational r)) <> semi
 ppExpression (bind:_) (Constant value)
     = bind =: valueToDoc value
 ppExpression [bind] (Application (Builtin "realWorld#") [])
     = bind =: int 0
+ppExpression binds (Application fn args) | not (isBuiltin fn) && not (isExternal fn) && isTailCall
+    = ppRenamed fn <> argList <> semi
+    where argList = parens $ hsep $ punctuate comma $ map ppRenamed args
+          isTailCall = and (zipWith (==) binds (map cafName returnArguments))
 ppExpression binds (Application fn args) | not (isBuiltin fn) && not (isExternal fn)
     = ppRenamed fn <> argList <> semi <$$>
       vsep (zipWith (=:) binds (map (ppRenamed.cafName) returnArguments))
@@ -166,10 +194,22 @@ ppExpression binds (a :>>= binds' :-> b)
       ppExpression binds' a <$$>
       ppExpression binds b
 
+ppExpression (bind:_) (Application (Builtin "coerceDoubleToWord") [arg])
+    = bind =: ppRenamed arg
+ppExpression (bind:_) (Application (Builtin "coerceWordToDouble") [arg])
+    = bind =: ppRenamed arg
+ppExpression (bind:_) (Application (Builtin "uncheckedShiftL#") [w,i])
+    = bind =: (parens (cu64 <> ppRenamed w <+> text "<<" <+> cs64 <> ppRenamed i))
+ppExpression (bind:_) (Application (Builtin "uncheckedShiftRL#") [w,i])
+    = bind =: (parens (cu64 <> ppRenamed w <+> text ">>" <+> cs64 <> ppRenamed i))
 ppExpression (bind:_) (Application (Builtin "noDuplicate#") [arg])
     = bind =: ppRenamed arg
 ppExpression (bind:_) (Application (Builtin "==#") [a,b])
     = ifStatement (cs64 <> ppRenamed a <+> text "==" <+> cs64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin "eqWord#") [a,b])
+    = ifStatement (cu64 <> ppRenamed a <+> text "==" <+> cu64 <> ppRenamed b)
                   (bind =: int 1)
                   (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "/=#") [a,b])
@@ -196,16 +236,34 @@ ppExpression (bind:_) (Application (Builtin "<##") [a,b])
     = ifStatement (castToDouble a <+> text "<" <+> castToDouble b)
                   (bind =: int 1)
                   (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin "<=##") [a,b])
+    = ifStatement (castToDouble a <+> text "<=" <+> castToDouble b)
+                  (bind =: int 1)
+                  (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin ">=##") [a,b])
+    = ifStatement (castToDouble a <+> text ">=" <+> castToDouble b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "==##") [a,b])
     = ifStatement (castToDouble a <+> text "==" <+> castToDouble b)
                   (bind =: int 1)
                   (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin "and#") [a,b])
+    = bind =: parens (parens (cu64 <> ppRenamed a) <+> text "&" <+> parens (cu64 <> ppRenamed b))
+ppExpression (bind:_) (Application (Builtin "or#") [a,b])
+    = bind =: parens (parens (cu64 <> ppRenamed a) <+> text "|" <+> parens (cu64 <> ppRenamed b))
+ppExpression (bind:_) (Application (Builtin "xor#") [a,b])
+    = bind =: parens (parens (cu64 <> ppRenamed a) <+> text "^" <+> parens (cu64 <> ppRenamed b))
+ppExpression (bind:_) (Application (Builtin "not#") [a])
+    = bind =: parens (text "~" <> parens (cu64 <> ppRenamed a))
 ppExpression (bind:_) (Application (Builtin "ord#") [a])
     = bind =: ppRenamed a
 ppExpression (bind:_) (Application (Builtin "chr#") [a])
     = bind =: ppRenamed a
 ppExpression (bind:_) (Application (Builtin "negateInt#") [a])
     = bind =: (text "-" <+> cs64 <+> cu64 <> ppRenamed a)
+ppExpression (bind:_) (Application (Builtin "negateDouble#") [a])
+    = bind =: castToWord (text "-" <+> castToDouble a)
 ppExpression (bind:_) (Application (Builtin "narrow8Word#") [a])
     = bind =: (cu64 <+> cu8 <+> cu64 <+> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "narrow16Word#") [a])
@@ -226,6 +284,24 @@ ppExpression (bind:_) (Application (Builtin "minusWord#") [a,b])
     = bind =: parens (parens u64 <+> ppRenamed a <+> text "-" <+> parens u64 <+> ppRenamed b)
 ppExpression (bind:_) (Application (Builtin "*#") [a,b])
     = bind =: parens (parens s64 <+> ppRenamed a <+> text "*" <+> parens s64 <+> ppRenamed b)
+ppExpression (bind:_) (Application (Builtin "*##") [a,b])
+    = bind =: castToWord (castToDouble a <+> text "*" <+> castToDouble b)
+ppExpression (bind:_) (Application (Builtin "-##") [a,b])
+    = bind =: castToWord (castToDouble a <+> text "-" <+> castToDouble b)
+ppExpression (bind:_) (Application (Builtin "+##") [a,b])
+    = bind =: castToWord (castToDouble a <+> text "+" <+> castToDouble b)
+ppExpression (bind:_) (Application (Builtin "/##") [a,b])
+    = bind =: castToWord (castToDouble a <+> text "/" <+> castToDouble b)
+ppExpression (bind:_) (Application (Builtin "**##") [a,b])
+    = bind =: castToWord (text "pow" <> parens (castToDouble a <+> text "," <+> castToDouble b))
+ppExpression (bind:_) (Application (Builtin "sinDouble#") [a])
+    = bind =: castToWord (text "sin" <> parens (castToDouble a))
+ppExpression (bind:_) (Application (Builtin "cosDouble#") [a])
+    = bind =: castToWord (text "cos" <> parens (castToDouble a))
+ppExpression (bind:_) (Application (Builtin "sqrtDouble#") [a])
+    = bind =: castToWord (text "sqrt" <> parens (castToDouble a))
+ppExpression (bind:_) (Application (Builtin "int2Double#") [a])
+    = bind =: castToWord (parens (text "double") <> cu64 <> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "+#") [a,b])
     = bind =: parens (parens s64 <+> ppRenamed a <+> text "+" <+> parens s64 <+> ppRenamed b)
 ppExpression (bind:_) (Application (Builtin "-#") [a,b])
@@ -239,6 +315,12 @@ ppExpression (bind:_) (Application (Builtin "indexCharOffAddr#") [addr,idx])
 ppExpression (st:bind:_) (Application (Builtin "readCharArray#") [arr,idx,realWorld])
     = vsep [ bind =: (cu64 <+> parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realWorld ]
+ppExpression (st:_) (Application (Builtin "writeArray#") [arr, idx, elt, realWorld])
+    = vsep [ st =: ppRenamed realWorld
+           , ppRenamed arr <> brackets (cu64 <> ppRenamed idx) <+> equals <+> cu64 <> ppRenamed elt <> semi
+           ]
+ppExpression (bind:_) (Application (Builtin "indexArray#") [arr, idx])
+    = vsep [ bind =: (ppRenamed arr <> brackets (cu64 <> ppRenamed idx)) ]
 ppExpression (st:_) (Application (Builtin "writeCharArray#") [arr,idx,chr,realWorld])
     = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
              equals <+> cu8 <+> cu64 <+> ppRenamed chr <> semi
@@ -261,6 +343,9 @@ ppExpression (st:bind:_) (Application (Builtin "readInt8OffAddr#") [addr,idx, re
 ppExpression (st:bind:_) (Application (Builtin "unsafeFreezeByteArray#") [addr, realworld])
     = vsep [ bind =: ppRenamed addr
            , st   =: ppRenamed realworld ]
+ppExpression (st:bind:_) (Application (Builtin "unsafeFreezeArray#") [addr, realworld])
+    = vsep [ bind =: ppRenamed addr
+           , st   =: ppRenamed realworld ]
 ppExpression (bind:_) (Application (Builtin "byteArrayContents#") [addr])
     = bind =: ppRenamed addr
 ppExpression (st:_) (Application (Builtin "touch#") [ptr,realworld])
@@ -269,6 +354,15 @@ ppExpression (st:_) (Application (Builtin "touch#") [ptr,realworld])
 ppExpression (st:bind:_) (Application (Builtin "mkWeak#") [key, val, finalizer, realWorld])
     = vsep [ bind =: int 0
            , st   =: ppRenamed realWorld ]
+ppExpression (st:arr:_) (Application (Builtin "newArray#") [size, elt, realWorld])
+    = vsep [ st =: ppRenamed realWorld
+           , arr =: alloc (cu64 <> ppRenamed size <+> text "* 8")
+           , text "int " <> i <+> equals <+> text "0;"
+           , text "for(;" <> i <> text "<" <> cu64 <> ppRenamed size <> text ";" <> i <> text"++) {" <$$>
+             text "  " <> ppRenamed arr <> brackets i <+> equals <+> ppRenamed elt <> semi <$$>
+             text "}"
+           ]
+    where i = text "i_" <> ppRenamed arr
 ppExpression (st:arr:_) (Application (Builtin "newByteArray#") [size,realWorld])
     = vsep [ st =: ppRenamed realWorld
            , arr =: alloc ((parens u64) <+> ppRenamed size) ]
@@ -291,10 +385,10 @@ ppExpression (st:bind:_) (Application (External "isDoubleNegativeZero") [double,
     = vsep [ bind =: int 0
            , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (External "isDoubleNaN") [double,realworld])
-    = vsep [ bind =: (text "isnan" <> parens (parens (parens (text "double*") <> char '&' <> ppRenamed double) <> brackets (int 0) ))
+    = vsep [ bind =: (text "isnan" <> parens (castToDouble double))
            , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (External "isDoubleInfinite") [double,realworld])
-    = vsep [ bind =: (text "isinf" <> parens (parens (parens (text "double*") <> char '&' <> ppRenamed double) <> brackets (int 0) ))
+    = vsep [ bind =: (text "isinf" <> parens (castToDouble double))
            , st   =: ppRenamed realworld ]
 ppExpression (st:_) (Application (External "getProgArgv") [argcPtr, argvPtr, realWorld])
     = vsep [ parens (parens (text "int*") <>ppRenamed argcPtr) <> brackets (int 0) <+> equals <+> text "global_argc" <> semi
@@ -320,8 +414,10 @@ ppExpression (st:bind:_) (Application (External fn) args)
 
 ppExpression binds e = puts (show (Grin.ppExpression e)) <$$> text "exit(1);"
 
+castToWord double
+    = text "doubleToWord" <> parens double
 castToDouble ptr
-    = parens (parens (text "double*") <> char '&' <> ppRenamed ptr) <> brackets (int 0)
+    = text "wordToDouble" <> parens (ppRenamed ptr)
 
 ppCase binds scrut alts
     = switch (parens (u64) <+> ppRenamed scrut) $
