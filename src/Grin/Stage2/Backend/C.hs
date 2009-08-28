@@ -212,6 +212,10 @@ ppExpression (bind:_) (Application (Builtin "eqWord#") [a,b])
     = ifStatement (cu64 <> ppRenamed a <+> text "==" <+> cu64 <> ppRenamed b)
                   (bind =: int 1)
                   (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin "neWord#") [a,b])
+    = ifStatement (cu64 <> ppRenamed a <+> text "!=" <+> cu64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "/=#") [a,b])
     = ifStatement (parens s64 <> ppRenamed a <+> text "!=" <+> parens s64 <> ppRenamed b)
                   (bind =: int 1)
@@ -242,6 +246,10 @@ ppExpression (bind:_) (Application (Builtin "<=##") [a,b])
                   (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin ">=##") [a,b])
     = ifStatement (castToDouble a <+> text ">=" <+> castToDouble b)
+                  (bind =: int 1)
+                  (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin ">##") [a,b])
+    = ifStatement (castToDouble a <+> text ">" <+> castToDouble b)
                   (bind =: int 1)
                   (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "==##") [a,b])
@@ -325,6 +333,10 @@ ppExpression (st:_) (Application (Builtin "writeCharArray#") [arr,idx,chr,realWo
     = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
              equals <+> cu8 <+> cu64 <+> ppRenamed chr <> semi
            , st =: ppRenamed realWorld ]
+ppExpression (st:_) (Application (Builtin "writeWord8Array#") [arr,idx,word,realWorld])
+    = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
+             equals <+> cu8 <+> cu64 <+> ppRenamed word <> semi
+           , st =: ppRenamed realWorld ]
 ppExpression (st:_) (Application (Builtin "writeWord8OffAddr#") [arr,idx,word,realWorld])
     = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
              equals <+> cu8 <+> cu64 <+> ppRenamed word <> semi
@@ -334,6 +346,10 @@ ppExpression (st:bind:_) (Application (Builtin "readAddrOffAddr#") [addr, idx, r
            , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (Builtin "readInt32OffAddr#") [addr,idx, realworld])
     = vsep [ bind =: (cu64 <+> parens (cs32p <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
+           , st   =: ppRenamed realworld
+           ]
+ppExpression (st:bind:_) (Application (Builtin "readWord8Array#") [addr,idx, realworld])
+    = vsep [ bind =: (cu64 <+> parens (cu8p <+> ppRenamed addr) <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realworld
            ]
 ppExpression (st:bind:_) (Application (Builtin "readInt8OffAddr#") [addr,idx, realworld])
@@ -388,6 +404,12 @@ ppExpression (st:bind:_) (Application (External "isDoubleNaN") [double,realworld
     = vsep [ bind =: (text "isnan" <> parens (castToDouble double))
            , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (External "isDoubleInfinite") [double,realworld])
+    = vsep [ bind =: (text "isinf" <> parens (castToDouble double))
+           , st   =: ppRenamed realworld ]
+ppExpression (st:bind:_) (Application (External "isFloatNaN") [double,realworld])
+    = vsep [ bind =: (text "isnan" <> parens (castToDouble double))
+           , st   =: ppRenamed realworld ]
+ppExpression (st:bind:_) (Application (External "isFloatInfinite") [double,realworld])
     = vsep [ bind =: (text "isinf" <> parens (castToDouble double))
            , st   =: ppRenamed realworld ]
 ppExpression (st:_) (Application (External "getProgArgv") [argcPtr, argvPtr, realWorld])
