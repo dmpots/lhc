@@ -20,8 +20,10 @@ Library {
    Exposed-modules:
       Prelude
       Data.List
+      Data.Function
       Data.Ix
       Data.Char
+      Data.Data
       Data.String
       Data.Maybe
       Data.Either
@@ -34,6 +36,7 @@ Library {
       Data.Dynamic
       Data.IORef
       Data.Ratio
+      Data.Complex
       Text.ParserCombinators.ReadP
       Text.ParserCombinators.ReadPrec
       Text.Read.Lex
@@ -94,8 +97,14 @@ Library {
       Foreign
 
       Control.Monad
+      Control.Monad.Instances
+      Control.Monad.Fix
+      Control.Monad.ST
+      Control.Monad.ST.Lazy
+      Control.Monad.ST.Strict
       Control.Exception.Base
       Control.Exception
+      Control.Concurrent.MVar
 
    Hs-source-dirs: src
 }
