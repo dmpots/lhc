@@ -46,7 +46,9 @@ languageTests
                   , "KindInference"
                   , "Kleisli"
                   , "PureInteger"
-                  , "Laziness" ]
+                  , "Laziness"
+                  , "Defaulting"
+                  , "NoMonomorphism" ]
 
 shootoutTests
     = [ lhcTest dir name | name <- tests ]
@@ -66,15 +68,13 @@ nofibTests
 bugsTests
     = [ lhcTest dir name | name <- tests ]
     where dir = ["tests", "bugs"]
-          tests = ["Defaulting"
-                  ,"ImportZeal"
+          tests = ["ImportZeal"
                   ,"Parsing1"
                   ,"RayT"
                   ,"Qualify1"
                   ,"Recursive2"
                   ,"UnpackedPoly"
-                  ,"Exceptions1"
-                  ,"NoMonomorphism"]
+                  ,"Exceptions1"]
 
 
 
@@ -109,9 +109,10 @@ lhcTest path name
 
 handleFailures False cmd = cmd
 handleFailures True cmd
-    = do cmd
-         fail $ "Program succeded unexpectantly."
-    `mplus` return ()
+    = do e <- try cmd :: IO (Either SomeException ())
+         case e of
+           Right () -> fail $ "Program succeded unexpectantly."
+           Left e   -> return ()
          
 
 execProcess :: FilePath -> [String] -> B.ByteString -> IO (ExitCode, B.ByteString, B.ByteString)
