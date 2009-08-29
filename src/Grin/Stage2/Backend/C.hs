@@ -327,6 +327,10 @@ ppExpression (st:_) (Application (Builtin "writeArray#") [arr, idx, elt, realWor
     = vsep [ st =: ppRenamed realWorld
            , ppRenamed arr <> brackets (cu64 <> ppRenamed idx) <+> equals <+> cu64 <> ppRenamed elt <> semi
            ]
+ppExpression (st:bind:_) (Application (Builtin "readArray#") [arr, idx, realWorld])
+    = vsep [ st =: ppRenamed realWorld
+           , bind =: (ppRenamed arr <> brackets (cu64 <+> ppRenamed idx))
+           ]
 ppExpression (bind:_) (Application (Builtin "indexArray#") [arr, idx])
     = vsep [ bind =: (ppRenamed arr <> brackets (cu64 <> ppRenamed idx)) ]
 ppExpression (st:_) (Application (Builtin "writeCharArray#") [arr,idx,chr,realWorld])
@@ -341,7 +345,14 @@ ppExpression (st:_) (Application (Builtin "writeWord8OffAddr#") [arr,idx,word,re
     = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
              equals <+> cu8 <+> cu64 <+> ppRenamed word <> semi
            , st =: ppRenamed realWorld ]
+ppExpression (st:_) (Application (Builtin "writeDoubleOffAddr#") [arr,idx,double,realWorld])
+    = vsep [ parens (cu64p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
+             equals <+> cu64 <+> ppRenamed double <> semi
+           , st =: ppRenamed realWorld ]
 ppExpression (st:bind:_) (Application (Builtin "readAddrOffAddr#") [addr, idx, realworld])
+    = vsep [ bind =: (ppRenamed addr <> brackets (parens u64 <+> ppRenamed idx))
+           , st   =: ppRenamed realworld ]
+ppExpression (st:bind:_) (Application (Builtin "readDoubleOffAddr#") [addr, idx, realworld])
     = vsep [ bind =: (ppRenamed addr <> brackets (parens u64 <+> ppRenamed idx))
            , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (Builtin "readInt32OffAddr#") [addr,idx, realworld])

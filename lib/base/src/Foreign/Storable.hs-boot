@@ -17,6 +17,6 @@ instance Storable Word8
 instance Storable Word16
 instance Storable Word32
 instance Storable Word64
---instance Storable Float
---instance Storable Double
+instance Storable Float
+instance Storable Double
 

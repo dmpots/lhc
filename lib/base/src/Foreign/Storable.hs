@@ -185,6 +185,12 @@ sizeOfPtr px x = sizeOf x
 #define SIZEOF_HSPTR    WORD_SIZE
 #define ALIGNMENT_HSPTR WORD_SIZE
 
+#define SIZEOF_HSFLOAT  4
+#define ALIGNMENT_HSFLOAT 4
+
+#define SIZEOF_HSDOUBLE 8
+#define ALIGNMENT_HSDOUBLE 8
+
 #define SIZEOF_HSFUNPTR    WORD_SIZE
 #define ALIGNMENT_HSFUNPTR WORD_SIZE
 
@@ -249,13 +255,13 @@ STORABLE((FunPtr a),SIZEOF_HSFUNPTR,ALIGNMENT_HSFUNPTR,
 {-
 STORABLE((StablePtr a),SIZEOF_HSSTABLEPTR,ALIGNMENT_HSSTABLEPTR,
          readStablePtrOffPtr,writeStablePtrOffPtr)
-
+-}
 STORABLE(Float,SIZEOF_HSFLOAT,ALIGNMENT_HSFLOAT,
          readFloatOffPtr,writeFloatOffPtr)
 
 STORABLE(Double,SIZEOF_HSDOUBLE,ALIGNMENT_HSDOUBLE,
          readDoubleOffPtr,writeDoubleOffPtr)
--}
+
 STORABLE(Word8,SIZEOF_WORD8,ALIGNMENT_WORD8,
          readWord8OffPtr,writeWord8OffPtr)
 
