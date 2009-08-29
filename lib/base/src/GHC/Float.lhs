@@ -527,8 +527,6 @@ formatRealFloat :: (RealFloat a) => FFFormat -> Maybe Int -> a -> String
 formatRealFloat fmt decs x
    | isNaN x                   = "NaN"
    | isInfinite x              = if x < 0 then "-Infinity" else "Infinity"
-   | x < 0                     = "less than zero"
-   | isNegativeZero x          = "Negative zero"
    | x < 0 || isNegativeZero x = '-':doFmt fmt (floatToDigits (toInteger base) (-x))
    | otherwise                 = doFmt fmt (floatToDigits (toInteger base) x)
  where 
@@ -1036,7 +1034,6 @@ showSignedFloat :: (RealFloat a)
   -> a                  -- ^ the value to show
   -> ShowS
 showSignedFloat showPos p x
-   | x < 0 = showString "Less than Zero!"
    | x < 0 || isNegativeZero x
        = showParen (p > 6) (showChar '-' . showPos (-x))
    | otherwise = showPos x
