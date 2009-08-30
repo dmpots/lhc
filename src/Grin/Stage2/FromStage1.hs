@@ -6,10 +6,7 @@ module Grin.Stage2.FromStage1
 import qualified Grin.Types as Stage1
 import Grin.Stage2.Types as Stage2
 
-import Grin.HPT.Environment
-import Grin.HPT.Solve
---import Grin.HPT.QuickSolve
---import Grin.HPT.Environment (Lhs(..))
+import Grin.HPT
 
 import Control.Monad.RWS
 import qualified Data.Map as Map
@@ -134,22 +131,24 @@ do tag <- fetch 0 p
                          unit [x,y,z,n,i]
 -}
 convertFetch p
-    = do values <- heapNodeValues p
-         let taggedValues = filter isInteresting values
-             isInteresting Tag{} = True
-             isInteresting _ = False
-             size = maximum (0:map rhsValueSize taggedValues)
-         [p'] <- lookupVariable p
-         if null taggedValues
-            then if not (null values)
-                 then return (Stage2.Fetch 0 p')
-                 else return (Application (Builtin "unreachable") [])
-            else do v <- newVariable
-                    tmps <- replicateM (size-1) newVariable
-                    vars <- replicateM size newVariable
-                    alts <- mapM (mkAlt p') taggedValues
-                    return $ Stage2.Fetch 0 p' :>>= [v] :-> Case v alts :>>= tmps :-> Unit (v:tmps)
-    where mkAlt p (Tag tag nt missing args)
+    = do rhs <- heapNodeValues p
+         case rhs of
+           Tagged nodes
+             -> do let size = rhsSize rhs
+                   [p'] <- lookupVariable p
+                   v <- newVariable
+                   tmps <- replicateM (size-1) newVariable
+                   vars <- replicateM size newVariable
+                   alts <- mapM (mkAlt p') (Map.toList nodes)
+                   return $ Stage2.Fetch 0 p' :>>= [v] :-> Case v alts :>>= tmps :-> Unit (v:tmps)
+           Base
+             -> do [p'] <- lookupVariable p
+                   return (Stage2.Fetch 0 p')
+           Heap _
+             -> do [p'] <- lookupVariable p
+                   return (Stage2.Fetch 0 p')
+           _ -> do return (Application (Builtin "unreachable") [])
+    where mkAlt p ((tag, nt, missing), args)
               | length args <= minNodeSize-1
               = do argVars <- replicateM (length args) newVariable
                    let fetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) (Unit (argVars)) (zip argVars [1..])
@@ -167,31 +166,17 @@ convertFetch p
 
 nodeSize :: Renamed -> M Int
 nodeSize val
-    = do HeapAnalysis hpt _smap <- asks fst
-         let Rhs vals = Map.findWithDefault mempty (VarEntry val) hpt
---         let Data vals = Map.findWithDefault mempty (VarEntry val) hpt
-         return $ maximum (0:map rhsValueSize vals)
+    = do hpt <- asks fst
+         return (rhsSize (lookupLhs (VarEntry val) hpt))
 
 heapNodeSize :: Renamed -> M Int
-heapNodeSize hp = do values <- heapNodeValues hp
-                     return $ maximum (0:map rhsValueSize values)
+heapNodeSize hp = do rhs <- heapNodeValues hp
+                     return $ rhsSize rhs
 
-heapNodeValues :: Renamed -> M [RhsValue]
+heapNodeValues :: Renamed -> M Rhs
 heapNodeValues val
-    = do HeapAnalysis hpt _smap <- asks fst
-         let Rhs vals = find (VarEntry val) hpt
---         let Data vals = find (VarEntry val) hpt
-             hps      = map (\(Heap hp) -> hp) vals
-             Rhs allVals  = mconcat [ vals | hp <- hps, let vals = find (HeapEntry hp) hpt ]
---               allVals  = [ val | hp <- hps, let Data vals = find (HeapEntry hp) hpt, val <- vals ]
-         return allVals
--- $ maximum (0:map rhsValueSize allVals)
-
-rhsValueSize (Base) = 1
-rhsValueSize (Tag _tag _nt _missing args) = 1 + length args
-rhsValueSize (VectorTag args) = length args
-rhsValueSize (Heap{}) = 1
-rhsValueSize v = error $ "Grin.Stage2.FromStage1.nodeSize: Invalid rhs value: " ++ show v
+    = do hpt <- asks fst
+         return (lookupHeap (VarEntry val) hpt)
 
 find key m = Map.findWithDefault (error $ "Couldn't find key: " ++ show key) key m
 
@@ -209,13 +194,13 @@ convertAlt vector (Stage1.Lit lit Stage1.:> alt)
 convertAlt vector (Stage1.Variable v Stage1.:> alt)
     = convertBind v $ \v' ->
       do alt' <- convertExpression alt
-         return $ Empty :> Unit vector :>>= v' :-> alt'
+         return $ Stage2.Empty :> Unit vector :>>= v' :-> alt'
 convertAlt vector (Stage1.Node tag nt missing args Stage1.:> alt)
     = do alt' <- convertExpression alt
          return $ Node tag nt missing :> Unit (tail vector) :>>= args :-> alt'
 convertAlt vector (Stage1.Vector args Stage1.:> alt)
     = do alt' <- convertExpression alt
-         return $ Empty :> Unit vector :>>= args :-> alt'
+         return $ Stage2.Empty :> Unit vector :>>= args :-> alt'
 convertAlt vector (Stage1.Empty Stage1.:> alt)
     = error $ "Grin.Stage2.FromStage1.convertAlt: Empty case condition."
 convertAlt vector (Stage1.Hole{} Stage1.:> alt)

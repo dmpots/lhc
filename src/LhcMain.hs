@@ -101,7 +101,7 @@ build action files@(file:_)
                            outputGrin target "_simple" opt
                            outputGrin target "_apply" applyLowered
                            outputGrin target "_eval" evalLowered
-                           writeFile (replaceExtension file "hpt") (show hpt')
+                           --writeFile (replaceExtension file "hpt") (show hpt')
                            outputGrin target "_trimmed" trimmed
                            outputGrin target "" out
                            outputGrin2 target "_raw" stage2_raw

@@ -1,16 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Grin.HPT.Solve
-    ( HeapAnalysis(..)
-    , solve
+    ( solve
     ) where
 
 import Grin.Types
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Control.Monad.Reader
 import Control.Monad.Writer
 
 import Grin.HPT.Environment
+import qualified Grin.HPT.Interface as Interface
 
 data HeapAnalysis
     = HeapAnalysis (Map.Map Lhs Rhs) SharingMap
@@ -24,8 +25,29 @@ type SharingMap = Map.Map Lhs Bool
 type M a = ReaderT (Equations,SharingMap) (Writer (Endo Equations, Endo SharingMap)) a
 
 
-solve :: Equations -> (Int, HeapAnalysis)
+dataOne = singleton (Tag (Anonymous 2) ConstructorNode 0 [arg])
+arg = singleton (Tag (Anonymous 3) ConstructorNode 0 [])
+testEqs = Map.fromList [(VarEntry (Anonymous 1), dataOne)
+                       ,(VarEntry (Anonymous 4), singleton (Ident (Anonymous 1)))
+                       ,(VarEntry (Anonymous 5), singleton (Ident (Anonymous 4)))
+                       ,(VarEntry (Anonymous 6), singleton (Ident (Anonymous 4)))]
+
+mkInterface :: HeapAnalysis -> Interface.HeapAnalysis
+mkInterface (HeapAnalysis binds smap)
+    = Interface.HeapAnalysis (Map.map fromRhs binds) smap
+    where fromRhs (Rhs vals) = foldr Interface.joinRhs Interface.Empty (map toRhs vals)
+          toRhs Base = Interface.Base
+          toRhs (Heap hp) = Interface.Heap (Set.singleton hp)
+          toRhs (Tag node nt missing args) = Interface.Tagged (Map.singleton (node,nt,missing) (map fromRhs args))
+          toRhs (VectorTag rhs) = Interface.Vector (map fromRhs rhs)
+          toRhs rhs = error $ "Grin.HPT.Solve.mkInterface: bad rhs: " ++ show rhs
+
+solve :: Equations -> (Int, Interface.HeapAnalysis)
 solve eqs
+    = case solve' eqs of
+        (iterations, hpt) -> (iterations, mkInterface hpt)
+solve' :: Equations -> (Int, HeapAnalysis)
+solve' eqs
     = let iterate ls
               = forM_ ls $ \(lhs,rhs) ->
                   do reducedRhs <- reduceEqs rhs

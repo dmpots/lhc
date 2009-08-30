@@ -3,7 +3,7 @@ module Grin.HPT.Lower
     ( lower
     ) where
 
-import Grin.Types
+import Grin.Types as Grin
 
 import qualified Data.Map as Map
 import Control.Monad.State
@@ -11,8 +11,9 @@ import Control.Monad.Writer
 import Data.List (delete)
 
 
-import Grin.HPT.Environment
-import Grin.HPT.Solve
+import Grin.HPT.Environment (Lhs(..))
+--import Grin.HPT.Solve
+import Grin.HPT.Interface as Interface
 
 type M a = State (HeapAnalysis, Int) a
 
@@ -41,37 +42,37 @@ lowerExpression (a :>> b)
          return $ a' :>> b'
 lowerExpression (Application (Builtin "eval") [a])
     = do f <- newVariable
-         HeapAnalysis hpt sharingMap <- gets fst
-         case Map.lookup (VarEntry a) hpt of
-           Just (Rhs rhs) -> do let Rhs rhs' = mconcat [ hpt Map.! HeapEntry hp | Heap hp <- rhs ]
-                                addHPTInfo (VarEntry f) (Rhs rhs')
-                                alts <- mapM (mkApplyAlt rhs []) rhs'
-                                v <- newVariable
-                                let expand (Tag tag FunctionNode 0 _) = hpt Map.! (VarEntry tag)
-                                    expand rhs = Rhs [rhs]
-                                    expanded = mconcat $ map expand rhs'
-                                addHPTInfo (VarEntry v) expanded
-                                let anyShared = or [ Map.findWithDefault False (HeapEntry hp) sharingMap | Heap hp <- rhs ]
-                                u <- mkUpdate anyShared a f v rhs' expanded
-                                return $ Application (Builtin "fetch") [a] :>>= f :->
-                                         Case f alts :>>= v :->
-                                         u :>>
-                                         Unit (Variable v)
-           Nothing -> return $ Application (Builtin "urk") []
+         hpt <- gets fst
+         case lookupHeap (VarEntry a) hpt of
+           Interface.Empty -> return $ Application (Builtin "unreachable") []
+           Tagged nodes
+             -> do let tags = Map.toList nodes
+                   addHPTInfo (VarEntry f) (Tagged nodes)
+                   alts <- mapM (mkApplyAlt []) tags
+                   v <- newVariable
+                   let expand ((tag,FunctionNode,0),_args) = lookupLhs (VarEntry tag) hpt
+                       expand (node,args) = Tagged (Map.singleton node args)
+                       expanded = foldr joinRhs Interface.Empty $ map expand tags
+                   addHPTInfo (VarEntry v) expanded
+                   let anyShared = heapIsShared (VarEntry a) hpt
+                   u <- mkUpdate anyShared a f v tags expanded
+                   return $ Application (Builtin "fetch") [a] :>>= f :->
+                            Case f alts :>>= v :->
+                            u :>>
+                            Unit (Variable v)
 lowerExpression (Application (Builtin "apply") [a,b])
-    = do HeapAnalysis hpt _ <- gets fst
-         case Map.lookup (VarEntry a) hpt of
-           Just (Rhs rhs) -> do alts <- mapM (mkApplyAlt [] [b]) rhs
-                                return $ Case a alts
-           Nothing -> return $ Application (Builtin "urk") []
+    = do hpt <- gets fst
+         case lookupLhs (VarEntry a) hpt of
+           Tagged nodes -> do alts <- mapM (mkApplyAlt [b]) (Map.toList nodes)
+                              return $ Case a alts
+           Interface.Empty -> return $ Application (Builtin "unreachable") []
 lowerExpression (Application fn args)
     = return $ Application fn args
 lowerExpression (Case scrut alts)
-    = do HeapAnalysis hpt _ <- gets fst
-         case Map.lookup (VarEntry scrut) hpt of
-           Just (Rhs rhs) -> do alts' <- mapM lowerAlt (filter (`isMemberOf` rhs) alts)
-                                return $ Case scrut alts'
-           Nothing -> error "Grin.HPT.Lower.lowerExpression: Urk"
+    = do hpt <- gets fst
+         let rhs = lookupLhs (VarEntry scrut) hpt
+         alts' <- mapM lowerAlt (filter (`isMemberOf` rhs) alts)
+         return $ Case scrut alts'
 lowerExpression (Store val)
     = return $ Store val
 lowerExpression (Unit val) = return $ Unit val
@@ -86,45 +87,46 @@ lowerAlt (a :> b)
     = do b' <- lowerExpression b
          return $ a :> b'
 
-(Node tag nt missing args :> _) `isMemberOf` rhs
-    = (tag, nt, missing) `elem` [ (tag, nt, missing) | Tag tag nt missing _ <- rhs ]
+(Node tag nt missing args :> _) `isMemberOf` (Tagged nodes)
+    = (tag, nt, missing) `Map.member` nodes
 _ `isMemberOf` rhs = True
 
 
-mkUpdate :: Bool -> Renamed -> Renamed -> Renamed ->[RhsValue] -> Rhs -> M Expression
-mkUpdate False ptr scrut val tags _ = return $ Unit Empty
-mkUpdate shared ptr scrut val tags (Rhs expanded)
-    = do let doUpdate = do alts <- mapM uWorker expanded
+mkUpdate :: Bool -> Renamed -> Renamed -> Renamed ->[(Node, [Rhs])] -> Rhs -> M Expression
+mkUpdate False ptr scrut val tags _ = return $ Unit Grin.Empty
+mkUpdate shared ptr scrut val tags (Tagged expanded)
+    = do let doUpdate = do alts <- mapM uWorker (Map.toList expanded)
                            return $ Case val alts
-             uWorker (Tag tag nt missing args)
+             uWorker ((tag, nt, missing), args)
                  = do args' <- replicateM (length args) newVariable
                       node <- newVariable
-                      addHPTInfo (VarEntry node) (singleton $ Tag tag nt missing args)
+                      addHPTInfo (VarEntry node) (Tagged (Map.singleton (tag, nt, missing) args))
                       return (Node tag nt missing args' :> (Unit (Node tag nt missing args') :>>= node :->
                               Application (Builtin "update") [ptr,node]))
-         let worker (Tag tag FunctionNode 0 args)
+         let worker ((tag, FunctionNode, 0), args)
                  = do args' <- replicateM (length args) newVariable
                       u <- doUpdate
                       return $ Node tag FunctionNode 0 args' :> u
-             worker (Tag tag nt missingArgs args)
+             worker ((tag, nt, missingArgs), args)
                  = do args' <- replicateM (length args) newVariable
-                      return $ Node tag nt missingArgs args' :> Unit Empty
+                      return $ Node tag nt missingArgs args' :> Unit Grin.Empty
              worker tag = error $ "Grin.HPT.Lower.mkUpdate: Unknown rhs value: " ++ show tag
          alts' <- mapM worker tags
          return $ Case scrut alts'
+mkUpdate shared ptr scrut val tags _ = return $ Unit Grin.Empty
 
-mkApplyAlt :: [RhsValue] -> [Renamed] -> RhsValue -> M Alt
-mkApplyAlt _ extraArgs (Tag tag FunctionNode n argsRhs) | n == length extraArgs
+mkApplyAlt :: [Renamed] -> (Node, [Rhs]) -> M Alt
+mkApplyAlt extraArgs ((tag, FunctionNode, n), argsRhs) | n == length extraArgs
     = do args <- replicateM (length argsRhs) newVariable
          return $ Node tag FunctionNode n args :> Application tag (args ++ extraArgs)
-mkApplyAlt _ extraArgs (Tag tag nt n argsRhs)
+mkApplyAlt extraArgs ((tag, nt, n), argsRhs)
     = do args <- replicateM (length argsRhs) newVariable
          return $ Node tag nt n args :> Unit (Node tag nt (n - length extraArgs) (args ++ extraArgs))
-mkApplyAlt _ _ val = error $ "Grin.HPT.Lower.mkApplyAlt: unexpected tag: " ++ show val
+mkApplyAlt _ val = error $ "Grin.HPT.Lower.mkApplyAlt: unexpected tag: " ++ show val
 
 addHPTInfo :: Lhs -> Rhs -> M ()
 addHPTInfo lhs rhs
-    = modify $ \(HeapAnalysis hpt smap, unique) -> (HeapAnalysis (Map.insertWith mappend lhs rhs hpt) smap, unique)
+    = modify $ \(HeapAnalysis hpt smap, unique) -> (HeapAnalysis (Map.insertWith joinRhs lhs rhs hpt) smap, unique)
 
 newVariable :: M Renamed
 newVariable = do unique <- gets snd
