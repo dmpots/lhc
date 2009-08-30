@@ -411,6 +411,9 @@ ppExpression (st:bind:_) (Application (External "fdReady") args)
 ppExpression (st:bind:_) (Application (External "isDoubleNegativeZero") [double,realworld])
     = vsep [ bind =: int 0
            , st   =: ppRenamed realworld ]
+ppExpression (st:bind:_) (Application (External "isFloatNegativeZero") [double,realworld])
+    = vsep [ bind =: int 0
+           , st   =: ppRenamed realworld ]
 ppExpression (st:bind:_) (Application (External "isDoubleNaN") [double,realworld])
     = vsep [ bind =: (text "isnan" <> parens (castToDouble double))
            , st   =: ppRenamed realworld ]
