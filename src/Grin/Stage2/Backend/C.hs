@@ -97,9 +97,13 @@ ppMain cafs entryPoint
       char '}'
 
 ppRTS :: Doc
-ppRTS = vsep [ ppDWUnion
+ppRTS = vsep [ ppPanicFn
+             , ppDWUnion
              , ppWordToDouble
              , ppDoubleToWord ]
+
+ppPanicFn
+    = text "void panic(char *str) { puts(str); exit(1); }"
 
 ppDWUnion
     = text "typedef union { double d; u64 *w; } DoubleOrWord;" 
@@ -448,7 +452,7 @@ ppExpression (st:bind:_) (Application (External fn) args)
            ,st   =: ppRenamed (last args) ]
     where argList = parens $ hsep $ punctuate comma $ map ppRenamed (init args)
 
-ppExpression binds e = puts (show (Grin.ppExpression e)) <$$> text "exit(1);"
+ppExpression binds e = panic (show (Grin.ppExpression e))
 
 castToWord double
     = text "doubleToWord" <> parens double
@@ -459,7 +463,7 @@ ppCase binds scrut alts
     = switch (parens (u64) <+> ppRenamed scrut) $
         vsep (map ppAlt alts) <$$> def (last alts)
     where def (Empty :> _)  = empty
-          def _             = text "default:" <$$> indent 2 (puts ("No match for case: " ++ show scrut) <$$> text "exit(1);")
+          def _             = text "default:" <$$> indent 2 (panic ("No match for case: " ++ show scrut))
           ppAlt (value :> exp)
               = case value of
                   Empty
@@ -489,8 +493,8 @@ valueToDoc val = error $ "Grin.Stage2.Backend.C.valueToDoc: Can't translate: " +
 
 
 
-puts :: String -> Doc
-puts txt = text "puts" <> parens (escString txt) <> semi
+panic :: String -> Doc
+panic txt = text "panic" <> parens (escString txt) <> semi
 
 alloc :: Doc -> Doc
 alloc size = text "GC_MALLOC" <> parens (size)
