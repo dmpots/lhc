@@ -34,8 +34,8 @@ testEqs = Map.fromList [(VarEntry (Anonymous 1), dataOne)
 
 mkInterface :: HeapAnalysis -> Interface.HeapAnalysis
 mkInterface (HeapAnalysis binds smap)
-    = Interface.HeapAnalysis (Map.map fromRhs binds) smap
-    where fromRhs (Rhs vals) = foldr Interface.joinRhs Interface.Empty (map toRhs vals)
+    = Interface.mkHeapAnalysis (Map.map fromRhs binds) smap
+    where fromRhs (Rhs vals) = mconcat (map toRhs vals)
           toRhs Base = Interface.Base
           toRhs (Heap hp) = Interface.Heap (Set.singleton hp)
           toRhs (Tag node nt missing args) = Interface.Tagged (Map.singleton (node,nt,missing) (map fromRhs args))
@@ -67,7 +67,7 @@ nonlinearVariables eqs
     = appEndo (execWriter (mapM_ rhsFn (Map.elems eqs))) Map.empty
     where rhsFn (Rhs values) = mapM_ worker values
           pushIdent ident = tell $ Endo $ Map.insertWith (\_ _ -> True) (VarEntry ident) False
-          worker (Extract ident tag _nth)   = pushIdent ident >> pushIdent tag
+          worker (Extract ident (tag, _nt, _missing) _nth)   = pushIdent ident >> pushIdent tag
           worker (ExtractVector ident _nth) = pushIdent ident
           worker (Eval ident)               = pushIdent ident
           worker (Update a b)               = pushIdent a >> pushIdent b
@@ -106,7 +106,7 @@ reduceEq :: RhsValue -> M Rhs
 reduceEq Base      = return $ singleton Base
 reduceEq (Heap hp) = return $ singleton $ Heap hp
 reduceEq (Ident i) = lookupEq (VarEntry i)
-reduceEq (Extract eq tag n)
+reduceEq (Extract eq (tag, _nt, _missing) n)
     = do Rhs eqs' <- lookupEq (VarEntry eq)
          return ({-# SCC "Extract.mappend" #-} mconcat [ args `nth` n | Tag t _ _ args <- eqs', t == tag ])
     where nth [] n = mempty --error $ "reduceEq: ExtractVector: " ++ show (eqs, tag, n)

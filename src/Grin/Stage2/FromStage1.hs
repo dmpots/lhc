@@ -176,7 +176,7 @@ heapNodeSize hp = do rhs <- heapNodeValues hp
 heapNodeValues :: Renamed -> M Rhs
 heapNodeValues val
     = do hpt <- asks fst
-         return (lookupHeap (VarEntry val) hpt)
+         return (lookupHeap val hpt)
 
 find key m = Map.findWithDefault (error $ "Couldn't find key: " ++ show key) key m
 

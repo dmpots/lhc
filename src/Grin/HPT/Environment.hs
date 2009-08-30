@@ -6,6 +6,7 @@ module Grin.HPT.Environment
     , RhsValue(..)
     , HeapPointer
     , Lhs(..)
+    , Node
     , singleton
     , isSubsetOf
     ) where
@@ -24,8 +25,10 @@ data Lhs = HeapEntry HeapPointer
          | VarEntry Renamed
     deriving (Eq,Ord,Show)
 
+type Node = (Renamed, NodeType, Int) -- Name, node type, missing arguments.
+
 data RhsValue
-    = Extract Renamed Renamed Int
+    = Extract Renamed Node Int
     | ExtractVector Renamed Int
     | Eval Renamed
     | Update Renamed Renamed
@@ -117,7 +120,7 @@ setupEnvGrin grin
               addEquation (VarEntry (funcDefName function)) rhs
               forM_ (zip (funcDefArgs function) [0..]) $ \(arg, n) ->
                 addEquation (VarEntry arg)
-                            (singleton $ Extract applications (funcDefName function) n)
+                            (singleton $ Extract applications (funcDefName function, FunctionNode, 0) n)
 
 -- FIXME: Put these in order.
 baseBuiltins, vectorBuiltins, unsupportedBuiltins :: [CompactString]
@@ -165,9 +168,10 @@ setupEnv (Case val alts)
     = do let valRhs = singleton $ Ident val
          rets <- forM alts $ \(l :> alt) ->
                    case l of
-                     Node tag _ _ args -> do forM_ (zip [0..] args) $ \(n,arg) ->
-                                               addEquation (VarEntry arg) (singleton $ Extract val tag n)
-                                             setupEnv alt
+                     Node tag nt missing args
+                       -> do forM_ (zip [0..] args) $ \(n,arg) ->
+                               addEquation (VarEntry arg) (singleton $ Extract val (tag, nt, missing) n)
+                             setupEnv alt
                      Vector args -> do forM_ (zip [0..] args) $ \(n,arg) ->
                                          addEquation (VarEntry arg) (singleton $ ExtractVector val n)
                                        setupEnv alt

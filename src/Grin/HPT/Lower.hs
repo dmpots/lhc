@@ -12,7 +12,6 @@ import Data.List (delete)
 
 
 import Grin.HPT.Environment (Lhs(..))
---import Grin.HPT.Solve
 import Grin.HPT.Interface as Interface
 
 type M a = State (HeapAnalysis, Int) a
@@ -43,7 +42,7 @@ lowerExpression (a :>> b)
 lowerExpression (Application (Builtin "eval") [a])
     = do f <- newVariable
          hpt <- gets fst
-         case lookupHeap (VarEntry a) hpt of
+         case lookupHeap a hpt of
            Interface.Empty -> return $ Application (Builtin "unreachable") []
            Tagged nodes
              -> do let tags = Map.toList nodes
@@ -52,9 +51,9 @@ lowerExpression (Application (Builtin "eval") [a])
                    v <- newVariable
                    let expand ((tag,FunctionNode,0),_args) = lookupLhs (VarEntry tag) hpt
                        expand (node,args) = Tagged (Map.singleton node args)
-                       expanded = foldr joinRhs Interface.Empty $ map expand tags
+                       expanded = mconcat $ map expand tags
                    addHPTInfo (VarEntry v) expanded
-                   let anyShared = heapIsShared (VarEntry a) hpt
+                   let anyShared = heapIsShared a hpt
                    u <- mkUpdate anyShared a f v tags expanded
                    return $ Application (Builtin "fetch") [a] :>>= f :->
                             Case f alts :>>= v :->
@@ -126,7 +125,7 @@ mkApplyAlt _ val = error $ "Grin.HPT.Lower.mkApplyAlt: unexpected tag: " ++ show
 
 addHPTInfo :: Lhs -> Rhs -> M ()
 addHPTInfo lhs rhs
-    = modify $ \(HeapAnalysis hpt smap, unique) -> (HeapAnalysis (Map.insertWith joinRhs lhs rhs hpt) smap, unique)
+    = modify $ \(hpt, unique) -> (hptAddBinding lhs rhs hpt, unique)
 
 newVariable :: M Renamed
 newVariable = do unique <- gets snd

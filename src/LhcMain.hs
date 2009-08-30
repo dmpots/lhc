@@ -101,16 +101,13 @@ build action files@(file:_)
                            outputGrin target "_simple" opt
                            outputGrin target "_apply" applyLowered
                            outputGrin target "_eval" evalLowered
-                           --writeFile (replaceExtension file "hpt") (show hpt')
                            outputGrin target "_trimmed" trimmed
                            outputGrin target "" out
                            outputGrin2 target "_raw" stage2_raw
                            outputGrin2 target "_opt" stage2_opt
                            outputGrin2 target "_trimmed" stage2_trim
                            outputGrin2 target "" stage2_out
-                           --writeFile (replaceExtension target ".ll") (show $ Backend.LLVM.ppModule llvmModule)]
                            Backend.C.compile stage2_out (dropExtension target)
-                           --Stage2.calcLiveNodes stage2_out
 
                            putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
 

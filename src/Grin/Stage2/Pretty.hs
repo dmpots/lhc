@@ -3,6 +3,7 @@ module Grin.Stage2.Pretty
     ( ppGrin
     , ppExpression
     , ppRenamed
+    , ppNodeType
     ) where
 
 import CompactString
