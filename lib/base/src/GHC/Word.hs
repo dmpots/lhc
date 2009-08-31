@@ -201,6 +201,10 @@ instance Bits Word where
 data Word8 = W8# Word# deriving (Eq, Ord)
 -- ^ 8-bit unsigned integer type
 
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = W8# (narrow8Word# (int2Word# x))
+  #-}
+
 instance Show Word8 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
 
@@ -304,6 +308,10 @@ instance Bits Word8 where
 
 data Word16 = W16# Word# deriving (Eq, Ord)
 -- ^ 16-bit unsigned integer type
+
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = W16# (narrow16Word# (int2Word# x))
+  #-}
 
 instance Show Word16 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -513,6 +521,10 @@ instance Bits Word32 where
 
 data Word32 = W32# Word# deriving (Eq, Ord)
 -- ^ 32-bit unsigned integer type
+
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = W32# (narrow32Word# (int2Word# x))
+  #-}
 
 instance Num Word32 where
     (W32# x#) + (W32# y#)  = W32# (narrow32Word# (x# `plusWord#` y#))
@@ -764,6 +776,10 @@ a `shiftRL64#` b | b >=# 64#  = wordToWord64# (int2Word# 0#)
 
 data Word64 = W64# Word# deriving (Eq, Ord)
 -- ^ 64-bit unsigned integer type
+
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = W64# (int2Word# x)
+  #-}
 
 instance Num Word64 where
     (W64# x#) + (W64# y#)  = W64# (x# `plusWord#` y#)

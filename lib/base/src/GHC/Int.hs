@@ -41,6 +41,8 @@ import GHC.Arr
 import GHC.Word hiding (uncheckedShiftL64#, uncheckedShiftRL64#)
 import GHC.Show
 
+import GHC.Integer (smallInteger)
+
 ------------------------------------------------------------------------
 -- type Int8
 ------------------------------------------------------------------------
@@ -50,6 +52,10 @@ import GHC.Show
 
 data Int8 = I8# Int# deriving (Eq, Ord)
 -- ^ 8-bit signed integer type
+
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I8# (narrow8Int# x)
+  #-}
 
 instance Show Int8 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -166,6 +172,10 @@ instance Bits Int8 where
 
 data Int16 = I16# Int# deriving (Eq, Ord)
 -- ^ 16-bit signed integer type
+
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I16# (narrow16Int# x)
+  #-}
 
 instance Show Int16 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -423,6 +433,11 @@ instance Bits Int32 where
 
 data Int32 = I32# Int# deriving (Eq, Ord)
 -- ^ 32-bit signed integer type
+
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I32# (narrow32Int# x)
+  #-}
+
 
 instance Show Int32 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -699,6 +714,11 @@ a `iShiftRA64#` b | b >=# 64# = if a `ltInt64#` (intToInt64# 0#)
 
 data Int64 = I64# Int# deriving (Eq, Ord)
 -- ^ 64-bit signed integer type
+
+{-# RULES
+"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I64# x
+  #-}
+
 
 instance Show Int64 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
