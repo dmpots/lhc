@@ -10,6 +10,7 @@ import Grin.Types (Renamed(..),NodeType(..),NodeDef(..),Type(..),uniqueId, alias
                   ,isBuiltin,isExternal)
 
 import CompactString
+import Traverse
 
 import Grin.SimpleCore.Types (Lit(..))
 
@@ -55,7 +56,32 @@ data Expression
     | StoreHole   Int
     | Unit        [Renamed]
     | Constant    Value
-
+{-
+instance Traverse Expression where
+    tmapM fn exp
+        = case exp of
+            e1 :>>= binds :-> e2
+              -> do e1' <- fn e1
+                    e2' <- fn e2
+                    return (e1' :>>= binds :-> e2')
+            Application{}
+              -> return exp
+            Case scrut alts
+              -> do alts' <- sequence [ do alt' <- fn alt
+                                           return (cond :> alt')
+                                        | cond :> alt <- alts]
+                    return $ Case scrut alts'
+            Fetch{}
+              -> return exp
+            Store{}
+              -> return exp
+            StoreHole{}
+              -> return exp
+            Unit{}
+              -> return exp
+            Constant{}
+              -> return exp
+-}
 type Variable = CompactString
 
 data Value
