@@ -284,7 +284,7 @@ new
 new cmpr hash = do
   recordNew
   -- make a new hash table with a single, empty, segment
-  let mask = tABLE_MIN-1
+  let mask = tABLE_MIN-1 :: Int32
   bkts'  <- newMutArray (0,mask) []
   bkts   <- freezeArray bkts'
 
