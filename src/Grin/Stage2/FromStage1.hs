@@ -133,7 +133,7 @@ do tag <- fetch 0 p
 convertFetch p
     = do rhs <- heapNodeValues p
          case rhs of
-           Tagged nodes
+           Other{rhsTagged = nodes} | not (Map.null nodes)
              -> do let size = rhsSize rhs
                    [p'] <- lookupVariable p
                    v <- newVariable
@@ -144,7 +144,7 @@ convertFetch p
            Base
              -> do [p'] <- lookupVariable p
                    return (Stage2.Fetch 0 p')
-           Heap _
+           Other{rhsHeap = _}
              -> do [p'] <- lookupVariable p
                    return (Stage2.Fetch 0 p')
            _ -> do return (Application (Builtin "unreachable") [])

@@ -37,9 +37,9 @@ mkInterface (HeapAnalysis binds smap)
     = Interface.mkHeapAnalysis (Map.map fromRhs binds) smap
     where fromRhs (Rhs vals) = mconcat (map toRhs vals)
           toRhs Base = Interface.Base
-          toRhs (Heap hp) = Interface.Heap (Set.singleton hp)
-          toRhs (Tag node nt missing args) = Interface.Tagged (Map.singleton (node,nt,missing) (map fromRhs args))
-          toRhs (VectorTag rhs) = Interface.Vector (map fromRhs rhs)
+          toRhs (Heap hp) = Interface.Other Map.empty [] (Set.singleton hp)
+          toRhs (Tag node nt missing args) = Interface.Other (Map.singleton (node,nt,missing) (map fromRhs args)) [] Set.empty
+          toRhs (VectorTag rhs) = Interface.Other Map.empty (map fromRhs rhs) Set.empty
           toRhs rhs = error $ "Grin.HPT.Solve.mkInterface: bad rhs: " ++ show rhs
 
 solve :: Equations -> (Int, Interface.HeapAnalysis)

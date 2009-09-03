@@ -6,6 +6,7 @@ module Grin.HPT.Lower
 import Grin.Types as Grin
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Control.Monad.State
 import Control.Monad.Writer
 import Data.List (delete)
@@ -44,13 +45,13 @@ lowerExpression (Application (Builtin "eval") [a])
          hpt <- gets fst
          case lookupHeap a hpt of
            Interface.Empty -> return $ Application (Builtin "unreachable") []
-           Tagged nodes
+           rhs@Other{rhsTagged = nodes}
              -> do let tags = Map.toList nodes
-                   addHPTInfo (VarEntry f) (Tagged nodes)
+                   addHPTInfo (VarEntry f) rhs -- (Tagged nodes)
                    alts <- mapM (mkApplyAlt []) tags
                    v <- newVariable
                    let expand ((tag,FunctionNode,0),_args) = lookupLhs (VarEntry tag) hpt
-                       expand (node,args) = Tagged (Map.singleton node args)
+                       expand (node,args) = Other (Map.singleton node args) [] Set.empty
                        expanded = mconcat $ map expand tags
                    addHPTInfo (VarEntry v) expanded
                    let anyShared = heapIsShared a hpt
@@ -62,8 +63,8 @@ lowerExpression (Application (Builtin "eval") [a])
 lowerExpression (Application (Builtin "apply") [a,b])
     = do hpt <- gets fst
          case lookupLhs (VarEntry a) hpt of
-           Tagged nodes -> do alts <- mapM (mkApplyAlt [b]) (Map.toList nodes)
-                              return $ Case a alts
+           Other{rhsTagged = nodes} -> do alts <- mapM (mkApplyAlt [b]) (Map.toList nodes)
+                                          return $ Case a alts
            Interface.Empty -> return $ Application (Builtin "unreachable") []
 lowerExpression (Application fn args)
     = return $ Application fn args
@@ -86,20 +87,20 @@ lowerAlt (a :> b)
     = do b' <- lowerExpression b
          return $ a :> b'
 
-(Node tag nt missing args :> _) `isMemberOf` (Tagged nodes)
+(Node tag nt missing args :> _) `isMemberOf` (Other{rhsTagged = nodes})
     = (tag, nt, missing) `Map.member` nodes
 _ `isMemberOf` rhs = True
 
 
 mkUpdate :: Bool -> Renamed -> Renamed -> Renamed ->[(Node, [Rhs])] -> Rhs -> M Expression
 mkUpdate False ptr scrut val tags _ = return $ Unit Grin.Empty
-mkUpdate shared ptr scrut val tags (Tagged expanded)
+mkUpdate shared ptr scrut val tags (Other{rhsTagged = expanded})
     = do let doUpdate = do alts <- mapM uWorker (Map.toList expanded)
                            return $ Case val alts
              uWorker ((tag, nt, missing), args)
                  = do args' <- replicateM (length args) newVariable
                       node <- newVariable
-                      addHPTInfo (VarEntry node) (Tagged (Map.singleton (tag, nt, missing) args))
+                      addHPTInfo (VarEntry node) (Other (Map.singleton (tag, nt, missing) args) [] Set.empty)
                       return (Node tag nt missing args' :> (Unit (Node tag nt missing args') :>>= node :->
                               Application (Builtin "update") [ptr,node]))
          let worker ((tag, FunctionNode, 0), args)
@@ -118,6 +119,8 @@ mkApplyAlt :: [Renamed] -> (Node, [Rhs]) -> M Alt
 mkApplyAlt extraArgs ((tag, FunctionNode, n), argsRhs) | n == length extraArgs
     = do args <- replicateM (length argsRhs) newVariable
          return $ Node tag FunctionNode n args :> Application tag (args ++ extraArgs)
+mkApplyAlt [extraArg] ((tag, nt, 0), argsRhs)
+    = return $ Node tag nt 0 [] :> Application (Builtin "unreachable") []
 mkApplyAlt extraArgs ((tag, nt, n), argsRhs)
     = do args <- replicateM (length argsRhs) newVariable
          return $ Node tag nt n args :> Unit (Node tag nt (n - length extraArgs) (args ++ extraArgs))
