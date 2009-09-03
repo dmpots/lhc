@@ -249,6 +249,10 @@ dconIsVector con
                     , (fromString "ghc-prim:GHC.Prim.(#,,,,,#)", 6)
                     , (fromString "ghc-prim:GHC.Prim.(#,,,,,,#)", 7)
                     , (fromString "ghc-prim:GHC.Prim.(#,,,,,,,#)", 8)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,#)", 9)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,#)", 10)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,,#)", 11)
+                    , (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,,,#)", 12)
                     ]
 
 

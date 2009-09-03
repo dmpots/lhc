@@ -72,7 +72,12 @@ build action files@(file:_)
                                                          ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,#)") 5
                                                          ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,#)") 6
                                                          ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,#)") 7
-                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,#)") 8]
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,#)") 8
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,#)") 9
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,#)") 10
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,,#)") 11
+                                                         ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,,,#)") 12
+                                                         ]
                                        , moduleDefs    = [] }
          let allModules = Map.insert (modulePackage primModule, moduleName primModule) primModule $
                           foldr (\mod -> Map.insert (modulePackage mod, moduleName mod) mod) libs mods
