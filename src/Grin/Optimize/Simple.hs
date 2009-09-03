@@ -24,7 +24,9 @@ optimize grin
 simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
     = let simplified = runReader (simpleExpression (funcDefBody def)) Map.empty
-          fetched    = runReader (fetchOpt simplified) Map.empty
+          evaled     = runReader (evalOpt simplified) Map.empty
+          applied    = runReader (applyOpt evaled) Map.empty
+          fetched    = runReader (fetchOpt applied) Map.empty
           pruned     = runReader (casePruneOpt fetched) Map.empty
       in def{ funcDefBody = pruned }
 
@@ -132,6 +134,39 @@ fetchOpt e@(Store (Variable val))
            Nothing -> return e
            Just e' -> return e'
 fetchOpt e = tmapM fetchOpt e
+
+
+type EvalOpt a = Reader (Map.Map Renamed Value) a
+
+evalOpt :: Expression -> EvalOpt Expression
+evalOpt e@(Store val :>>= bind :-> _)
+    = local (Map.insert bind val)
+            (tmapM evalOpt e)
+evalOpt e@(Application (Builtin "eval") [ptr])
+    = do mbVal <- asks (Map.lookup ptr)
+         case mbVal of
+           Just (Node _tag FunctionNode n _args) | n >= 1
+             -> return (Application (Builtin "fetch") [ptr])
+           _ -> return e
+evalOpt e = tmapM evalOpt e
+
+
+type ApplyOpt a = Reader (Map.Map Renamed Value) a
+
+applyOpt :: Expression -> ApplyOpt Expression
+applyOpt e@(Unit val :>>= bind :-> _)
+    = local (Map.insert bind val)
+            (tmapM applyOpt e)
+applyOpt e@(Application (Builtin "apply") [fn,arg])
+    = do mbVal <- asks (Map.lookup fn)
+         case mbVal of
+           Just (Node _tag FunctionNode 0 _args) -> error "Grin.Optimize.Simple.applyOpt: Invalid application."
+           Just (Node tag FunctionNode 1 args)
+             -> return (Application tag (args ++ [arg]))
+           Just (Node tag FunctionNode n args)
+             -> return (Unit (Node tag FunctionNode (n-1) (args ++ [arg])))
+           _ -> return e
+applyOpt e = tmapM applyOpt e
 
 
 

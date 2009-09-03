@@ -15,6 +15,8 @@ import Control.Monad  (ap)
 
 import Traverse
 
+import qualified HashTable as HT
+
 -- Invariants:
 --   The nodes referred to by the functions are a subset of the nodes in 'grinNodes'.
 data Grin
@@ -107,6 +109,13 @@ data Renamed = Aliased Int CompactString
              | Builtin CompactString
              | External String
     deriving (Show,Eq,Ord)
+
+instance HT.Hashable Renamed where
+    hash (Aliased uid _alias) = uid
+    hash (Anonymous uid)      = uid
+    hash Builtin{}            = 0
+    hash External{}           = 0
+
 
 isAliased, isBuiltin, isExternal :: Renamed -> Bool
 
