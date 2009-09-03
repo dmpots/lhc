@@ -48,7 +48,7 @@ lowerExpression (e :>> f)
 lowerExpression (Application (Builtin fn) [a,b]) | Just renamed <- lookup fn renamedOpts
     = lowerExpression (Application (Builtin renamed) [a,b])
 lowerExpression (Application (Builtin fn) [a,b]) | fn `elem` [">=#",">#","==#","/=#","<=#","<#","<##",">##",">=##","<=##","==##"
-                                                             ,"eqWord#", "neWord#"]
+                                                             ,"eqWord#", "neWord#", "leWord#"]
     = do tnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.True"
          fnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.False"
          v <- newVariable

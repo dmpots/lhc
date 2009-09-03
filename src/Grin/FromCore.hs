@@ -313,7 +313,7 @@ simpleExpIsPrimitive _
     = False
 
 isBooleanPrimitive x = x `elem` [">=#",">#","==#","/=#","<=#","<#","<##",">##",">=##","<=##","==##"
-                                ,"eqWord#", "neWord#"]
+                                ,"eqWord#", "neWord#", "leWord#"]
 
 
 {-

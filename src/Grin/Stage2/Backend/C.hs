@@ -220,6 +220,10 @@ ppExpression (bind:_) (Application (Builtin "neWord#") [a,b])
     = ifStatement (cu64 <> ppRenamed a <+> text "!=" <+> cu64 <> ppRenamed b)
                   (bind =: int 1)
                   (bind =: int 0)
+ppExpression (bind:_) (Application (Builtin "leWord#") [a,b])
+    = ifStatement (cu64 <> ppRenamed a <+> text "<=" <+> cu64 <> ppRenamed b)
+                  (bind =: int 1)
+                  (bind =: int 0)
 ppExpression (bind:_) (Application (Builtin "/=#") [a,b])
     = ifStatement (parens s64 <> ppRenamed a <+> text "!=" <+> parens s64 <> ppRenamed b)
                   (bind =: int 1)
@@ -312,6 +316,8 @@ ppExpression (bind:_) (Application (Builtin "cosDouble#") [a])
     = bind =: castToWord (text "cos" <> parens (castToDouble a))
 ppExpression (bind:_) (Application (Builtin "sqrtDouble#") [a])
     = bind =: castToWord (text "sqrt" <> parens (castToDouble a))
+ppExpression (bind:_) (Application (Builtin "logDouble#") [a])
+    = bind =: castToWord (text "log" <> parens (castToDouble a))
 ppExpression (bind:_) (Application (Builtin "int2Double#") [a])
     = bind =: castToWord (parens (text "double") <> cu64 <> ppRenamed a)
 ppExpression (bind:_) (Application (Builtin "+#") [a,b])
@@ -348,6 +354,10 @@ ppExpression (st:_) (Application (Builtin "writeWord8Array#") [arr,idx,word,real
 ppExpression (st:_) (Application (Builtin "writeWord8OffAddr#") [arr,idx,word,realWorld])
     = vsep [ parens (cu8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
              equals <+> cu8 <+> cu64 <+> ppRenamed word <> semi
+           , st =: ppRenamed realWorld ]
+ppExpression (st:_) (Application (Builtin "writeInt8OffAddr#") [arr,idx,word,realWorld])
+    = vsep [ parens (cs8p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
+             equals <+> cs8 <+> cu64 <+> ppRenamed word <> semi
            , st =: ppRenamed realWorld ]
 ppExpression (st:_) (Application (Builtin "writeDoubleOffAddr#") [arr,idx,double,realWorld])
     = vsep [ parens (cu64p <+> ppRenamed arr) <> brackets (parens u64 <+> ppRenamed idx) <+>
