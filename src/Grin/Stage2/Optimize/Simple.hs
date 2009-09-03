@@ -9,6 +9,8 @@ import Control.Monad.Reader
 import Control.Monad.State.Strict
 import qualified Data.Map as Map
 
+import Traverse
+
 type Opt a = Reader Subst a
 type Subst = Map.Map Renamed Renamed
 
@@ -23,7 +25,8 @@ grinSimple grin
 
 simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
-    = def{ funcDefBody = runSimpleExpression (funcDefBody def) }
+    = def{ funcDefBody = runConstantPropagation $
+                         runSimpleExpression (funcDefBody def) }
 
 runSimpleExpression :: Expression -> Expression
 runSimpleExpression e = runReader (simpleExpression e) Map.empty
@@ -32,6 +35,11 @@ simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit v1 :>>= v2 :-> b)
     = do v1' <- doSubsts v1
          subst (zip v2 (v1' ++ repeat (Builtin "undefined"))) (simpleExpression b)
+simpleExpression (e :>>= binds :-> Unit binds') | binds == binds'
+    = simpleExpression e
+simpleExpression (Constant c :>>= (bind:binds) :-> e)
+    = do e' <- simpleExpression (Unit [] :>>= binds :-> e)
+         return (Constant c :>>= [bind] :-> e')
 simpleExpression (a :>>= v1 :-> Unit v2) | v1 == v2
     = simpleExpression a
 simpleExpression ((a :>>= b :-> c) :>>= d)
@@ -58,6 +66,25 @@ simpleExpression (Fetch n p)
     = liftM (Fetch n) (doSubst p)
 simpleExpression (Constant c)
     = return $ Constant c
+
+
+type CP a = Reader (Map.Map Value Renamed) a
+
+runConstantPropagation :: Expression -> Expression
+runConstantPropagation e = runReader (constantPropagation e) Map.empty
+
+constantPropagation :: Expression -> CP Expression
+constantPropagation (Case scrut [cond :> branch])
+    = local (Map.insert cond scrut) (constantPropagation branch)
+constantPropagation (Case scrut alts)
+    = liftM (Case scrut) $ forM alts $ \(cond :> branch) -> do branch' <- local (Map.insert cond scrut) (constantPropagation branch)
+                                                               return (cond :> branch')
+constantPropagation (Constant v)
+    = do mbVar <- asks $ Map.lookup v
+         return $ case mbVar of Nothing  -> Constant v
+                                Just var -> Unit [var]
+constantPropagation e
+    = tmapM constantPropagation e
 
 
 simpleAlt :: Alt -> Opt Alt

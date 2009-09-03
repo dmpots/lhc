@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, FlexibleInstances, MultiParamTypeClasses, BangPatterns #-}
+-- FIXME: Use HashSet instead of IntSet.
 module Grin.Stage2.DeadCode
     ( trimDeadCode
     , calcLiveNodes

@@ -56,7 +56,7 @@ data Expression
     | StoreHole   Int
     | Unit        [Renamed]
     | Constant    Value
-{-
+
 instance Traverse Expression where
     tmapM fn exp
         = case exp of
@@ -81,7 +81,7 @@ instance Traverse Expression where
               -> return exp
             Constant{}
               -> return exp
--}
+
 type Variable = CompactString
 
 data Value
@@ -89,7 +89,7 @@ data Value
     | Lit Lit
     | Hole
     | Empty
-    deriving (Show,Eq)
+    deriving (Show,Eq,Ord)
 
 {-
 $(derive makeBinary ''Value)

@@ -94,6 +94,8 @@ renameCAF caf
                    , cafValue = value }
 
 bind :: Renamed -> M Renamed
+bind name | isBuiltin name || isExternal name
+    = return name
 bind name
     = do uid <- newUnique
          s <- get
