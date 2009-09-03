@@ -168,7 +168,11 @@ translate cxt simplExp
                       r <- process (v:acc) xs
                       return $ e :>>= v :-> r
              call vs = case fn of
-                         Simple.Primitive p  -> return $ Application (Builtin p) vs
+                         Simple.Primitive p
+                             | isBooleanPrimitive p, Lazy <- cxt
+                               -> do n <- newVariable
+                                     return $ Application (Builtin p) vs :>>= n :-> Store (Variable n)
+                             | otherwise   -> return $ Application (Builtin p) vs
                          Simple.External e _ _ -> return $ Application (Grin.External e) vs
                          Var var isUnboxed -> do name <- lookupVariable var
                                                  mbArity <- findArity var
@@ -298,6 +302,8 @@ alternative fn (Alit lit e)
          return $ Grin.Lit lit :> e'
 
 simpleExpIsPrimitive :: SimpleExp -> Bool
+simpleExpIsPrimitive (App (Simple.Primitive prim) _) | isBooleanPrimitive prim
+    = False
 simpleExpIsPrimitive (App Simple.Primitive{} _)
     = True
 simpleExpIsPrimitive (App Simple.External{} _)
@@ -305,6 +311,10 @@ simpleExpIsPrimitive (App Simple.External{} _)
 simpleExpIsPrimitive Simple.Lit{} = True
 simpleExpIsPrimitive _
     = False
+
+isBooleanPrimitive x = x `elem` [">=#",">#","==#","/=#","<=#","<#","<##",">##",">=##","<=##","==##"
+                                ,"eqWord#", "neWord#"]
+
 
 {-
 let a = 1:b
