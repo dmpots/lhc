@@ -39,7 +39,7 @@ tryMain = do args <- getArgs
              case args of
                ("install":files)      -> mapM_ installCoreFile files >> exitWith ExitSuccess
                ("compile":files)  -> build Compile files >> exitWith ExitSuccess
-               ("benchmark":file:[]) -> build Benchmark [file] >> exitWith ExitSuccess
+               ("benchmark":files) -> build Benchmark files >> exitWith ExitSuccess
                ("execute":file:args)  -> execute file args >> exitWith ExitSuccess
                _ -> return ()
 
