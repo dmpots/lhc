@@ -21,10 +21,13 @@ Library {
       Prelude
       Data.List
       Data.Function
+      Data.Traversable
       Data.Ix
       Data.Char
       Data.Data
       Data.String
+      Data.Foldable
+      Data.Monoid
       Data.Maybe
       Data.Either
       Data.Tuple
@@ -53,6 +56,7 @@ Library {
       System.Environment
 
       GHC.Base
+      GHC.Exts
       GHC.Unicode
       GHC.Read
       GHC.Float
@@ -105,6 +109,9 @@ Library {
       Control.Exception.Base
       Control.Exception
       Control.Concurrent.MVar
+      Control.Applicative
+      Control.Arrow
+      Control.Category
 
    Hs-source-dirs: src
 }
