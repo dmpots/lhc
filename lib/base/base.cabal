@@ -28,6 +28,7 @@ Library {
       Data.String
       Data.Foldable
       Data.Monoid
+      Data.Version
       Data.Maybe
       Data.Either
       Data.Tuple
