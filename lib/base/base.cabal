@@ -55,6 +55,10 @@ Library {
       System.Posix.Types
       System.Posix.Internals
       System.Environment
+      System.Exit
+      System.Console.GetOpt
+
+      Debug.Trace
 
       GHC.Base
       GHC.Exts
