@@ -18,17 +18,19 @@ import qualified Data.Map as Map
 
 data Env
     = Env { scope :: Map.Map Variable Renamed
+          , enums :: Map.Map CompactString [Renamed]
           , arities :: Map.Map Variable Int
           }
-emptyEnv = Env Map.empty Map.empty
+emptyEnv = Env Map.empty Map.empty Map.empty
 
 type M a = ReaderT Env (State Int) a
 
-coreToGrin :: [SimpleType] -> [SimpleDef] -> Grin
-coreToGrin tdefs defs
+coreToGrin :: [SimpleType] -> [SimpleEnum] -> [SimpleDef] -> Grin
+coreToGrin tdefs senums defs
     = let gen = tdefsToNodes tdefs $ \nodes ->
                 let (defs',cafs) = splitCAFs defs in
                 bindCAFs cafs $
+                bindEnums senums $
                 defsToFuncs defs' $ \funcs ->
                 defsToCAFs cafs $ \cafs' ->
                 do entryPoint <- genEntryPoint
@@ -63,6 +65,13 @@ tdefToNode stype
     = do name <- lookupVariable (simpleTypeName stype)
          return (NodeDef name ConstructorNode (replicate (simpleTypeArity stype) PtrType))
 
+
+bindEnums :: [SimpleEnum] -> M a -> M a
+bindEnums [] fn = fn
+bindEnums (x:xs) fn
+    = do lookupVariable (simpleEnumName x)
+         members <- mapM lookupVariable (simpleEnumMembers x)
+         local (\env -> env{enums = Map.insert (simpleEnumName x) members (enums env)}) (bindEnums xs fn)
 
 splitCAFs :: [SimpleDef] -> ([SimpleDef], [(Variable,Variable)])
 splitCAFs []     = ([],[])
@@ -127,6 +136,10 @@ translate cxt simplExp
               v <- newVariable
               alts' <- alternatives cxt alts
               return $ e :>>= v :-> Store (Variable v) :>>= renamed :-> Grin.Case v alts'
+       Simple.EnumPrimitive "tagToEnum#" arg t
+         -> translateTagToEnum cxt arg t
+       Simple.EnumPrimitive "dataToTag#" arg t
+         -> translateDataToTag cxt arg t
        Simple.Primitive p ->
          return $ Application (Builtin p) []
        Var var isUnboxed ->
@@ -256,6 +269,38 @@ dconIsVector con
                     ]
 
 
+
+{-
+tagToEnum @ Bool arg
+======>
+do case arg of
+     0# -> Unit False
+     1# -> Unit True
+-}
+translateTagToEnum cxt arg (Tcon ty)
+    = do members <- lookupEnum ty
+         argName <- lookupVariable arg
+         let fn = case cxt of Strict -> Unit; Lazy -> Store
+         return $ Grin.Case argName [ Grin.Lit (Lint n) :> fn (Node member ConstructorNode 0 []) | (n, member) <- zip [0..] members ]
+
+{-
+dataToTag @ Bool arg
+======>
+do node <- fetch arg
+   case node of
+     False -> Unit 0#
+     True  -> Unit 1#
+-}
+translateDataToTag cxt arg (Tcon ty)
+    = do members <- lookupEnum ty
+         argName <- lookupVariable arg
+         let fn = case cxt of Strict -> Unit; Lazy -> Store
+         node <- newVariable
+         return $ Application (Builtin "fetch") [argName] :>>= node :->
+                  Grin.Case node [ Grin.Node member ConstructorNode 0 [] :> fn (Grin.Lit (Lint n)) | (n, member) <- zip [0..] members ]
+
+
+
 {-
 
 -- const application
@@ -362,7 +407,12 @@ bindVariables vs fn
 lookupVariable :: Variable -> M Renamed
 lookupVariable var
     = asks $ \env -> Map.findWithDefault err var (scope env)
-    where err = error $ "Variable not found: " ++ show var
+    where err = error $ "Grin.FromCore.lookupVariable: Variable not found: " ++ show var
+
+lookupEnum :: CompactString -> M [Renamed]
+lookupEnum tyName
+    = asks $ \env -> Map.findWithDefault err tyName (enums env)
+    where err = error $ "Grin.FromCore.lookupEnum: Enum not found: " ++ show tyName
 
 bindSimpleDef :: SimpleDef -> M a -> M a
 bindSimpleDef sdef fn

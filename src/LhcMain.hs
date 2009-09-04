@@ -78,12 +78,13 @@ build action files@(file:_)
                                                          ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,,#)") 11
                                                          ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,,,#)") 12
                                                          ]
+                                       , moduleEnums   = []
                                        , moduleDefs    = [] }
          let allModules = Map.insert (modulePackage primModule, moduleName primModule) primModule $
                           foldr (\mod -> Map.insert (modulePackage mod, moduleName mod) mod) libs mods
                           -- libs
-             (tdefs, defs) = Simple.removeDeadCode [("main","Main")]  ["main::Main.main"] allModules
-             grin = coreToGrin tdefs defs
+             (tdefs, enums, defs) = Simple.removeDeadCode [("main","Main")]  ["main::Main.main"] allModules
+             grin = coreToGrin tdefs enums defs
              opt = iterate Simple.optimize grin !! 2
              applyLowered = Apply.lower opt
              (iterations, hpt) = HPT.analyze applyLowered

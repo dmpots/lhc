@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 
 
 
-removeDeadCode :: [(String,String)] -> [String] -> Map.Map (String,String) SimpleModule -> ([SimpleType], [SimpleDef])
+removeDeadCode :: [(String,String)] -> [String] -> Map.Map (String,String) SimpleModule -> ([SimpleType], [SimpleEnum], [SimpleDef])
 removeDeadCode initialModules entryPoints modules
     = let entryPointsCompact = map fromString entryPoints
           addModules mods entries = entries `Map.union` Map.unions (map (entityMap `find`) mods)
@@ -26,12 +26,13 @@ removeDeadCode initialModules entryPoints modules
           neededMods = map (modules `find`) modDeps
           tdefs = concatMap moduleTypes neededMods
           defs = concatMap moduleDefs neededMods
-      in ( [ tdef | tdef <- tdefs, simpleTypeName tdef `Set.member` deps ]
+      in ( [ tdef | tdef <- tdefs] -- Unused nodes are removed later.
+         , concatMap moduleEnums neededMods
          , [ def  | def  <- defs, simpleDefName def `Set.member` deps ]
          )
     where find m k = case Map.lookup k m of
                        Just v  -> v
-                       Nothing -> error $ "Couldn't find key: " ++ show k
+                       Nothing -> error $ "Grin.SimpleCore.DeadCode.removeDeadCode: Couldn't find key: " ++ show k
           entityMap :: Map.Map (String,String) (Map.Map CompactString ([(String,String)], Set.Set CompactString)) 
           entityMap = flip Map.map modules $ \smod ->
                       Map.fromList $ [ (simpleDefName def, (simpleDefDeps def, defDependencies def)) | def <- moduleDefs smod ] ++
@@ -45,6 +46,7 @@ defDependencies def
 dependencies :: SimpleExp -> Set.Set CompactString
 dependencies (Var var isUnboxed) = Set.singleton var
 dependencies Primitive{}= Set.empty
+dependencies (EnumPrimitive prim arg ty) = Set.singleton arg
 dependencies (Dcon var) = Set.singleton var
 dependencies Lit{} = Set.empty
 dependencies (App a args) = Set.unions (dependencies a : map dependencies args)

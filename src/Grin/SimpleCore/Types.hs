@@ -14,6 +14,7 @@ data SimpleModule
     = SimpleModule { modulePackage :: String
                    , moduleName    :: String
                    , moduleTypes   :: [SimpleType]
+                   , moduleEnums   :: [SimpleEnum]
                    , moduleDefs    :: [SimpleDef]
                    }
 
@@ -23,6 +24,11 @@ moduleIdent mod = (modulePackage mod, moduleName mod)
 data SimpleType
     = SimpleType { simpleTypeName  :: CompactString
                  , simpleTypeArity :: Int
+                 }
+
+data SimpleEnum
+    = SimpleEnum { simpleEnumName :: CompactString
+                 , simpleEnumMembers :: [CompactString]
                  }
 
 data SimpleDef
@@ -37,6 +43,7 @@ simpleDefArity = length . simpleDefArgs
 data SimpleExp
     = Var CompactString Bool
     | Primitive CompactString
+    | EnumPrimitive CompactString CompactString Ty
     | Dcon CompactString
     | Lit Lit
     | App SimpleExp [SimpleExp]
@@ -49,6 +56,8 @@ data SimpleExp
     | DynExternal String [FFIType]
     | Label String
     | Note String SimpleExp
+
+data Ty = Tcon CompactString
 
 data FFIType = Word | Int | Addr | Unit | Invalid
 
@@ -66,10 +75,12 @@ data Lit
 
 $(derive makeBinary ''Alt)
 $(derive makeBinary ''Lit)
+$(derive makeBinary ''Ty)
 $(derive makeBinary ''FFIType)
 $(derive makeBinary ''SimpleExp)
 $(derive makeBinary ''SimpleDef)
 $(derive makeBinary ''SimpleType)
+$(derive makeBinary ''SimpleEnum)
 $(derive makeBinary ''SimpleModule)
 
 

@@ -11,6 +11,8 @@ module Grin.SimpleCore
   , ModuleIdent
   , moduleIdent
   , SimpleType(..)
+  , SimpleEnum(..)
+  , Ty(..)
   , SimpleDef(..)
   , SimpleExp(..)
   , simpleDefArity
@@ -21,7 +23,7 @@ module Grin.SimpleCore
 
 import Grin.Types (Variable)
 import Grin.SimpleCore.Types
-import Language.Core (Ty,Tdef,Vdef(..))
+import Language.Core (Tdef,Vdef(..))
 -- TODO: The Language.Core library uses parsec and is fairly slow. We could write
 -- TODO: a faster version using Happy.
 import qualified Language.Core as Core
@@ -33,6 +35,7 @@ import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy.Char8 as L
 import Control.Monad.RWS
 import Data.List
+import Data.Maybe
 
 import Traverse
 
@@ -56,6 +59,7 @@ coreToSimpleCore (Core.Module (pkgname,modname) tdefs vdefs)
       in SimpleModule { modulePackage = L.unpack pkgname
                       , moduleName    = L.unpack modname
                       , moduleTypes   = concatMap tdefToSimpleTypes tdefs
+                      , moduleEnums   = mapMaybe tdefToSimpleEnum tdefs
                       , moduleDefs    = simpleDefs }
     where allDefs = concatMap (\x -> case x of Core.Nonrec d -> [d]; Core.Rec ds -> ds) vdefs
           emptyScope = Scope { currentScope  = Map.empty
@@ -71,6 +75,16 @@ cdefToSimpleType (Core.Constr qual _ tys) = SimpleType { simpleTypeName = qualTo
                                                        , simpleTypeArity = length tys }
 cdefToSimpleType (Core.GadtConstr{}) = error "GADTs aren't yet supported!"
 
+tdefToSimpleEnum :: Core.Tdef -> Maybe SimpleEnum
+tdefToSimpleEnum (Core.Data qual [] cdefs)
+    = Just (SimpleEnum { simpleEnumName = qualToCompact qual
+                       , simpleEnumMembers = mapMaybe cdefToSimpleEnum cdefs })
+tdefToSimpleEnum _ = Nothing
+
+cdefToSimpleEnum :: Core.Cdef -> Maybe CompactString
+cdefToSimpleEnum (Core.Constr qual [] []) = Just (qualToCompact qual)
+cdefToSimpleEnum _ = Nothing
+
 sdefDeps :: Core.Exp -> [(String, String)]
 sdefDeps exp
     = let free = Set.toList $ freeVariables exp
@@ -83,11 +97,12 @@ sdefDeps exp
 isPrimitiveQual (pkg,mod,_ident)
     = pkg == L.pack "ghczmprim" && mod == L.pack "GHCziPrim"
 
-
+isEnumPrimitive (_pkg, _mod, ident)
+    = ident == L.pack "tagToEnumzh" || ident == L.pack "dataToTagzh"
 
 
 --type ScopeEnv = Map.Map (Core.Qual Core.Id) Renamed
-data Scope = Scope { currentScope :: Map.Map (Core.Qual Core.Id) Ty
+data Scope = Scope { currentScope :: Map.Map (Core.Qual Core.Id) Core.Ty
                    , currentModule :: (Core.Pkgname, Core.Mname)
                    , currentContext :: Context }
 data Context = Strict | Lazy deriving Eq
@@ -114,6 +129,9 @@ vdefToSimpleDef' name args body
                          , simpleDefDeps = sdefDeps body }]
 
 expToSimpleExp :: Core.Exp -> M SimpleExp
+expToSimpleExp (Core.App (Core.Appt (Core.Var qual@(_pkg,_mod,ident)) t) (Core.Var var))
+    | isPrimitiveQual qual && isEnumPrimitive qual
+    = return $ EnumPrimitive (qualToCompact (L.empty, L.empty, ident)) (qualToCompact var) (tyToSimpleTy t)
 expToSimpleExp (Core.Var qual@(pkg,mod,ident)) | isPrimitiveQual qual
     = return $ Primitive (qualToCompact (L.empty, L.empty, ident))
 expToSimpleExp (Core.Var var)  = do isUnboxed <- varIsStrictPrimitive var
@@ -161,6 +179,10 @@ expToSimpleExp (Core.External target conv ty) = return $ External target conv (t
 expToSimpleExp (Core.DynExternal conv ty)     = return $ DynExternal conv (tyToFFITypes ty)
 expToSimpleExp (Core.Label label)             = return $ Label label
 expToSimpleExp (Core.Note note e)             = {- return (Note note) `ap` -} expToSimpleExp e
+
+tyToSimpleTy :: Core.Ty -> Ty
+tyToSimpleTy (Core.Tcon con) = Tcon (qualToCompact con)
+tyToSimpleTy ty = error $ "Invalid enum type: " ++ show ty
 
 tyToFFITypes :: Core.Ty -> [FFIType]
 tyToFFITypes (Core.Tarrow (Core.Tcon con) rest)
@@ -329,11 +351,11 @@ freeVariablesAlt (Core.Adefault e)
 
 
 
-bindVariable :: (Core.Qual Core.Id, Ty) -> M a -> M a
+bindVariable :: (Core.Qual Core.Id, Core.Ty) -> M a -> M a
 bindVariable (var, ty)
     = local $ \scope -> scope{ currentScope = Map.insert var ty (currentScope scope)}
 
-bindVariables :: [(Core.Qual Core.Id, Ty)] -> M a -> M a
+bindVariables :: [(Core.Qual Core.Id, Core.Ty)] -> M a -> M a
 bindVariables [] = id
 bindVariables (x:xs) = bindVariable x . bindVariables xs
 
@@ -351,7 +373,7 @@ varIsStrictPrimitive var
                       Nothing -> False
                       Just ty -> typeIsStrictPrimitive ty
 
-varType :: Core.Qual Core.Id -> M Ty
+varType :: Core.Qual Core.Id -> M Core.Ty
 varType var
     = asks $ \st -> Map.findWithDefault errMsg var (currentScope st)
     where errMsg = error $ "Couldn't find type for: " ++ show var
@@ -367,7 +389,7 @@ uniqueQual (pkg,mod,ident)
          return (pkg, mod, ident `L.append` L.pack (show u))
 
 
-splitExp :: Core.Exp -> ([(Core.Qual Core.Id,Ty)], Core.Exp)
+splitExp :: Core.Exp -> ([(Core.Qual Core.Id,Core.Ty)], Core.Exp)
 splitExp (Core.Lam b exp) = let (args,body) = splitExp exp
                                 in (b:args, body)
 splitExp (Core.Lamt _ exp) = splitExp exp
