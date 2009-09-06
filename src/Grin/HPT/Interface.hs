@@ -24,7 +24,9 @@ import Data.Monoid
 import Grin.Stage2.Pretty (ppNodeType)
 import Text.PrettyPrint.ANSI.Leijen
 
-import qualified HashTable as HT
+import Control.Parallel.Strategies
+
+import qualified HashMap as HT
 
 type IsShared = Bool
 

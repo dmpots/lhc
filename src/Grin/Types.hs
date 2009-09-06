@@ -15,7 +15,7 @@ import Control.Monad  (ap)
 
 import Traverse
 
-import qualified HashTable as HT
+import qualified HashMap as HT
 
 -- Invariants:
 --   The nodes referred to by the functions are a subset of the nodes in 'grinNodes'.
