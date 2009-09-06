@@ -229,6 +229,8 @@ translate cxt simplExp
                       r <- loop v' xs
                       return $ eval v :>>= v' :-> r
          in process [] args
+       LetRec [(bind,func,args,arity)] e | bind `notElem` args ->
+         translate cxt (Let bind func args arity e)
        LetRec defs e ->
          let binds = [ bind | (bind,_,_,_) <- defs ]
              funcs = [ func | (_,func,_,_) <- defs ]
