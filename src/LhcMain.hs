@@ -10,6 +10,7 @@ import qualified Data.Map as Map
 import Data.Binary
 import Data.Maybe
 import Control.Monad
+import Data.Time; import Text.Printf
 
 import CompactString
 import qualified Language.Core as Core
@@ -20,6 +21,8 @@ import qualified Grin.SimpleCore.DeadCode as Simple
 import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
 import qualified Grin.DeadCode as DeadCode
+import qualified Grin.PreciseDeadCode as DeadCode
+import qualified Grin.Optimize.Inline as Inline
 
 --import Grin.Rename
 import qualified Grin.HPT as HPT
@@ -32,6 +35,8 @@ import qualified Grin.Stage2.Optimize.Simple as Stage2.Simple
 import qualified Grin.Stage2.Backend.C as Backend.C
 import qualified Grin.Stage2.DeadCode  as Stage2
 import qualified Grin.Stage2.Rename    as Stage2
+
+--import Tick
 
 -- TODO: We need proper command line parsing.
 tryMain :: IO ()
@@ -79,6 +84,7 @@ build action files@(file:_)
                                                          ,SimpleType (fromString "ghc-prim:GHC.Prim.(#,,,,,,,,,,,#)") 12
                                                          ]
                                        , moduleEnums   = []
+
                                        , moduleDefs    = [] }
          let allModules = Map.insert (modulePackage primModule, moduleName primModule) primModule $
                           foldr (\mod -> Map.insert (modulePackage mod, moduleName mod) mod) libs mods
@@ -86,12 +92,14 @@ build action files@(file:_)
              (tdefs, enums, defs) = Simple.removeDeadCode [("main","Main")]  ["main::Main.main"] allModules
              grin = coreToGrin tdefs enums defs
              opt = iterate Simple.optimize grin !! 2
-             applyLowered = Apply.lower opt
+             inlined = Inline.inlinePass . DeadCode.trimDeadCode . Inline.inlinePass . DeadCode.trimDeadCode $ opt
+             trimmed1 = DeadCode.trimDeadCode inlined
+             applyLowered = Apply.lower trimmed1
              (iterations, hpt) = HPT.analyze applyLowered
              (evalLowered, hpt') = HPT.lower hpt applyLowered
              opt' = iterate Simple.optimize evalLowered !! 2
-             trimmed = DeadCode.removeDeadCode opt'
-             out = trimmed
+             trimmed2 = DeadCode.removeDeadCode opt'
+             out = trimmed2
          let stage2_raw = Stage2.convert hpt' out
              stage2_opt = iterate Stage2.Simple.optimize stage2_raw !! 2
              stage2_trim = Stage2.trimDeadCode stage2_opt
@@ -103,19 +111,23 @@ build action files@(file:_)
            Benchmark -> do let target = replaceExtension file "lhc"
                            Backend.C.compileFastCode stage2_out (dropExtension target)
            Compile   -> do let target = replaceExtension file "lhc"
-                           outputGrin target "_raw" grin
-                           outputGrin target "_simple" opt
-                           outputGrin target "_apply" applyLowered
-                           outputGrin target "_eval" evalLowered
-                           outputGrin target "_trimmed" trimmed
+                           timeIt "Creating initial GRIN code" $ outputGrin target "_raw" grin
+                           timeIt "First level optimization" $ outputGrin target "_simple" opt
+                           timeIt "Simple inlining" $ outputGrin target "_inlined" inlined
+                           timeIt "First trimming" $ outputGrin target "_trimmed1" trimmed1
+                           timeIt "Lowering apply primitives" $ outputGrin target "_apply" applyLowered
+                           timeIt "Heap points-to analysis" $ do forM_ iterations $ \_ -> do putStr "."; hFlush stdout
+                                                                 outputGrin target "_eval" evalLowered
+                           putStrLn $ "Fixpoint found in " ++ show (length iterations) ++ " iterations."
+                           timeIt "Second trimming" $ outputGrin target "_trimmed2" trimmed2
                            outputGrin target "" out
-                           outputGrin2 target "_raw" stage2_raw
-                           outputGrin2 target "_opt" stage2_opt
-                           outputGrin2 target "_trimmed" stage2_trim
+                           timeIt "Creating second level GRIN code" $ outputGrin2 target "_raw" stage2_raw
+                           timeIt "Second level optimization" $ outputGrin2 target "_opt" stage2_opt
+                           timeIt "Second level trimming" $ outputGrin2 target "_trimmed" stage2_trim
                            outputGrin2 target "" stage2_out
-                           Backend.C.compile stage2_out (dropExtension target)
+                           timeIt "Compiling C code" $ Backend.C.compile stage2_out (dropExtension target)
 
-                           putStrLn $ "Fixpoint found in " ++ show iterations ++ " iterations."
+                           --showTicks
 
                            --lhc <- findExecutable "lhc"
                            --L.writeFile target $ L.unlines [ L.pack $ "#!" ++ fromMaybe "/usr/bin/env lhc" lhc ++ " execute"
@@ -162,3 +174,14 @@ parseCore path
            Left errs -> error (show errs)
            Right mod -> do --putStrLn $ "parsing done: " ++ path
                            return (coreToSimpleCore mod)
+
+
+timeIt :: String -> IO a -> IO a
+timeIt msg action
+    = do printf "%-40s" (msg ++ ": ")
+         hFlush stdout
+         s <- getCurrentTime
+         a <- action
+         e <- getCurrentTime
+         printf "%.2fs\n" (realToFrac (diffUTCTime e s) :: Double)
+         return a
