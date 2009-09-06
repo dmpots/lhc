@@ -25,7 +25,7 @@ simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
     = let simplified = runReader (simpleExpression (funcDefBody def)) Map.empty
           evaled     = runReader (evalOpt simplified) Map.empty
-          applied    = runReader (applyOpt evaled) Map.empty
+          applied    = runReader (evalOpt evaled) Map.empty
           fetched    = runReader (fetchOpt applied) Map.empty
           pruned     = runReader (casePruneOpt fetched) Map.empty
       in def{ funcDefBody = pruned }
@@ -142,12 +142,42 @@ evalOpt :: Expression -> EvalOpt Expression
 evalOpt e@(Store val :>>= bind :-> _)
     = local (Map.insert bind val)
             (tmapM evalOpt e)
+evalOpt e@(Unit val :>>= bind :-> _)
+    = local (Map.insert bind val)
+            (tmapM evalOpt e)
+evalOpt e@(Application (Builtin "update") [ptr,val] :>> _)
+    = local (Map.insert ptr (Variable val))
+            (tmapM evalOpt e)
 evalOpt e@(Application (Builtin "eval") [ptr])
-    = do mbVal <- asks (Map.lookup ptr)
-         case mbVal of
-           Just (Node _tag FunctionNode n _args) | n >= 1
-             -> return (Application (Builtin "fetch") [ptr])
+    = do node <- isNode (Variable ptr)
+         if node
+            then return (Application (Builtin "fetch") [ptr])
+            else return e
+    where isNode (Node _tag FunctionNode n _args) | n >= 1
+              = return True
+          isNode (Variable v)
+              = do mbVal <- asks $ Map.lookup v
+                   case mbVal of
+                     Nothing  -> return False
+                     Just val -> isNode val
+          isNode _ = return False
+evalOpt e@(Application (Builtin "apply") [fn,arg])
+    = do mbNode <- getNode (Variable fn)
+         case mbNode of
+           Just (Node _tag FunctionNode 0 _args) -> error "Grin.Optimize.Simple.applyOpt: Invalid application."
+           Just (Node tag FunctionNode 1 args)
+             -> return (Application tag (args ++ [arg]))
+           Just (Node tag FunctionNode n args)
+             -> return (Unit (Node tag FunctionNode (n-1) (args ++ [arg])))
            _ -> return e
+    where getNode node@Node{}
+              = return (Just node)
+          getNode (Variable v)
+              = do mbVal <- asks (Map.lookup fn)
+                   case mbVal of
+                     Nothing  -> return Nothing
+                     Just val -> getNode val
+          getNode _ = return Nothing
 evalOpt e = tmapM evalOpt e
 
 
