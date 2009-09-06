@@ -25,13 +25,16 @@ grinSimple grin
 
 simpleFuncDef :: FuncDef -> FuncDef
 simpleFuncDef def
-    = def{ funcDefBody = runConstantPropagation $
+    = def{ funcDefBody = runKnownCase $
+                         runConstantPropagation $
                          runSimpleExpression (funcDefBody def) }
 
 runSimpleExpression :: Expression -> Expression
 runSimpleExpression e = runReader (simpleExpression e) Map.empty
 
 simpleExpression :: Expression -> Opt Expression
+simpleExpression (Case scrut [cond :> branch] :>>= binds :-> e)
+    = simpleExpression (Case scrut [cond :> branch :>>= binds :-> e])
 simpleExpression (Unit v1 :>>= v2 :-> b)
     = do v1' <- doSubsts v1
          subst (zip v2 (v1' ++ repeat (Builtin "undefined"))) (simpleExpression b)
@@ -56,8 +59,8 @@ simpleExpression (Store vs)
     = liftM Store $ mapM doSubst vs
 simpleExpression (Unit values)
     = liftM Unit (mapM doSubst values)
---simpleExpression (Case var [_ :> alt])
---    = simpleExpression alt
+simpleExpression (Case var [Empty :> alt])
+    = simpleExpression alt
 simpleExpression (Case val alts)
     = do val' <- doSubst val
          alts' <- mapM simpleAlt alts
@@ -74,8 +77,6 @@ runConstantPropagation :: Expression -> Expression
 runConstantPropagation e = runReader (constantPropagation e) Map.empty
 
 constantPropagation :: Expression -> CP Expression
-constantPropagation (Case scrut [cond :> branch])
-    = local (Map.insert cond scrut) (constantPropagation branch)
 constantPropagation (Case scrut alts)
     = liftM (Case scrut) $ forM alts $ \(cond :> branch) -> do branch' <- local (Map.insert cond scrut) (constantPropagation branch)
                                                                return (cond :> branch')
@@ -85,6 +86,30 @@ constantPropagation (Constant v)
                                 Just var -> Unit [var]
 constantPropagation e
     = tmapM constantPropagation e
+
+
+type KC a = Reader (Map.Map Renamed Value) a
+
+runKnownCase :: Expression -> Expression
+runKnownCase e = runReader (knownCase e) Map.empty
+
+knownCase :: Expression -> KC Expression
+knownCase (Case scrut alts)
+    = do mbVal <- asks $ Map.lookup scrut
+         case mbVal of
+           Nothing -> liftM (Case scrut) $ forM alts $ \(cond :> branch) -> do branch' <- local (Map.insert scrut cond) (knownCase branch)
+                                                                               return (cond :> branch')
+           Just Empty -> tmapM knownCase (Case scrut alts)
+           Just val -> case lookup val [ (cond,branch) | cond :> branch <- alts ] of
+                         Nothing     -> if any isDefault alts
+                                        then tmapM knownCase (Case scrut alts)
+                                        else return $ Application (Builtin "unreachable") []
+                         Just branch -> tmapM knownCase branch
+knownCase e@(Constant v :>>= (bind:_) :-> _)
+    = local (Map.insert bind v)
+            (tmapM knownCase e)
+knownCase e
+    = tmapM knownCase e
 
 
 simpleAlt :: Alt -> Opt Alt
@@ -144,9 +169,14 @@ isTrivialExpression _ = False
             C -> ...
 -}
 trivialCaseCase :: Expression -> M Expression
-trivialCaseCase (Case scrut1 alts1 :>>= binds1 :-> Case scrut2 alts2 :>>= binds2 :-> e) | scrut1 == scrut2
+trivialCaseCase (Case scrut1 alts1 :>>= binds1 :-> Case scrut2 alts2 :>>= binds2 :-> e)
+    | scrut1 == scrut2 && all (not.isDefault) alts1 && all (not.isDefault) alts2
     = do alts <- mapM (joinAlt binds1 binds2 alts2) alts1
          trivialCaseCase (Case scrut1 alts :>>= (binds1++binds2) :-> e)
+trivialCaseCase (Case scrut1 alts1 :>>= binds1 :-> Case scrut2 alts2)
+    | scrut1 == scrut2 && all (not.isDefault) alts1 && all (not.isDefault) alts2
+    = do alts <- mapM (joinAltEnd binds1 alts2) alts1
+         trivialCaseCase (Case scrut1 alts)
 trivialCaseCase (Case scrut alts :>>= binds :-> e) | isTrivialExpression e
     = do alts' <- forM alts $ \(cond :> branch) -> do binds' <- replicateM (length binds) newVariable
                                                       e' <- subst (zip binds binds') (renameExp e)
@@ -217,12 +247,23 @@ joinAlt binds1 binds2 branches (cond :> branch)
     = do binds1' <- replicateM (length binds1) newVariable
          binds2' <- replicateM (length binds2) newVariable
          let newBranch = findBranch branches
-         branch' <- return branch
          exp' <- subst (zip binds1 binds1') (renameExp newBranch)
-         return (cond :> (branch' :>>= binds1' :-> exp' :>>= binds2' :-> Unit (binds1'++binds2')))
+         return (cond :> (branch :>>= binds1' :-> exp' :>>= binds2' :-> Unit (binds1'++binds2')))
     where findBranch [] = Application (Builtin "unreachable") []
           findBranch ((c :> branch):xs) | c == cond = branch
                                         | otherwise = findBranch xs
+
+joinAltEnd binds1 branches (cond :> branch)
+    = do binds1' <- replicateM (length binds1) newVariable
+         let newBranch = findBranch branches
+         exp' <- subst (zip binds1 binds1') (renameExp newBranch)
+         return (cond :> (branch :>>= binds1' :-> exp'))
+    where findBranch [] = Application (Builtin "unreachable") []
+          findBranch ((c :> branch):xs) | c == cond = branch
+                                        | otherwise = findBranch xs
+
+isDefault (Empty :> _) = True
+isDefault x = False
 
 newVariable :: M Renamed
 newVariable
