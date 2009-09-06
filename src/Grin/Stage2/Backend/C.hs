@@ -38,7 +38,7 @@ compile' gccArgs grin target
                    exitWith ret
     where cCode = grinToC grin
           cFile = replaceExtension target "c"
-          cmdLine = unwords (["gcc", "-lm", "-I/usr/include/gc/", "-lgc", cFile, "-o", target] ++ gccArgs)
+          cmdLine = unwords (["gcc", "-w", "-lm", "-I/usr/include/gc/", "-lgc", cFile, "-o", target] ++ gccArgs)
 
 grinToC :: Grin -> Doc
 grinToC grin
