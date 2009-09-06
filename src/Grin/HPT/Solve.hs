@@ -46,6 +46,7 @@ solve :: Equations -> (Int, Interface.HeapAnalysis)
 solve eqs
     = case solve' eqs of
         (iterations, hpt) -> (iterations, mkInterface hpt)
+
 solve' :: Equations -> (Int, HeapAnalysis)
 solve' eqs
     = let iterate ls

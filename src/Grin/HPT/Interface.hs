@@ -41,15 +41,28 @@ data Rhs
 --    | Heap (Set.Set HeapPointer)
     deriving (Eq)
 
+instance NFData Rhs where
+    rnf Empty = ()
+    rnf Base  = ()
+    rnf (Other t v h) = rnf t `seq` rnf v `seq` rnf h
+
+instance NFData Renamed where
+    rnf _ = ()
+instance NFData NodeType where
+    rnf _ = ()
+
 instance Show Rhs where
     showsPrec _ = displayS . renderPretty 1 200 . ppRhs
 
 ppRhs Empty          = text "Empty"
 ppRhs Base           = text "Base"
-ppRhs Other{}        = text "Other"
---ppRhs (Tagged nodes) = list [ (ppNodeType nt missing tag) <+> list (map ppRhs args) | ((tag, nt, missing), args) <- Map.toList nodes ]
---ppRhs (Vector args)  = list (map ppRhs args)
---ppRhs (Heap hps)     = list (map int (Set.toList hps))
+ppRhs (Other nodes args hps)
+    = text "Other" <+> list [ (ppNodeType nt missing tag) <+> list (map ppRhs args) | ((tag, nt, missing), args) <- Map.toList nodes ]
+                   <+> list (map ppRhs args)
+                   <+> list (map int (Set.toList hps))
+--ppRhs (Tagged nodes) = 
+--ppRhs (Vector args)  = 
+--ppRhs (Heap hps)     = 
 
 instance Monoid Rhs where
     mempty = Empty
@@ -59,7 +72,10 @@ joinRhs :: Rhs -> Rhs -> Rhs
 joinRhs Empty rhs                         = rhs
 joinRhs rhs Empty                         = rhs
 joinRhs Base Base                         = Base
-joinRhs (Other t1 v1 h1) (Other t2 v2 h2) = Other (Map.unionWith zipJoin t1 t2) (zipJoin v1 v2) (Set.union h1 h2)
+joinRhs (Other t1 v1 h1) (Other t2 v2 h2)
+--    | Map.size t1 `seq` Map.size t2 `seq` False = undefined
+--    | Set.size h1 `seq` Set.size h2 `seq` False = undefined
+    | otherwise = Other (Map.unionWith zipJoin t1 t2) (zipJoin v1 v2) (Set.union h1 h2)
 joinRhs rhs Base                          = rhs
 joinRhs Base rhs                          = rhs
 {-
@@ -104,10 +120,13 @@ instance HT.Hashable Lhs where
     hash (HeapEntry hp) = hp
 
 data HeapAnalysis
-    = HeapAnalysis { hptBindings   :: HT.HashTable Lhs Rhs
+    = HeapAnalysis { hptBindings   :: HT.HashMap Lhs Rhs
                    , hptSharingMap :: Map.Map Lhs IsShared
                    }
     deriving (Eq)
+
+--instance NFData HeapAnalysis where
+--    rnf hpt = rnf (hptBindings hpt) `seq` rnf (hptSharingMap hpt)
 
 mkHeapAnalysis :: Map.Map Lhs Rhs -> Map.Map Lhs IsShared -> HeapAnalysis
 mkHeapAnalysis binds smap
@@ -159,5 +178,8 @@ hptSetShared lhs hpt
 
 hptAddBinding :: Lhs -> Rhs -> HeapAnalysis -> HeapAnalysis
 hptAddBinding lhs rhs hpt
-    = hpt { hptBindings = HT.insertWith mappend lhs rhs (hptBindings hpt) }
+    = case HT.lookup lhs (hptBindings hpt) of
+        Nothing  -> hpt { hptBindings = HT.insert lhs rhs (hptBindings hpt) }
+        Just old -> let joined = old `mappend` rhs
+                    in rnf joined `seq` hpt { hptBindings = HT.insert lhs joined (hptBindings hpt) }
 

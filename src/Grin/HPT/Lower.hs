@@ -94,18 +94,21 @@ _ `isMemberOf` rhs = True
 
 mkUpdate :: Bool -> Renamed -> Renamed -> Renamed ->[(Node, [Rhs])] -> Rhs -> M Expression
 mkUpdate False ptr scrut val tags _ = return $ Unit Grin.Empty
-mkUpdate shared ptr scrut val tags (Other{rhsTagged = expanded})
-    = do let doUpdate = do alts <- mapM uWorker (Map.toList expanded)
-                           return $ Case val alts
+mkUpdate shared ptr scrut val tags _ -- (Other{rhsTagged = expanded})
+    = do hpt <- gets fst
+         let doUpdate tag = case lookupLhs (VarEntry tag) hpt of
+                              Other{rhsTagged = expanded} -> do alts <- mapM uWorker (Map.toList expanded)
+                                                                return $ Case val alts
+                              _ -> return $ Unit Grin.Empty
              uWorker ((tag, nt, missing), args)
-                 = do args' <- replicateM (length args) newVariable
-                      node <- newVariable
-                      addHPTInfo (VarEntry node) (Other (Map.singleton (tag, nt, missing) args) [] Set.empty)
-                      return (Node tag nt missing args' :> (Unit (Node tag nt missing args') :>>= node :->
-                              Application (Builtin "update") [ptr,node]))
+                  = do args' <- replicateM (length args) newVariable
+                       node <- newVariable
+                       addHPTInfo (VarEntry node) (Other (Map.singleton (tag, nt, missing) args) [] Set.empty)
+                       return (Node tag nt missing args' :> (Unit (Node tag nt missing args') :>>= node :->
+                               Application (Builtin "update") [ptr,node]))
          let worker ((tag, FunctionNode, 0), args)
                  = do args' <- replicateM (length args) newVariable
-                      u <- doUpdate
+                      u <- doUpdate tag
                       return $ Node tag FunctionNode 0 args' :> u
              worker ((tag, nt, missingArgs), args)
                  = do args' <- replicateM (length args) newVariable

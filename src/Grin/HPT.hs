@@ -13,6 +13,6 @@ import Grin.HPT.QuickSolve      ( solve )
 import Grin.HPT.Lower           ( lower )
 import Grin.HPT.Interface
 
-analyze :: Grin -> (Int, HeapAnalysis)
+analyze :: Grin -> ([Int], HeapAnalysis)
 analyze = solve . mkEnvironment
 

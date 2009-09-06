@@ -17,30 +17,34 @@ import qualified Grin.HPT.Interface as Interface
 
 import Grin.Stage2.Pretty (ppRenamed)
 
+--import Tick
 import Debug.Trace
 
+import Control.Parallel.Strategies
 
 type M a = State HeapAnalysis a
 
 type SharingMap = Map.Map Lhs Bool
 
 
-solve :: Equations -> (Int, Interface.HeapAnalysis)
+solve :: Equations -> ([Int], Interface.HeapAnalysis)
 solve eqs
     = case solve' eqs of
         (iterations, hpt) -> (iterations, hpt)
 
-solve' :: Equations -> (Int, HeapAnalysis)
+solve' :: Equations -> ([Int], HeapAnalysis)
 solve' eqs
-    = let iterate i ls
+    = let eqPairs = Map.toList eqs
+          iterate i ls
               = forM_ ls $ \(lhs,rhs) ->
                   do debugMsg $ "Reducing: " ++ ppLhs lhs ++ " " ++ show i
                      reducedRhs <- reduceEqs rhs
                      addReduced lhs reducedRhs
           loop iter prev
-              = case execState (debugMsg ("Iteration: " ++ show iter) >> iterate iter (Map.toList eqs)) prev of
-                  (newData) ->
-                    if prev == newData then (iter, newData) else loop (iter+1) newData
+              = case execState (debugMsg ("Iteration: " ++ show iter) >> iterate iter eqPairs) prev of
+                  (newData) -> -- | rnf newData `seq` True ->
+                    let (iterList, finishedData) = if prev == newData then ([iter], newData) else loop (iter+1) newData
+                    in (iter : iterList, finishedData)
       in loop 1 (mkHeapAnalysis (Map.map (const mempty) eqs) (nonlinearVariables eqs))
 
 -- Scan for shared variables. A variable is shared if it is used more than once.
@@ -74,18 +78,18 @@ ppLhs (HeapEntry hp) = "@" ++ show hp
 
 addReduced :: Lhs -> Interface.Rhs -> M ()
 addReduced lhs rhs
-    = do orig <- lookupEq lhs
-         unless (rhs `Interface.isSubsetOf` orig) $
-           do modify $ \hpt -> hptAddBinding lhs rhs hpt
+    = do orig <- {-addTick "AddReduced" $ -} lookupEq lhs
+         let noNewChanges = rhs `Interface.isSubsetOf` orig
+         unless noNewChanges $
+           do {-addTick "HPT: Change" $ -}
+              modify $ \hpt -> hptAddBinding lhs rhs hpt
               debugMsg $ ppLhs lhs ++ ":"
-              debugMsg $ "Old: " ++ show orig
-              debugMsg $ "Rhs: " ++ show rhs
+              --debugMsg $ "Old: " ++ show orig
+              --debugMsg $ "Rhs: " ++ show rhs
               debugMsg $ "New: " ++ show (mappend orig rhs)
               shared <- isShared lhs
               when shared $
                 mapM_ setShared (listHeapPointers rhs)
-         when (rhs `Interface.isSubsetOf` orig) $
-           do debugMsg $ ppLhs lhs ++ ": No change."
 
 listHeapPointers :: Interface.Rhs -> [HeapPointer]
 listHeapPointers (Interface.Other{rhsHeap= hps}) = Set.toList hps

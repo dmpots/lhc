@@ -20,10 +20,16 @@ import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Writer
 
+import Control.Parallel.Strategies
+
 type HeapPointer = Int
 data Lhs = HeapEntry HeapPointer
          | VarEntry Renamed
     deriving (Eq,Ord,Show)
+
+instance NFData Lhs where
+    rnf (HeapEntry hp) = ()
+    rnf (VarEntry r) = ()
 
 type Node = (Renamed, NodeType, Int) -- Name, node type, missing arguments.
 
