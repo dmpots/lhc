@@ -10,6 +10,7 @@ import Grin.Types               ( Grin )
 import Grin.HPT.Environment     ( mkEnvironment, Lhs(..) )
 import Grin.HPT.Solve           ( )
 import Grin.HPT.QuickSolve      ( solve )
+import Grin.HPT.FastSolve       ( )
 import Grin.HPT.Lower           ( lower )
 import Grin.HPT.Interface
 
