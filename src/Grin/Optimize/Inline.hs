@@ -23,7 +23,7 @@ inlinePass = inlineSimple . inlineCAFs
 -- Lower cheap CAFs to regular functions.
 inlineCAFs :: Grin -> Grin
 inlineCAFs grin
-    = let toInline = map funcDefName $ filter (\def -> funcCategory def == InlineLazy) (grinFunctions grin)
+    = let toInline = map funcDefName $ filter (\def -> funcCategory def `elem` [Cheap]) (grinFunctions grin)
           cafsToInline = Map.fromList [ (cafName caf, tag) | caf@CAF{cafValue=Node tag FunctionNode 0 []} <- grinCAFs grin, tag `elem` toInline ]
       in runTrans (runReaderT (inlineCAFs' grin) cafsToInline) grin
 
@@ -80,7 +80,7 @@ inlineSimpleExp :: Expression -> Simple Expression
 inlineSimpleExp e@(Store (Node tag FunctionNode 0 args))
     = do mbEntry <- findFunc tag
          case mbEntry of
-           Just (InlineLazy, func) -> lazify <$> doInline func args
+           Just (Cheap, func) -> lazify <$> doInline func args
            _ -> return e
 inlineSimpleExp e = tmapM inlineSimpleExp e
 
@@ -134,43 +134,56 @@ expressionSize Store{}
 expressionSize Unit{}
     = 1
 
-data Category = NoInline | InlineLazy | InlineStrict deriving (Show,Eq)
+data Category = NoInline | Lazy | Strict | Cheap deriving (Show,Eq)
 
 instance Monoid Category where
-    mempty = InlineLazy
+    mempty = Cheap
     mappend NoInline _ = NoInline
     mappend _ NoInline = NoInline
-    mappend InlineStrict _ = InlineStrict
-    mappend _ InlineStrict = InlineStrict
-    mappend _ _ = InlineLazy
+    mappend Strict _ = Strict
+    mappend _ Strict = Strict
+    mappend Lazy _ = Lazy
+    mappend _ Lazy = Lazy
+    mappend Cheap Cheap = Cheap
 
+bump :: Category -> Category
+bump Cheap = Cheap
+bump Lazy = Strict
+bump Strict = Strict
+bump NoInline = NoInline
 
 funcCategory :: FuncDef -> Category
-funcCategory FuncDef{funcDefBody = Application (Builtin "eval") _}
-    = InlineLazy
+--funcCategory FuncDef{funcDefBody = Application (Builtin "eval") _}
+--    = InlineLazy
 funcCategory def = expressionCategory (funcDefBody def)
 
 expressionCategory :: Expression -> Category
 expressionCategory (e1 :>>= bind :-> e2)
-    = expressionCategory e1 `mappend` expressionCategory e2
+    = bump (expressionCategory e1) `mappend` expressionCategory e2
 expressionCategory (e1 :>> e2)
-    = expressionCategory e1 `mappend` expressionCategory e2
+    = bump (expressionCategory e1) `mappend` expressionCategory e2
 expressionCategory (Application fn args) | isExternal fn
     = NoInline
+expressionCategory (Application (Builtin "eval") _args)
+    = Lazy
+expressionCategory (Application (Builtin "apply") _args)
+    = Lazy
+expressionCategory (Application fn args) | isBuiltin fn
+    = Cheap
 expressionCategory (Application fn args)
-    = InlineStrict
+    = Lazy
 expressionCategory (Case scrut [_ :> branch])
     = expressionCategory branch
 expressionCategory (Case scrut alts)
     = NoInline
 expressionCategory (Store (Node _tag ConstructorNode _n _args))
-    = InlineLazy
+    = Cheap
 expressionCategory (Store (Node _tag FunctionNode n _args)) | n >= 1
-    = InlineLazy
+    = Cheap
 expressionCategory Store{}
-    = InlineStrict
+    = Lazy
 expressionCategory Unit{}
-    = InlineLazy
+    = Cheap
 
 
 
