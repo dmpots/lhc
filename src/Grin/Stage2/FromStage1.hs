@@ -104,7 +104,7 @@ convertExpression (Stage1.Unit val)
 convertBind :: Renamed -> ([Renamed] -> M a) -> M a
 convertBind val fn
     = do size <- nodeSize val
-         vars <- replicateM size newVariable
+         vars <- replicateM (max 1 size) newVariable
          local (\(hpt,nmap) -> (hpt,Map.insert val vars nmap)) $ fn vars
 
 
