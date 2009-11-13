@@ -18,7 +18,6 @@ import Grin.SimpleCore
 import Grin.FromCore
 import Grin.Pretty
 import qualified Grin.SimpleCore.DeadCode as Simple
-import qualified Grin.Eval.Compile as Compile
 import qualified Grin.Optimize.Simple as Simple
 import qualified Grin.DeadCode as DeadCode
 import qualified Grin.PreciseDeadCode as DeadCode
@@ -45,7 +44,6 @@ tryMain = do args <- getArgs
                ("install":files)      -> mapM_ installCoreFile files >> exitWith ExitSuccess
                ("compile":files)  -> build Compile files >> exitWith ExitSuccess
                ("benchmark":files) -> build Benchmark files >> exitWith ExitSuccess
-               ("execute":file:args)  -> execute file args >> exitWith ExitSuccess
                _ -> return ()
 
 
@@ -144,16 +142,6 @@ outputGrin2 file variant grin
     = do let outputFile = replaceExtension file ("grin2"++variant)
          writeFile outputFile (show $ Stage2.ppGrin grin)
          return ()
-
-execute :: FilePath -> [String] -> IO ()
-execute path args
-    = do inp <- L.readFile path
-         let grin = decode (dropHashes inp)
-         Compile.runGrin grin args
-         return ()
-    where dropHashes inp | L.pack "#" `L.isPrefixOf` inp = L.unlines (drop 1 (L.lines inp))
-                         | otherwise = inp
-
 
 loadAllLibraries :: IO (Map.Map ModuleIdent SimpleModule)
 loadAllLibraries
