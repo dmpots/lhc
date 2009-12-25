@@ -142,10 +142,10 @@ instance (Ix ix, Show ix) => Show (DiffUArray ix Int16) where
 
 instance (Ix ix, Show ix) => Show (DiffUArray ix Int32) where
   showsPrec = showsIArray
-
+{-
 instance (Ix ix, Show ix) => Show (DiffUArray ix Int64) where
   showsPrec = showsIArray
-
+-}
 instance (Ix ix, Show ix) => Show (DiffUArray ix Word8) where
   showsPrec = showsIArray
 
@@ -154,10 +154,10 @@ instance (Ix ix, Show ix) => Show (DiffUArray ix Word16) where
 
 instance (Ix ix, Show ix) => Show (DiffUArray ix Word32) where
   showsPrec = showsIArray
-
+{-
 instance (Ix ix, Show ix) => Show (DiffUArray ix Word64) where
   showsPrec = showsIArray
-
+-}
 ------------------------------------------------------------------------
 -- Boring instances.
 
@@ -251,14 +251,14 @@ instance IArray (IOToDiffArray IOUArray) Int32 where
     unsafeArray   lu ies = unsafePerformIO $ newDiffArray lu ies
     unsafeAt      a i    = unsafePerformIO $ a `readDiffArray` i
     unsafeReplace a ies  = unsafePerformIO $ a `replaceDiffArray2` ies
-
+{-
 instance IArray (IOToDiffArray IOUArray) Int64 where
     bounds        a      = unsafePerformIO $ boundsDiffArray a
     numElements   a      = unsafePerformIO $ numElementsDiffArray a
     unsafeArray   lu ies = unsafePerformIO $ newDiffArray lu ies
     unsafeAt      a i    = unsafePerformIO $ a `readDiffArray` i
     unsafeReplace a ies  = unsafePerformIO $ a `replaceDiffArray2` ies
-
+-}
 instance IArray (IOToDiffArray IOUArray) Word8 where
     bounds        a      = unsafePerformIO $ boundsDiffArray a
     numElements   a      = unsafePerformIO $ numElementsDiffArray a
@@ -279,14 +279,14 @@ instance IArray (IOToDiffArray IOUArray) Word32 where
     unsafeArray   lu ies = unsafePerformIO $ newDiffArray lu ies
     unsafeAt      a i    = unsafePerformIO $ a `readDiffArray` i
     unsafeReplace a ies  = unsafePerformIO $ a `replaceDiffArray2` ies
-
+{-
 instance IArray (IOToDiffArray IOUArray) Word64 where
     bounds        a      = unsafePerformIO $ boundsDiffArray a
     numElements   a      = unsafePerformIO $ numElementsDiffArray a
     unsafeArray   lu ies = unsafePerformIO $ newDiffArray lu ies
     unsafeAt      a i    = unsafePerformIO $ a `readDiffArray` i
     unsafeReplace a ies  = unsafePerformIO $ a `replaceDiffArray2` ies
-
+-}
 
 
 ------------------------------------------------------------------------

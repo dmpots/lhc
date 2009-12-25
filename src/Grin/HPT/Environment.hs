@@ -12,7 +12,8 @@ module Grin.HPT.Environment
     ) where
 
 import CompactString
-import Grin.Types
+import Grin.Types hiding (Update)
+import qualified Grin.Types as Grin
 
 import qualified Data.Map as Map
 import Control.Monad.RWS
@@ -68,6 +69,8 @@ instance Monoid Rhs where
                       LT -> Tag tag1 nt1 missing1 args1 : worker xs (Tag tag2 nt2 missing2 args2:ys)
                       GT -> Tag tag2 nt2 missing2 args2 : worker (Tag tag1 nt1 missing1 args1:xs) ys
                       EQ -> Tag tag1 nt1 (min missing1 missing2) (zipJoin args1 args2):worker xs ys
+              worker (VectorTag v1:xs) (VectorTag v2:ys)
+                  = VectorTag (zipJoin v1 v2) : worker xs ys
 {-              worker (y@Tag{}:ys) (x:xs)
                   = x:worker (y:ys) xs
               worker (y:ys) (x@Tag{}:xs)
@@ -136,7 +139,7 @@ baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"narrow8Int#", "byteArrayContents#","touch#"
                       ,"uncheckedIShiftL#", "negateInt#", "not#"
                       ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
-                      ,"neWord#", "remWord#"
+                      ,"neWord#", "ltWord#", "gtWord#", "remWord#"
                       ,"ord#","chr#","or#","narrow32Word#","uncheckedShiftL#","plusWord#"
                       ,"uncheckedShiftRL#","neChar#","narrow16Int#","timesWord#"
                       ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#", "quotWord#"
@@ -147,7 +150,9 @@ baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
                       ,"acosDouble#", "asinhDouble#", "sinhDouble#", "tanhDouble#", "coshDouble#"
                       ,"<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##"
                       ,"ltFloat#", "eqFloat#", "writeWord8Array#"
-                      ,"coerceDoubleToWord", "coerceWordToDouble", "logDouble#", "int2Double#" ]
+                      ,"coerceDoubleToWord", "coerceWordToDouble", "logDouble#", "int2Double#", "double2Int#"
+                      ,"int2Float#", "divideFloat#", "timesFloat#", "minusFloat#", "plusFloat#"
+                      ,"gtFloat#", "geFloat#", "leFloat#", "sqrtFloat#" ]
 vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
                       , "word2Integer#","integer2Int#", "newByteArray#", "newPinnedByteArray#"
                       ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"
@@ -194,7 +199,10 @@ setupEnv (Application (Builtin "eval") [arg])
 setupEnv (Application (Builtin "apply") [arg1, arg2])
   = do addEquation (VarEntry applications) (singleton $ PartialApply arg1 arg2)
        return $ singleton (Apply arg1 arg2)
-setupEnv (Application (Builtin "update") [ptr,val])
+--setupEnv (Application (Builtin "update") [ptr,val])
+--    = do addEquation (VarEntry updates) (singleton $ Update ptr val)
+--           return mempty
+setupEnv (Grin.Update size ptr val)
     = do addEquation (VarEntry updates) (singleton $ Update ptr val)
          return mempty
 setupEnv (Application (Builtin "updateMutVar") [ptr, val, realWorld])

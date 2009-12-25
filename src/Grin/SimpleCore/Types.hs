@@ -59,7 +59,8 @@ data SimpleExp
 
 data Ty = Tcon CompactString
 
-data FFIType = Word | Int | Addr | Unit | Invalid
+data FFIType = UnsignedType | SignedType | PointerType | UnitType | InvalidType
+    deriving ( Show, Eq, Ord )
 
 data Alt
     = Acon CompactString [CompactString] SimpleExp

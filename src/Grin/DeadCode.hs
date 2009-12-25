@@ -43,6 +43,8 @@ defDepends def
 expDepends :: Expression -> Set.Set Renamed
 expDepends (Store v) = valueDepends v
 expDepends (Unit v)  = valueDepends v
+expDepends (Update size ptr val)
+    = Set.fromList [ptr,val]
 expDepends (Application fn args) | isBuiltin fn
     = Set.fromList args
 expDepends (Application fn args) | isExternal fn

@@ -7,7 +7,7 @@ module Grin.Stage2.Types
 
 import qualified Grin.Types as Stage1
 import Grin.Types (Renamed(..),NodeType(..),NodeDef(..),Type(..),uniqueId, alias
-                  ,isBuiltin,isExternal)
+                  ,isBuiltin,isExternal,FFIType(..))
 
 import CompactString
 import Traverse
@@ -25,11 +25,13 @@ data Grin
            , grinEntryPoint :: Renamed
            , grinUnique    :: Int
            }
+    deriving (Eq,Ord)
 
 data CAF
     = CAF { cafName  :: Renamed
           , cafValue :: Value
           }
+    deriving (Eq,Ord)
 
 data FuncDef
     = FuncDef { funcDefName :: Renamed
@@ -37,9 +39,12 @@ data FuncDef
               , funcDefArgs :: [Renamed]
               , funcDefBody :: Expression
               }
+    deriving (Eq,Ord)
 
 data Lambda = [Renamed] :-> Expression
+    deriving (Eq,Ord)
 data Alt = Value :> Expression
+    deriving (Eq,Ord)
 
 infixr 1 :->
 infixr 1 :>>=
@@ -56,6 +61,7 @@ data Expression
     | StoreHole   Int
     | Unit        [Renamed]
     | Constant    Value
+    deriving (Eq,Ord)
 
 instance Traverse Expression where
     tmapM fn exp

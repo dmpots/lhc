@@ -10,6 +10,7 @@ module HashMap
     , insert
     , insertWith
     , lookup
+    , member
     , delete
     , findWithDefault
     ) where
@@ -49,7 +50,11 @@ fromList lst
     = HashMap $ IntMap.fromListWith Map.union [ (hash k, Map.singleton k v) | (k,v) <- lst ]
 
 toList :: Hashable k => HashMap k v -> [(k,v)]
-toList = Map.toList . toMap
+toList (HashMap imap) = concatMap Map.toList (IntMap.elems imap)
+--toList = Map.toList . toMap
+
+toAscList :: Hashable k => HashMap k v -> [(k,v)]
+toAscList = Map.toAscList . toMap
 
 insert :: Hashable k => k -> v -> HashMap k v -> HashMap k v
 insert k v (HashMap imap)
@@ -63,6 +68,12 @@ lookup :: Hashable k => k -> HashMap k v -> Maybe v
 lookup k (HashMap imap)
     = do m <- IntMap.lookup (hash k) imap
          Map.lookup k m
+
+member :: Hashable k => k -> HashMap k v -> Bool
+member k (HashMap imap)
+    = case IntMap.lookup (hash k) imap of
+        Nothing -> False
+        Just m  -> Map.member k m
 
 delete :: Hashable k => k -> HashMap k v -> HashMap k v
 delete k (HashMap imap)

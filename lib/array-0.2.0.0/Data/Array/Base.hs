@@ -277,16 +277,12 @@ type ListUArray e = forall i . Ix i => (i,i) -> [e] -> UArray i e
    = (\lu es -> runST (listUArrayST lu es >>= unsafeFreezeSTUArray)) :: ListUArray Int16
 "listArray/UArray/Int32"     listArray
    = (\lu es -> runST (listUArrayST lu es >>= unsafeFreezeSTUArray)) :: ListUArray Int32
-"listArray/UArray/Int64"     listArray
-   = (\lu es -> runST (listUArrayST lu es >>= unsafeFreezeSTUArray)) :: ListUArray Int64
 "listArray/UArray/Word8"     listArray
    = (\lu es -> runST (listUArrayST lu es >>= unsafeFreezeSTUArray)) :: ListUArray Word8
 "listArray/UArray/Word16"    listArray
    = (\lu es -> runST (listUArrayST lu es >>= unsafeFreezeSTUArray)) :: ListUArray Word16
 "listArray/UArray/Word32"    listArray
    = (\lu es -> runST (listUArrayST lu es >>= unsafeFreezeSTUArray)) :: ListUArray Word32
-"listArray/UArray/Word64"    listArray
-   = (\lu es -> runST (listUArrayST lu es >>= unsafeFreezeSTUArray)) :: ListUArray Word64
     #-}
 #endif
 
@@ -800,7 +796,7 @@ instance IArray UArray Int32 where
     unsafeAccum f arr ies = runST (unsafeAccumUArray f arr ies)
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
-
+{-
 instance IArray UArray Int64 where
     {-# INLINE bounds #-}
     bounds (UArray l u _ _) = (l,u)
@@ -821,7 +817,7 @@ instance IArray UArray Int64 where
     unsafeAccum f arr ies = runST (unsafeAccumUArray f arr ies)
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
-
+-}
 instance IArray UArray Word8 where
     {-# INLINE bounds #-}
     bounds (UArray l u _ _) = (l,u)
@@ -884,7 +880,7 @@ instance IArray UArray Word32 where
     unsafeAccum f arr ies = runST (unsafeAccumUArray f arr ies)
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
-
+{-
 instance IArray UArray Word64 where
     {-# INLINE bounds #-}
     bounds (UArray l u _ _) = (l,u)
@@ -905,7 +901,7 @@ instance IArray UArray Word64 where
     unsafeAccum f arr ies = runST (unsafeAccumUArray f arr ies)
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
-
+-}
 instance (Ix ix, Eq e, IArray UArray e) => Eq (UArray ix e) where
     (==) = eqUArray
 
@@ -1373,7 +1369,7 @@ instance MArray (STUArray s) Int32 (ST s) where
     unsafeWrite (STUArray _ _ _ marr#) (I# i#) (I32# e#) = ST $ \s1# ->
         case writeInt32Array# marr# i# e# s1# of { s2# ->
         (# s2#, () #) }
-
+{-
 instance MArray (STUArray s) Int64 (ST s) where
     {-# INLINE getBounds #-}
     getBounds (STUArray l u _ _) = return (l,u)
@@ -1391,7 +1387,7 @@ instance MArray (STUArray s) Int64 (ST s) where
     unsafeWrite (STUArray _ _ _ marr#) (I# i#) (I64# e#) = ST $ \s1# ->
         case writeInt64Array# marr# i# e# s1# of { s2# ->
         (# s2#, () #) }
-
+-}
 instance MArray (STUArray s) Word8 (ST s) where
     {-# INLINE getBounds #-}
     getBounds (STUArray l u _ _) = return (l,u)
@@ -1445,7 +1441,7 @@ instance MArray (STUArray s) Word32 (ST s) where
     unsafeWrite (STUArray _ _ _ marr#) (I# i#) (W32# e#) = ST $ \s1# ->
         case writeWord32Array# marr# i# e# s1# of { s2# ->
         (# s2#, () #) }
-
+{-
 instance MArray (STUArray s) Word64 (ST s) where
     {-# INLINE getBounds #-}
     getBounds (STUArray l u _ _) = return (l,u)
@@ -1463,7 +1459,7 @@ instance MArray (STUArray s) Word64 (ST s) where
     unsafeWrite (STUArray _ _ _ marr#) (I# i#) (W64# e#) = ST $ \s1# ->
         case writeWord64Array# marr# i# e# s1# of { s2# ->
         (# s2#, () #) }
-
+-}
 -----------------------------------------------------------------------------
 -- Translation between elements and bytes
 {-
@@ -1619,7 +1615,7 @@ instance MArray (STUArray s) Int32 (ST s) where
     newArray_  = unsafeNewArray_
     unsafeRead = unsafeReadMBArray
     unsafeWrite = unsafeWriteMBArray
-
+{-
 instance MArray (STUArray s) Int64 (ST s) where
     getBounds = getBoundsMBArray
     getNumElements = getNumElementsMBArray
@@ -1627,7 +1623,7 @@ instance MArray (STUArray s) Int64 (ST s) where
     newArray_  = unsafeNewArray_
     unsafeRead = unsafeReadMBArray
     unsafeWrite = unsafeWriteMBArray
-
+-}
 instance MArray (STUArray s) Word8 (ST s) where
     getBounds = getBoundsMBArray
     getNumElements = getNumElementsMBArray
@@ -1651,7 +1647,7 @@ instance MArray (STUArray s) Word32 (ST s) where
     newArray_  = unsafeNewArray_
     unsafeRead = unsafeReadMBArray
     unsafeWrite = unsafeWriteMBArray
-
+{-
 instance MArray (STUArray s) Word64 (ST s) where
     getBounds = getBoundsMBArray
     getNumElements = getNumElementsMBArray
@@ -1659,7 +1655,7 @@ instance MArray (STUArray s) Word64 (ST s) where
     newArray_  = unsafeNewArray_
     unsafeRead = unsafeReadMBArray
     unsafeWrite = unsafeWriteMBArray
-
+-}
 type BitSet = Word8
 
 bitSetSize = bitSize (0::BitSet)

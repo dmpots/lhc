@@ -48,7 +48,8 @@ lowerExpression (e :>> f)
 lowerExpression (Application (Builtin fn) [a,b]) | Just renamed <- lookup fn renamedOpts
     = lowerExpression (Application (Builtin renamed) [a,b])
 lowerExpression (Application (Builtin fn) [a,b]) | fn `elem` [">=#",">#","==#","/=#","<=#","<#","<##",">##",">=##","<=##","==##"
-                                                             ,"eqWord#", "neWord#", "leWord#"]
+                                                             ,"eqWord#", "neWord#", "leWord#", "geWord#","ltWord#","gtWord#","gtFloat#", "ltFloat#", "geFloat#"
+                                                             ,"leFloat#", "eqFloat#"]
     = do tnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.True"
          fnode <- lookupNode $ fromString "ghc-prim:GHC.Bool.False"
          v <- newVariable
@@ -103,10 +104,10 @@ lowerExpression (Application (Builtin "unblockAsyncExceptions#") [fn, realworld]
     = do v <- newVariable
          return $ Application (Builtin "eval") [fn] :>>= v :-> Application (Builtin "apply") [v, realworld]
 
-lowerExpression (Application (External "lhc_prim_castDoubleToWord") [double, realWorld])
+lowerExpression (Application (External "lhc_prim_castDoubleToWord" tys) [double, realWorld])
     = do v <- newVariable
          return $ Application (Builtin "coerceDoubleToWord") [double] :>>= v :-> Unit (Vector [realWorld, v])
-lowerExpression (Application (External "lhc_prim_castWordToDouble") [word, realWorld])
+lowerExpression (Application (External "lhc_prim_castWordToDouble" tys) [word, realWorld])
     = do v <- newVariable
          return $ Application (Builtin "coerceWordToDouble") [word] :>>= v :-> Unit (Vector [realWorld, v])
 
@@ -119,6 +120,8 @@ lowerExpression (Store v)
     = return $ Store v
 lowerExpression (Unit v)
     = return $ Unit v
+lowerExpression (Update size ptr val)
+    = return $ Update size ptr val
 
 lowerLambda :: Lambda -> Lower Lambda
 lowerLambda (v :-> e)

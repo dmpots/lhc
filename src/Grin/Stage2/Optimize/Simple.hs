@@ -61,6 +61,8 @@ simpleExpression (Unit values)
     = liftM Unit (mapM doSubst values)
 simpleExpression (Case var [Empty :> alt])
     = simpleExpression alt
+simpleExpression (Case var [])
+    = return $ unreachable
 simpleExpression (Case val alts)
     = do val' <- doSubst val
          alts' <- mapM simpleAlt alts
@@ -70,6 +72,7 @@ simpleExpression (Fetch n p)
 simpleExpression (Constant c)
     = return $ Constant c
 
+unreachable = Application (Builtin "unreachable") []
 
 type CP a = Reader (Map.Map Value Renamed) a
 
@@ -103,7 +106,7 @@ knownCase (Case scrut alts)
            Just val -> case lookup val [ (cond,branch) | cond :> branch <- alts ] of
                          Nothing     -> if any isDefault alts
                                         then tmapM knownCase (Case scrut alts)
-                                        else return $ Application (Builtin "unreachable") []
+                                        else return unreachable
                          Just branch -> tmapM knownCase branch
 knownCase e@(Constant v :>>= (bind:_) :-> _)
     = local (Map.insert bind v)
@@ -249,7 +252,7 @@ joinAlt binds1 binds2 branches (cond :> branch)
          let newBranch = findBranch branches
          exp' <- subst (zip binds1 binds1') (renameExp newBranch)
          return (cond :> (branch :>>= binds1' :-> exp' :>>= binds2' :-> Unit (binds1'++binds2')))
-    where findBranch [] = Application (Builtin "unreachable") []
+    where findBranch [] = unreachable
           findBranch ((c :> branch):xs) | c == cond = branch
                                         | otherwise = findBranch xs
 
@@ -258,7 +261,7 @@ joinAltEnd binds1 branches (cond :> branch)
          let newBranch = findBranch branches
          exp' <- subst (zip binds1 binds1') (renameExp newBranch)
          return (cond :> (branch :>>= binds1' :-> exp'))
-    where findBranch [] = Application (Builtin "unreachable") []
+    where findBranch [] = unreachable
           findBranch ((c :> branch):xs) | c == cond = branch
                                         | otherwise = findBranch xs
 

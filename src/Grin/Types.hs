@@ -7,7 +7,7 @@ module Grin.Types
 
 import CompactString
 
-import Grin.SimpleCore.Types (Lit(..))
+import Grin.SimpleCore.Types (Lit(..), FFIType(..))
 
 import Data.Binary
 import Data.DeriveTH
@@ -26,23 +26,27 @@ data Grin
            , grinEntryPoint ::Renamed
            , grinUnique     :: Int
            }
+    deriving (Eq)
 
 data CAF
     = CAF { cafName  :: Renamed
           , cafValue :: Value
           }
+    deriving (Eq)
 
 data FuncDef
     = FuncDef { funcDefName :: Renamed
               , funcDefArgs :: [Renamed]
               , funcDefBody :: Expression
               }
+    deriving (Eq)
 
 data NodeDef
     = NodeDef { nodeName :: Renamed
               , nodeType :: NodeType
               , nodeArgs :: [Type]
               }
+    deriving (Eq,Ord)
 
 {-
   ConstructorNodes represent data, like: Nil, Cons, Char, etc.
@@ -57,10 +61,10 @@ data Type
     = PtrType
     | WordType
     | NodeType
-    deriving (Eq)
+    deriving (Eq,Ord)
 
-data Lambda = Renamed :-> Expression deriving Show
-data Alt = Value :> Expression deriving Show
+data Lambda = Renamed :-> Expression deriving (Show, Eq)
+data Alt = Value :> Expression deriving (Show, Eq)
 
 infixr 1 :->
 infixr 1 :>>=
@@ -74,8 +78,9 @@ data Expression
     | Case        { expValue    :: Renamed
                   , expAlts     :: [Alt] }
     | Store       Value
+    | Update      Int Renamed Renamed -- size, ptr, value
     | Unit        Value
-    deriving Show
+    deriving (Show, Eq)
 
 instance Traverse Expression where
     tmapM fn exp
@@ -97,6 +102,8 @@ instance Traverse Expression where
                     return $ Case scrut alts'
             Store{}
               -> return exp
+            Update{}
+              -> return exp
             Unit{}
               -> return exp
 
@@ -107,7 +114,7 @@ type Variable = CompactString
 data Renamed = Aliased Int CompactString
              | Anonymous Int
              | Builtin CompactString
-             | External String
+             | External String [FFIType]
     deriving (Show,Eq,Ord)
 
 instance HT.Hashable Renamed where
@@ -141,7 +148,7 @@ uniqueId :: Renamed -> Int
 uniqueId (Aliased uid _name) = uid
 uniqueId (Anonymous uid)     = uid
 uniqueId (Builtin prim)      = error $ "Grin.Types.uniqueId: Primitive: " ++ show prim
-uniqueId (External fn)       = error $ "Grin.Types.uniqueId: External: " ++ show fn
+uniqueId (External fn tys)   = error $ "Grin.Types.uniqueId: External: " ++ show fn
 
 data Value
     = Node Renamed NodeType Int [Renamed]

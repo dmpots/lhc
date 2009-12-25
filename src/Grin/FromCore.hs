@@ -186,7 +186,7 @@ translate cxt simplExp
                                -> do n <- newVariable
                                      return $ Application (Builtin p) vs :>>= n :-> Store (Variable n)
                              | otherwise   -> return $ Application (Builtin p) vs
-                         Simple.External e _ _ -> return $ Application (Grin.External e) vs
+                         Simple.External e _ tys -> return $ Application (Grin.External e tys) vs
                          Var var isUnboxed -> do name <- lookupVariable var
                                                  mbArity <- findArity var
                                                  case mbArity of
@@ -249,7 +249,7 @@ translate cxt simplExp
        Note _ e ->
           translate cxt e
 --       Label str -> error $ "label: " ++ str
-       Simple.External fn conv _ -> return $ Unit $ Variable $ Grin.External fn
+       Simple.External fn conv tys -> return $ Unit $ Variable $ Grin.External fn tys
 --       DynExternal fn   -> error $ "dynexternal: " ++ fn
        _ ->
           return $ Unit Empty
@@ -321,7 +321,7 @@ fn f = eval f >>= \v -> apply v fibs
 
 update bind fn args arity var
     = Unit (Node fn FunctionNode (arity-length args) args) :>>= var :->
-      Application (Builtin $ fromString "update") [bind, var]
+      Update (length args + 1) bind var
 eval v = Application (Builtin $ fromString "eval") [v]
 apply a b = Application (Builtin $ fromString "apply") [a,b]
 applyCell a b = Store (Node (Builtin $ fromString "evalApply") FunctionNode 0 [a,b])
@@ -364,7 +364,8 @@ simpleExpIsPrimitive _
     = False
 
 isBooleanPrimitive x = x `elem` [">=#",">#","==#","/=#","<=#","<#","<##",">##",">=##","<=##","==##"
-                                ,"eqWord#", "neWord#", "leWord#"]
+                                ,"eqWord#", "neWord#", "leWord#", "gtFloat#", "ltFloat#", "geFloat#"
+                                ,"leFloat#", "eqFloat#"]
 
 
 {-

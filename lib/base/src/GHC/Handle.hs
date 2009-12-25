@@ -812,6 +812,7 @@ stdin = unsafePerformIO $ do
    (buf, bmode) <- getBuffer fd_stdin ReadBuffer
    mkStdHandle fd_stdin "<stdin>" ReadHandle buf bmode
 
+{-# NOINLINE stdout #-}
 -- | A handle managing output to the Haskell program's standard output channel.
 stdout :: Handle
 stdout = unsafePerformIO $ do

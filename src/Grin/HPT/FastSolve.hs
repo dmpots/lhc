@@ -28,10 +28,7 @@ import qualified HashSet as HS
 
 data HPTState
     = HPTState { hptAnalysis :: HeapAnalysis
-               , hptDependencies :: HashMap Lhs (HashSet Lhs)
                , hptLiveSet :: HashMap Lhs Env.Rhs
-               , hptClean :: HashSet Lhs
-               , hptAllDirty :: !Int
                , hptChanged :: !Bool
                }
 type M = State HPTState
@@ -41,20 +38,15 @@ type Minner a = ReaderT Lhs M a
 type SharingMap = Map.Map Lhs Bool
 
 
-solve :: Equations -> ([Int], Interface.HeapAnalysis)
+solve :: Equations -> ([HeapAnalysis], HeapAnalysis)
 solve eqs
-    = case solve' eqs of
-        (iterations, hpt) -> (iterations, hpt)
-
-solve' :: Equations -> ([Int], HeapAnalysis)
-solve' eqs
     = let iterate i
-              = do live <- return (Map.toList eqs) -- gets (HM.toList . hptLiveSet)
+              = do live <- return (reverse $ Map.toList eqs) -- gets (HM.toList . hptLiveSet)
                    forM_ live $ \(lhs,rhs) ->
                      do debugMsg $ "Reducing: " ++ ppLhs lhs ++ " " ++ show rhs
                         reducedRhs <- runReaderT (reduceEqs rhs) lhs
                         addReduced lhs reducedRhs
-                        --d <- isDead lhs
+                        --d <- isDead rhs
                         --when d $ modify $ \st -> st{hptLiveSet = HM.delete lhs (hptLiveSet st)}
                         return ()
           bootSequence
@@ -66,17 +58,23 @@ solve' eqs
               = case execState (iterate iter) prev of
                   (newData) ->
                     if not (hptChanged newData) -- hptAnalysis prev == hptAnalysis newData
-                    then ([iter], hptAnalysis newData) else
+                    then ([hptAnalysis newData], hptAnalysis newData) else
                     let (iterList, finishedData) = loop (iter+1) newData{hptChanged = False}
-                    in  (iter : iterList, finishedData)
+                    in  (hptAnalysis newData : iterList, finishedData)
           initState = HPTState { hptAnalysis = mkHeapAnalysis (Map.map (const mempty) eqs) (nonlinearVariables eqs)
-                               , hptDependencies = HM.empty
                                , hptLiveSet = HM.fromList (Map.toList eqs)
-                               , hptClean = HS.empty
-                               , hptAllDirty = 0
                                , hptChanged = False }
           firstState = execState bootSequence initState
       in loop 1 firstState{ hptChanged = False }
+
+isDead :: Env.Rhs -> M Bool
+isDead (Rhs rhs) = do ds <- mapM worker rhs
+                      return (and ds)
+    where worker Env.Base = return True
+          worker (Ident i) = do live <- gets hptLiveSet
+                                return (not $ HM.member (VarEntry i) live)
+          --worker (Env.Heap{}) = return True
+          worker _    = return False
 
 -- Scan for shared variables. A variable is shared if it is used more than once.
 -- Detecting shared heap points is done later when we solve the equations.
@@ -118,22 +116,14 @@ addReduced lhs rhs
               debugMsg $ "Old: " ++ show orig
               debugMsg $ "Rhs: " ++ show rhs
               debugMsg $ "New: " ++ show (mappend orig rhs)
-              setDirty lhs
+              --setDirty lhs
               shared <- isShared lhs
               when shared $
                 mapM_ setShared (listHeapPointers rhs)
-              {-change <- canChange lhs
-              unless change $ do deps <- getDependencies lhs
-                                 trace (ppLhs lhs) (return ())
-                                 trace (show rhs) (return ())
-                                 trace (show deps) (return ())
-                                 error "Error in assumptions."-}
-         when noNewChanges $
-           do setClean lhs
-              debugMsg $ ppLhs lhs ++ ": No change."
+
 
 listHeapPointers :: Interface.Rhs -> [HeapPointer]
-listHeapPointers (Interface.Other{rhsHeap= hps}) = Set.toList hps
+listHeapPointers (Interface.Heap hps) = Set.toList hps
 listHeapPointers _ = []
 
 
@@ -143,7 +133,7 @@ reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
 
 reduceEq :: RhsValue -> Minner Interface.Rhs
 reduceEq Env.Base  = return $ Interface.Base
-reduceEq (Env.Heap hp) = return $ Interface.Other Map.empty [] (Set.singleton hp)
+reduceEq (Env.Heap hp) = return $ Interface.Heap (Set.singleton hp)
 reduceEq (Ident i) = lookupDirtyEq (VarEntry i)
 reduceEq (Extract eq node n) = reduceExtract eq node n
 reduceEq (ExtractVector eq n)
@@ -157,15 +147,15 @@ reduceEq (ExtractVector eq n)
           nth (x:xs) n = nth xs (n-1)
 reduceEq (Tag t nt missing args)
     = do args' <- mapM reduceEqs args
-         return $ Other (Map.singleton (t, nt, missing) args') [] Set.empty
+         return $ Other (Map.singleton (t, nt, missing) args') []
 reduceEq (VectorTag args)
     = do args' <- mapM reduceEqs args
-         return $ Interface.Other Map.empty args' Set.empty
+         return $ Interface.Other Map.empty args'
 reduceEq (Eval i) = reduceEval i
 reduceEq (Fetch i)
     = do rhs <- lookupEq (VarEntry i)
          case rhs of
-           Other{rhsHeap=hp} -> cautionDirty (VarEntry i) $ liftM mconcat (mapM (lookupEq . HeapEntry) (Set.toList hp))
+           Interface.Heap hp -> cautionDirty (VarEntry i) $ liftM mconcat (mapM (lookupEq . HeapEntry) (Set.toList hp))
            Empty -> return Empty
 reduceEq (Apply a b) = reduceApply a b
 reduceEq (PartialApply a b)
@@ -176,13 +166,13 @@ reduceEq (PartialApply a b)
              do let f ((tag, nt, n), args)
                       | n == 0    = return mempty
                       | otherwise = do bRhs <- lookupDirtyEq (VarEntry b)
-                                       return $ Other (Map.singleton (tag, nt, (n-1)) (args ++ [bRhs])) [] Set.empty
+                                       return $ Other (Map.singleton (tag, nt, (n-1)) (args ++ [bRhs])) []
                 cautionDirty (VarEntry a) $ liftM mconcat $ mapM f (Map.toList nodes)
 reduceEq (Update hp val)
     = do rhs <- lookupEq (VarEntry hp)
          case rhs of
            Interface.Empty -> return mempty
-           Interface.Other{rhsHeap = hps} ->
+           Interface.Heap hps ->
              do valRhs  <- cautionDirty (VarEntry hp) $ lookupDirtyEq (VarEntry val)
                 forM_ (Set.toList hps) $ \hp -> addReduced (HeapEntry hp) valRhs
                 return mempty
@@ -203,19 +193,19 @@ reduceEval i
          case rhs of
            Interface.Base -> return Interface.Base
            Interface.Empty -> return Interface.Empty
-           Interface.Other {rhsHeap = hps} ->
+           Interface.Heap hps ->
              do let anyShared = heapIsShared i hpt
                 let fn hp = do let worker ((t, FunctionNode, 0), args) = do rhs <- lookupDirtyEq (VarEntry t)
                                                                             when (anyShared && rhs /= mempty) $
                                                                               addReduced (HeapEntry hp) rhs
                                                                             return rhs
-                                   worker ((t, nt, missing), args)     = return $ Other (Map.singleton (t, nt, missing) args) [] Set.empty
+                                   worker ((t, nt, missing), args)     = return $ Other (Map.singleton (t, nt, missing) args) []
                                hpRhs <- lookupEq (HeapEntry hp)
                                case hpRhs of
                                  Empty        -> return mempty
                                  Other{rhsTagged = nodes} -> liftM mconcat $ mapM worker (Map.toList nodes)
                 cautionDirty (VarEntry i) $ liftM mconcat $ mapM fn (Set.toList hps)
-           rhs -> error $ "Eval: " ++ show rhs
+           rhs -> error $ "Eval: " ++ show (rhs, i)
 
 reduceApply a b
     = do rhs <- lookupEq (VarEntry a)
@@ -227,18 +217,20 @@ reduceApply a b
                    f ((conc, nt, n), args)
                        | n == 0    = return mempty
                        | otherwise = do bRhs <- lookupDirtyEq (VarEntry b)
-                                        return $ Other (Map.singleton (conc, nt, (n-1)) (args ++ [bRhs])) [] Set.empty
+                                        return $ Other (Map.singleton (conc, nt, (n-1)) (args ++ [bRhs])) []
                cautionDirty (VarEntry a) $ liftM mconcat $ mapM f (Map.toList nodes)
 
 
 lookupDirtyEq :: Lhs -> Minner Interface.Rhs
 lookupDirtyEq lhs = lookupEq lhs
+{-
 lookupDirtyEq lhs
     = do isClean <- gets (HS.member lhs . hptClean)
          allDirty <- gets ((/=) 0 . hptAllDirty)
          if isClean && not allDirty
             then return Empty
             else lookupEq lhs
+-}
 
 lookupEq :: Lhs -> Minner Interface.Rhs
 lookupEq lhs
@@ -247,6 +239,7 @@ lookupEq lhs
 
 cautionDirty :: Lhs -> Minner a -> Minner a
 cautionDirty _ action = action
+{-
 cautionDirty lhs action
     = do isClean <- gets (HS.member lhs . hptClean)
          if isClean then action else
@@ -254,6 +247,7 @@ cautionDirty lhs action
               r <- action
               modify $ \st -> st{hptAllDirty = pred (hptAllDirty st) }
               return r
+-}
 
 lookupEqAtomic :: MonadState HPTState m => Lhs -> m Interface.Rhs
 lookupEqAtomic lhs
@@ -266,32 +260,4 @@ isShared lhs
 setShared :: MonadState HPTState m => HeapPointer ->m ()
 setShared hp = modify $ \st ->st{hptAnalysis = hptSetShared (HeapEntry hp) (hptAnalysis st)}
 
-addDependency :: Lhs -> Minner ()
-addDependency lhs
-    = do orig <- ask
-         modify $ \st -> st{hptDependencies = HM.insertWith (HS.union) orig (HS.singleton lhs) (hptDependencies st)}
 
-getDependencies :: MonadState HPTState m => Lhs -> m (HashSet Lhs)
-getDependencies lhs
-    = gets $ \st -> HM.findWithDefault HS.empty lhs (hptDependencies st)
-
-setClean :: MonadState HPTState m => Lhs -> m ()
-setClean lhs
-    = modify $ \st -> st{hptClean = HS.insert lhs (hptClean st)}
-
-setDirty :: MonadState HPTState m => Lhs -> m ()
-setDirty lhs
-    = modify $ \st -> st{hptClean = HS.delete lhs (hptClean st)}
-
-canChange :: MonadState HPTState m => Lhs -> m Bool
-canChange (HeapEntry{}) = return True
-canChange lhs
-    = do deps <- getDependencies lhs
-         static <- gets hptClean
-         return (not (deps `HS.isSubsetOf` static))
-
-isDead :: MonadState HPTState m => Lhs -> m Bool
-isDead lhs
-    = do deps <- getDependencies lhs
-         live <- gets hptLiveSet
-         return (HS.approxSuperset deps live)

@@ -16,11 +16,17 @@ convert :: HeapAnalysis -> Stage1.Grin -> Stage2.Grin
 convert hpt grin
     = let initReader = (hpt,Map.empty)
           initState  = Stage1.grinUnique grin
-          convertFuncs = mapM convertFuncDef (Stage1.grinFunctions grin)
+          convertFuncs = do nodes <- funcDefsToNodes (Stage1.grinFunctions grin)
+                            withNodeMap nodes $ do funcs <- mapM convertFuncDef (Stage1.grinFunctions grin)
+                                                   cafs <- mapM convertCAF (Stage1.grinCAFs grin)
+                                                   return (funcs, cafs, nodes)
       in case runRWS convertFuncs initReader initState of
-           (funcs, newUnique, stringCAFs)
-             -> Grin { grinNodes     = Stage1.grinNodes grin
-                     , grinCAFs      = map convertCAF (Stage1.grinCAFs grin) ++
+           ((funcs, cafs, nodes), newUnique, stringCAFs)
+             -> Grin { grinNodes     = Stage1.grinNodes grin ++
+                                       [ NodeDef name FunctionNode []
+                                       | names <- Map.elems nodes
+                                       , name <- names ]
+                     , grinCAFs      = cafs ++
                                        [ CAF { cafName = name, cafValue = Lit (Lstring string) }
                                          | (name, string) <- stringCAFs ]
                      , grinFunctions = funcs
@@ -28,17 +34,34 @@ convert hpt grin
                      , grinUnique    = newUnique
                      }
 
-convertCAF :: Stage1.CAF -> Stage2.CAF
+convertCAF :: Stage1.CAF -> M Stage2.CAF
 convertCAF caf
-    = CAF { cafName  = Stage1.cafName caf
-          , cafValue = case Stage1.cafValue caf of
-                         Stage1.Node tag nt missing _args -> Node tag nt missing
-                         other -> error $ "Grin.Stage2.FromStage1.convertCaf: Weird caf: " ++ show other
-          }
+    = do value <- case Stage1.cafValue caf of
+                    Stage1.Node tag nt missing _args -> do tag' <- lookupTag tag missing
+                                                           return $ Node tag' nt missing
+                    other -> error $ "Grin.Stage2.FromStage1.convertCaf: Weird caf: " ++ show other
+         return $ CAF { cafName  = Stage1.cafName caf
+                      , cafValue = value }
 
 
 type NodeMap = Map.Map Renamed [Renamed]
 type M a = RWS (HeapAnalysis,NodeMap) [(Renamed,String)] Int a
+
+funcDefToNode :: Stage1.FuncDef -> M (Renamed, [Renamed])
+funcDefToNode def
+    = do vars <- replicateM (arity+1) (newVariableFrom name)
+         return (name, vars)
+    where arity = length (Stage1.funcDefArgs def)
+          name  = Stage1.funcDefName def
+
+funcDefsToNodes :: [Stage1.FuncDef] -> M NodeMap
+funcDefsToNodes defs
+    = do nodes <- mapM funcDefToNode defs
+         return $ Map.fromList nodes
+
+withNodeMap :: NodeMap -> M a -> M a
+withNodeMap nodes
+    = local (\(hpt,nodes') -> (hpt, Map.union nodes nodes'))
 
 convertFuncDef :: Stage1.FuncDef -> M Stage2.FuncDef
 convertFuncDef def
@@ -63,20 +86,17 @@ convertExpression (a Stage1.:>> b)
          b' <- convertExpression b
          return $ a' :>>= [] :-> b'
 convertExpression (Stage1.Application (Builtin "fetch") [p])
-    = convertFetch p{-
-    = do size <- heapNodeSize p
-         [p'] <- lookupVariable p
-         vars <- replicateM size newVariable
-         return $ foldr (\(v,n) r -> Stage2.Fetch n p' :>>= [v] :-> r) (Unit vars) (zip vars [0..])-}
-convertExpression (Stage1.Application fn@(Builtin "update") ~[ptr,val])
+    = convertFetch p
+convertExpression (Stage1.Update size ptr val)
     = do [ptr'] <- lookupVariable ptr
-         values <- lookupVariable val
+         values <- fmap (take size) $ lookupVariable val
          if length values <= minNodeSize
             then return $ Application fn (ptr':values)
             else do extra <- newVariable
                     let (first,second) = splitAt (minNodeSize-1) values
                     return $ Store second :>>= [extra] :-> Application fn (ptr':first++[extra])
     where minNodeSize = 4
+          fn = Builtin "update"
 convertExpression (Stage1.Application fn args)
     = do args' <- mapM lookupVariable args
          return $ Application fn (map head args')
@@ -144,7 +164,7 @@ convertFetch p
            Base
              -> do [p'] <- lookupVariable p
                    return (Stage2.Fetch 0 p')
-           Other{rhsHeap = _}
+           Heap _
              -> do [p'] <- lookupVariable p
                    return (Stage2.Fetch 0 p')
            _ -> do return (Application (Builtin "unreachable") [])
@@ -152,7 +172,8 @@ convertFetch p
               | length args <= minNodeSize-1
               = do argVars <- replicateM (length args) newVariable
                    let fetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) (Unit (argVars)) (zip argVars [1..])
-                   return $ Node tag nt missing :> fetches
+                   tag' <- lookupTag tag missing
+                   return $ Node tag' nt missing :> fetches
               | otherwise
               = do argVars <- replicateM (length args) newVariable
                    extra <- newVariable
@@ -160,7 +181,8 @@ convertFetch p
                        firstFetches = foldr (\(v,n) r -> Stage2.Fetch n p :>>= [v] :-> r) secondFetches (zip firstArgs [1..])
                        secondFetches = Stage2.Fetch (minNodeSize-1) p :>>= [extra] :->
                                        foldr (\(v,n) r -> Stage2.Fetch n extra :>>= [v] :-> r) (Unit argVars) (zip secondArgs [0..])
-                   return $ Node tag nt missing :> firstFetches
+                   tag' <- lookupTag tag missing
+                   return $ Node tag' nt missing :> firstFetches
           -- FIXME: The node size should be configurable.
           minNodeSize = 4
 
@@ -181,11 +203,15 @@ heapNodeValues val
 find key m = Map.findWithDefault (error $ "Couldn't find key: " ++ show key) key m
 
 newVariable :: M Renamed
-newVariable
+newVariable = newVariableFrom (Builtin "newVariable.undefined")
+
+newVariableFrom :: Renamed -> M Renamed
+newVariableFrom original
     = do u <- get
          put (u+1)
-         return $ Anonymous u
-
+         return $ merge original $ Anonymous u
+    where merge (Aliased _ name) (Anonymous uid) = Aliased uid name
+          merge _ renamed = renamed
 
 convertAlt :: [Renamed] -> Stage1.Alt -> M Stage2.Alt
 convertAlt vector (Stage1.Lit lit Stage1.:> alt)
@@ -195,6 +221,10 @@ convertAlt vector (Stage1.Variable v Stage1.:> alt)
     = convertBind v $ \v' ->
       do alt' <- convertExpression alt
          return $ Stage2.Empty :> Unit vector :>>= v' :-> alt'
+convertAlt vector (Stage1.Node tag FunctionNode missing args Stage1.:> alt)
+    = do names <- lookupVariable tag
+         alt' <- convertExpression alt
+         return $ Node (names !! missing) FunctionNode missing :> Unit (tail vector) :>>= args :-> alt'
 convertAlt vector (Stage1.Node tag nt missing args Stage1.:> alt)
     = do alt' <- convertExpression alt
          return $ Node tag nt missing :> Unit (tail vector) :>>= args :-> alt'
@@ -218,10 +248,11 @@ convertValue fn Stage1.Hole{}       = error "Grin.Stage2.FromStage1.convertValue
 convertValue fn (Stage1.Empty)      = fn []
 convertValue fn (Stage1.Variable v) = fn =<< lookupVariable v
 convertValue fn (Stage1.Node tag nt missing args)
-    = do v <- newVariable
+    = do tag' <- lookupTag tag missing
+         v <- newVariable
          args' <- mapM lookupVariable args
          r <- fn (v:concat args')
-         return $ Constant (Node tag nt missing) :>>= [v] :-> r
+         return $ Constant (Node tag' nt missing) :>>= [v] :-> r
 convertValue fn (Stage1.Vector args)
     = do args' <- mapM lookupVariable args
          fn (concat args')
@@ -231,3 +262,7 @@ lookupVariable val
     = do nmap <- asks snd
          return $ Map.findWithDefault [val] val nmap
 
+lookupTag :: Renamed -> Int -> M Renamed
+lookupTag tag idx
+    = do tags <- lookupVariable tag
+         return (cycle tags !! idx)

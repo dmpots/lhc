@@ -51,7 +51,7 @@ lowerExpression (Application (Builtin "eval") [a])
                    alts <- mapM (mkApplyAlt []) tags
                    v <- newVariable
                    let expand ((tag,FunctionNode,0),_args) = lookupLhs (VarEntry tag) hpt
-                       expand (node,args) = Other (Map.singleton node args) [] Set.empty
+                       expand (node,args) = Other (Map.singleton node args) []
                        expanded = mconcat $ map expand tags
                    addHPTInfo (VarEntry v) expanded
                    let anyShared = heapIsShared a hpt
@@ -68,6 +68,8 @@ lowerExpression (Application (Builtin "apply") [a,b])
            Interface.Empty -> return $ Application (Builtin "unreachable") []
 lowerExpression (Application fn args)
     = return $ Application fn args
+lowerExpression (Update size ptr val)
+    = return $ Update size ptr val
 lowerExpression (Case scrut alts)
     = do hpt <- gets fst
          let rhs = lookupLhs (VarEntry scrut) hpt
@@ -97,15 +99,14 @@ mkUpdate False ptr scrut val tags _ = return $ Unit Grin.Empty
 mkUpdate shared ptr scrut val tags _ -- (Other{rhsTagged = expanded})
     = do hpt <- gets fst
          let doUpdate tag = case lookupLhs (VarEntry tag) hpt of
-                              Other{rhsTagged = expanded} -> do alts <- mapM uWorker (Map.toList expanded)
+                              Other{rhsTagged = expanded} -> do alts <- mapM (uWorker val) (Map.toList expanded)
                                                                 return $ Case val alts
                               _ -> return $ Unit Grin.Empty
-             uWorker ((tag, nt, missing), args)
+             uWorker val ((tag, nt, missing), args)
                   = do args' <- replicateM (length args) newVariable
                        node <- newVariable
-                       addHPTInfo (VarEntry node) (Other (Map.singleton (tag, nt, missing) args) [] Set.empty)
-                       return (Node tag nt missing args' :> (Unit (Node tag nt missing args') :>>= node :->
-                               Application (Builtin "update") [ptr,node]))
+                       addHPTInfo (VarEntry node) (Other (Map.singleton (tag, nt, missing) args) [])
+                       return (Node tag nt missing args' :> Update (length args'+1) ptr val)
          let worker ((tag, FunctionNode, 0), args)
                  = do args' <- replicateM (length args) newVariable
                       u <- doUpdate tag
@@ -113,7 +114,6 @@ mkUpdate shared ptr scrut val tags _ -- (Other{rhsTagged = expanded})
              worker ((tag, nt, missingArgs), args)
                  = do args' <- replicateM (length args) newVariable
                       return $ Node tag nt missingArgs args' :> Unit Grin.Empty
-             worker tag = error $ "Grin.HPT.Lower.mkUpdate: Unknown rhs value: " ++ show tag
          alts' <- mapM worker tags
          return $ Case scrut alts'
 mkUpdate shared ptr scrut val tags _ = return $ Unit Grin.Empty

@@ -12,7 +12,7 @@ author:              David Himmelstrup, Austin Seipp
 maintainer:          lhc@projects.haskell.org
 homepage:            http://lhc.seize.it/
 build-type:          Custom
-data-files:
+extra-source-files:
   lib/base/base.cabal
   lib/base/includes/CTypes.h
   lib/base/includes/ieee-flpt.h
@@ -118,6 +118,11 @@ data-files:
   lib/integer-native/Setup.lhs
   lib/integer-native/src/GHC/Integer/Internals.hs
   lib/integer-native/src/GHC/Integer.hs
+data-files:
+  rts/rts.ll
+  rts/rts.c
+  rts/ltm/*.c
+  rts/ltm/*.h
 
 
 flag hpc

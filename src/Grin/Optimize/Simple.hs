@@ -16,6 +16,7 @@ type Opt a = Reader Subst a
 type Subst = Map.Map Renamed Renamed
 
 
+
 optimize :: Grin -> Grin
 optimize grin
     = grin{ grinFunctions = map simpleFuncDef (grinFunctions grin)}
@@ -28,7 +29,8 @@ simpleFuncDef def
           applied    = runReader (evalOpt evaled) Map.empty
           fetched    = runReader (fetchOpt applied) Map.empty
           pruned     = runReader (casePruneOpt fetched) Map.empty
-      in def{ funcDefBody = pruned }
+          vectorOpt  = runReader (vectorCaseOpt pruned) Map.empty
+      in def{ funcDefBody = vectorOpt }
 
 simpleExpression :: Expression -> Opt Expression
 simpleExpression (Unit (Variable v1) :>>= v2 :-> t)
@@ -58,6 +60,8 @@ simpleExpression (Application fn values)
     = liftM (Application fn) $ doSubsts values
 simpleExpression (Store v)
     = liftM Store $ simpleValue v
+simpleExpression (Update size ptr val)
+    = return (Update size) `ap` doSubst ptr `ap` doSubst val
 simpleExpression (Unit value)
     = liftM Unit (simpleValue value)
 simpleExpression (Case var [])
@@ -120,7 +124,7 @@ fetchOpt e@(Store val :>>= bind :-> _)
 fetchOpt e@(Application (Builtin "fetch") [val] :>>= bind :-> _)
     = local (Map.insert (Right bind) (Unit (Variable val)))
             (tmapM fetchOpt e)
-fetchOpt e@(Application (Builtin "update") [ptr,val] :>> _)
+fetchOpt e@(Update size ptr val :>> _)
     = local (Map.insert (Left ptr) (Unit (Variable val)))
             (tmapM fetchOpt e)
 fetchOpt e@(Application (Builtin "fetch") [ptr])
@@ -145,7 +149,7 @@ evalOpt e@(Store val :>>= bind :-> _)
 evalOpt e@(Unit val :>>= bind :-> _)
     = local (Map.insert bind val)
             (tmapM evalOpt e)
-evalOpt e@(Application (Builtin "update") [ptr,val] :>> _)
+evalOpt e@(Update size ptr val :>> _)
     = local (Map.insert ptr (Variable val))
             (tmapM evalOpt e)
 evalOpt e@(Application (Builtin "eval") [ptr])
@@ -154,6 +158,8 @@ evalOpt e@(Application (Builtin "eval") [ptr])
             then return (Application (Builtin "fetch") [ptr])
             else return e
     where isNode (Node _tag FunctionNode n _args) | n >= 1
+              = return True
+          isNode (Node _tag ConstructorNode _n _args)
               = return True
           isNode (Variable v)
               = do mbVal <- asks $ Map.lookup v
@@ -215,5 +221,19 @@ casePruneOpt e@(Case scrut alts)
                             worker alt = Just alt
                         in tmapM casePruneOpt (Case scrut (mapMaybe worker alts))
 casePruneOpt e = tmapM casePruneOpt e
+
+
+type VectorCaseOpt a = Reader (Map.Map Renamed [Renamed]) a
+
+vectorCaseOpt :: Expression -> VectorCaseOpt Expression
+vectorCaseOpt e@(Unit (Vector vs) :>>= v :-> _)
+    = local (Map.insert v vs)
+            (tmapM vectorCaseOpt e)
+vectorCaseOpt e@(Case scrut [ Vector vs :> branch ])
+    = do mbVals <- asks $ Map.lookup scrut
+         case mbVals of
+           Nothing   -> tmapM vectorCaseOpt e
+           Just vals -> tmapM vectorCaseOpt (foldr (\(v,v') r -> Unit (Variable v) :>>= v' :-> r) branch (zip vals vs))
+vectorCaseOpt e = tmapM vectorCaseOpt e
 
 

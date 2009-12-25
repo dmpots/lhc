@@ -33,9 +33,10 @@ type IsShared = Bool
 data Rhs
     = Empty
     | Base
-    | Other { rhsTagged :: Map.Map Node [Rhs]
-            , rhsVector :: [Rhs]
-            , rhsHeap   :: Set.Set HeapPointer }
+    | Heap (Set.Set HeapPointer)
+    | Other { rhsTagged :: (Map.Map Node [Rhs])
+            , rhsVector :: [Rhs] }
+--            , rhsHeap   :: Set.Set HeapPointer }
 --    | Tagged (Map.Map Node [Rhs])
 --    | Vector [Rhs]
 --    | Heap (Set.Set HeapPointer)
@@ -44,7 +45,10 @@ data Rhs
 instance NFData Rhs where
     rnf Empty = ()
     rnf Base  = ()
-    rnf (Other t v h) = rnf t `seq` rnf v `seq` rnf h
+    rnf (Heap h) = rnf h
+    rnf (Other t v) = if False -- not (Map.null t && null v) && not (Set.null h)
+                      then error "Broken invariant."
+                      else rnf t `seq` rnf v -- `seq` rnf h
 
 instance NFData Renamed where
     rnf _ = ()
@@ -56,10 +60,11 @@ instance Show Rhs where
 
 ppRhs Empty          = text "Empty"
 ppRhs Base           = text "Base"
-ppRhs (Other nodes args hps)
+ppRhs (Heap hps)      = text "Heap" <+> list (map int (Set.toList hps))
+ppRhs (Other nodes args)
     = text "Other" <+> list [ (ppNodeType nt missing tag) <+> list (map ppRhs args) | ((tag, nt, missing), args) <- Map.toList nodes ]
                    <+> list (map ppRhs args)
-                   <+> list (map int (Set.toList hps))
+--                   <+> list (map int (Set.toList hps))
 --ppRhs (Tagged nodes) = 
 --ppRhs (Vector args)  = 
 --ppRhs (Heap hps)     = 
@@ -72,10 +77,11 @@ joinRhs :: Rhs -> Rhs -> Rhs
 joinRhs Empty rhs                         = rhs
 joinRhs rhs Empty                         = rhs
 joinRhs Base Base                         = Base
-joinRhs (Other t1 v1 h1) (Other t2 v2 h2)
+joinRhs (Heap h1) (Heap h2)               = Heap (Set.union h1 h2)
+joinRhs (Other t1 v1) (Other t2 v2)
 --    | Map.size t1 `seq` Map.size t2 `seq` False = undefined
 --    | Set.size h1 `seq` Set.size h2 `seq` False = undefined
-    | otherwise = Other (Map.unionWith zipJoin t1 t2) (zipJoin v1 v2) (Set.union h1 h2)
+    | otherwise = Other (Map.unionWith zipJoin t1 t2) (zipJoin v1 v2) -- (Set.union h1 h2)
 joinRhs rhs Base                          = rhs
 joinRhs Base rhs                          = rhs
 {-
@@ -92,10 +98,11 @@ lRhs `isSubsetOf` rRhs
           worker x Empty  = False
           worker _ Base   = True
           worker Base _   = False
-          worker (Other t1 v1 h1) (Other t2 v2 h2)
+          worker (Heap h1) (Heap h2) = Set.isSubsetOf h1 h2
+          worker (Other t1 v1) (Other t2 v2)
               = Map.isSubmapOfBy (\a b -> and (zipWith isSubsetOf a b)) t1 t2 &&
-                and (zipWith isSubsetOf v1 v2) &&
-                Set.isSubsetOf h1 h2
+                and (zipWith isSubsetOf v1 v2)
+--                && Set.isSubsetOf h1 h2
 {-
           worker (Tagged nodes1) (Tagged nodes2)
               = Map.isSubmapOfBy (\a b -> and (zipWith isSubsetOf a b)) nodes1 nodes2
@@ -125,6 +132,9 @@ data HeapAnalysis
                    }
     deriving (Eq)
 
+instance Show HeapAnalysis where
+    show (HeapAnalysis binds smap) = unlines ([ unlines [ show lhs, "  " ++ show rhs] | (lhs,rhs) <- HT.toList binds ])
+
 --instance NFData HeapAnalysis where
 --    rnf hpt = rnf (hptBindings hpt) `seq` rnf (hptSharingMap hpt)
 
@@ -142,7 +152,8 @@ lookupLhs lhs hpt
 rhsSize :: Rhs -> Int
 rhsSize Empty = 0
 rhsSize Base = 1
-rhsSize (Other t v h)
+rhsSize (Heap hp) = 1
+rhsSize (Other t v)
     = maximum [ (1 + maximum (0:map length (Map.elems t)))
               , length v ]
 {-
@@ -154,7 +165,7 @@ rhsSize Heap{} = 1
 lookupHeap :: Renamed -> HeapAnalysis -> Rhs
 lookupHeap var hpt
     = case HT.lookup (VarEntry var) (hptBindings hpt) of
-        Just (Other{rhsHeap=hp}) -> mconcat [ HT.findWithDefault (errMsg pointer) (HeapEntry pointer) (hptBindings hpt) | pointer <- Set.toList hp ]
+        Just (Heap hp) -> mconcat [ HT.findWithDefault (errMsg pointer) (HeapEntry pointer) (hptBindings hpt) | pointer <- Set.toList hp ]
         Just Empty     -> Empty
         Just rhs       -> error $ "Grin.HPT.Interface.lookupHeap: Invalid rhs: " ++ show (var, rhs)
         Nothing        -> error $ "Grin.HPT.Interface.lookupHeap: Couldn't find lhs: " ++ show var
@@ -163,7 +174,7 @@ lookupHeap var hpt
 heapIsShared :: Renamed -> HeapAnalysis -> IsShared
 heapIsShared var hpt
     = case HT.lookup (VarEntry var) (hptBindings hpt) of
-        Just (Other{rhsHeap=hp}) -> or [ Map.findWithDefault False (HeapEntry pointer) (hptSharingMap hpt) | pointer <- Set.toList hp ]
+        Just (Heap hp) -> or [ Map.findWithDefault False (HeapEntry pointer) (hptSharingMap hpt) | pointer <- Set.toList hp ]
         Just Empty     -> False
         Just rhs       -> error $ "Grin.HPT.Interface.heapIsShared: Invalid rhs: " ++ show (var, rhs)
         Nothing        -> error $ "Grin.HPT.Interface.heapIsShared: Couldn't find lhs: " ++ show var

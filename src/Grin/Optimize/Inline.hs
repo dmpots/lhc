@@ -25,11 +25,11 @@ inlineCAFs :: Grin -> Grin
 inlineCAFs grin
     = let toInline = map funcDefName $ filter (\def -> funcCategory def `elem` [Cheap]) (grinFunctions grin)
           cafsToInline = Map.fromList [ (cafName caf, tag) | caf@CAF{cafValue=Node tag FunctionNode 0 []} <- grinCAFs grin, tag `elem` toInline ]
-      in runTrans (runReaderT (inlineCAFs' grin) cafsToInline) grin
+      in runTrans (runReaderT (inlineCAFs') cafsToInline) grin
 
 type M = ReaderT (Map.Map Renamed Renamed) Transform
 
-inlineCAFs' :: Grin -> M Grin
+inlineCAFs' :: M ()
 inlineCAFs' = transformExp inlineCAF
 
 inlineCAF :: Expression -> M Expression
@@ -72,7 +72,7 @@ inlineArgs args fn
 inlineSimple :: Grin -> Grin
 inlineSimple grin
     = let inp = Map.fromList [ (funcDefName def, (funcCategory def, def)) | def <- grinFunctions grin ]
-      in runTrans (runReaderT (transformExp inlineSimpleExp grin) inp) grin
+      in runTrans (runReaderT (transformExp inlineSimpleExp) inp) grin
 
 type Simple = ReaderT (Map.Map Renamed (Category, FuncDef)) Transform
 
@@ -80,7 +80,8 @@ inlineSimpleExp :: Expression -> Simple Expression
 inlineSimpleExp e@(Store (Node tag FunctionNode 0 args))
     = do mbEntry <- findFunc tag
          case mbEntry of
-           Just (Cheap, func) -> lazify <$> doInline func args
+           Just (Cheap, func) -> lazify =<< doInline func args
+           Just (Lazy, func) -> lazify =<< doInline func args
            _ -> return e
 inlineSimpleExp e = tmapM inlineSimpleExp e
 
@@ -88,18 +89,22 @@ doInline func args
     = do let renamedArgs = Map.fromList (zip (funcDefArgs func) (args ++ repeat (Builtin "undefined")))
          lift (renameExp renamedArgs (funcDefBody func))
 
+lazify :: Expression -> Simple Expression
 lazify (e1 :>>= bind :-> e2)
-    = e1 :>>= bind :-> lazify e2
+    = do e2' <- lazify e2
+         return $ e1 :>>= bind :-> e2'
 lazify (e1 :>> e2)
-    = e1 :>> lazify e2
+    = do e2' <- lazify e2
+         return $ e1 :>> e2
 lazify (Application fn args) | not (isBuiltin fn) && not (isExternal fn)
-    = Store (Node fn FunctionNode 0 args)
+    = return $ Store (Node fn FunctionNode 0 args)
 lazify (Unit v)
-    = Store v
+    = return $ Store v
 lazify (Application (Builtin "eval") [arg])
-    = Unit (Variable arg)
+    = return $ Unit (Variable arg)
 lazify e
-    = e
+    = do v <- lift newVariable
+         return $ e :>>= v :-> Store (Variable v)
 
 findFunc :: Renamed -> Simple (Maybe (Category, FuncDef))
 findFunc name
@@ -182,6 +187,8 @@ expressionCategory (Store (Node _tag FunctionNode n _args)) | n >= 1
     = Cheap
 expressionCategory Store{}
     = Lazy
+expressionCategory Update{}
+    = Cheap
 expressionCategory Unit{}
     = Cheap
 

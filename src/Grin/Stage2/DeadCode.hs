@@ -31,7 +31,7 @@ trimDeadCode grin
               = func { funcDefBody = walkExp (funcDefBody func) }
           walkExp (e1@Case{} :>>= binds :-> e2)
               = walkExp e1 :>>= binds :-> walkExp e2
-          walkExp (e1@(Application (Builtin "update") args) :>>= binds :-> e2) | all isAlive args
+          walkExp (e1@(Application (Builtin "update") args) :>>= binds :-> e2) | all isAlive args || True
               = walkExp e1 :>>= binds :-> walkExp e2
           walkExp (e1 :>>= binds :-> e2)
               = if all isDead binds
@@ -42,7 +42,7 @@ trimDeadCode grin
                 then Case scrut (map walkAlt alts)
                 else Unit []
           walkExp fn@(Application (Builtin "update") (ptr:_))
-              | nodeId ptr `IntSet.member` liveSet
+              | nodeId ptr `IntSet.member` liveSet || True
               = fn
               | otherwise
               = Unit []
@@ -106,7 +106,7 @@ insert k v m = let v' = IntMap.findWithDefault IntSet.empty k m
 
 cafGraph :: CAF -> M ()
 cafGraph caf
-    = do deps <- valueGraph (cafValue caf)
+    = do let deps = valueGraph (cafValue caf)
          modify $ insert (nodeId (cafName caf)) deps
          return ()
 
@@ -127,10 +127,10 @@ expGraph (Application (Builtin "updateMutVar") [ptr, val, realWorld])
     = do --modify $ insert (nodeId ptr) (IntSet.singleton (nodeId val))
          --modify $ insert (nodeId realWorld) (IntSet.singleton (nodeId ptr))
          return $ IntSet.fromList [nodeId realWorld, nodeId ptr, nodeId val]
-expGraph (Application (Builtin "update") (ptr:vals))
+expGraph (Application (Builtin "update") args)
     = do t <- top
-         let s = IntSet.fromList (map nodeId vals)
-         modify $ insert (nodeId ptr) s
+         let s = IntSet.fromList (map nodeId args)
+         modify $ insert t s
          return IntSet.empty
 expGraph (Application fn args)
     = return $ IntSet.fromList (map nodeId (fn:args))
@@ -150,7 +150,7 @@ expGraph (Store vals)
 expGraph (StoreHole _size)
     = return IntSet.empty
 expGraph (Constant value)
-    = valueGraph value
+    = return $ valueGraph value
 
 nodeId :: Renamed -> Int
 nodeId (Aliased uid _name) = uid
@@ -160,11 +160,12 @@ nodeId (External{}) = -1
 
 altGraph :: Alt -> M IntSet.IntSet
 altGraph (value :> exp)
-    = liftM2 (IntSet.union) (valueGraph value) (expGraph exp)
+    = IntSet.union (valueGraph value) `liftM` expGraph exp
 
-valueGraph :: Value -> M IntSet.IntSet
-valueGraph (Node tag _nt _partial) = return $ IntSet.singleton (nodeId tag)
-valueGraph Lit{} = return IntSet.empty
-valueGraph Hole = return IntSet.empty
-valueGraph Empty = return IntSet.empty
+valueGraph :: Value -> IntSet.IntSet
+valueGraph (Node tag ConstructorNode _partial) = IntSet.singleton (nodeId tag)
+valueGraph (Node tag FunctionNode _partial) = IntSet.singleton (nodeId tag)
+valueGraph Lit{} = IntSet.empty
+valueGraph Hole = IntSet.empty
+valueGraph Empty = IntSet.empty
 

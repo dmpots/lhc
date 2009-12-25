@@ -229,6 +229,8 @@ data Force = NoForce | ForceFiles | ForceAll | CannotForce
 
 data PackageArg = Id PackageIdentifier | Substring String (String->Bool)
 
+last' msg ls = last (error msg : ls)
+
 runit :: [Flag] -> [String] -> IO ()
 runit cli nonopts = do
   installSignalHandlers -- catch ^C and clean up
@@ -248,7 +250,7 @@ runit cli nonopts = do
         substringCheck "*"   = Just (const True)
         substringCheck [_]   = Nothing
         substringCheck (h:t) =
-          case (h, init t, last t) of
+          case (h, init t, last' "runit" t) of
             ('*',s,'*') -> Just (isInfixOf (f s) . f)
             ('*',_, _ ) -> Just (isSuffixOf (f t) . f)
             ( _ ,s,'*') -> Just (isPrefixOf (f (h:s)) . f)
@@ -382,7 +384,7 @@ getPkgDatabases modify my_flags = do
                   exist <- doesFileExist globalConfPath
                   if exist then return $ Just globalConfPath
                            else return $ Nothing-}
-        fs -> return $ Just (last fs)
+        fs -> return $ Just (last' "getPkgDatabases" fs)
 
   let global_conf_dir = fromMaybe "" global_conf ++ ".d"
   global_conf_dir_exists <- doesDirectoryExist global_conf_dir
@@ -425,14 +427,13 @@ getPkgDatabases modify my_flags = do
         case e_pkg_path of
                 Left  _ -> sys_databases
                 Right path
-                  | last cs == ""  -> init cs ++ sys_databases
+                  | last' "e_pkg_path" cs == ""  -> init cs ++ sys_databases
                   | otherwise      -> cs
-                  where cs = parseSearchPath path
+                  where cs = splitSearchPath path -- parseSearchPath path
 
         -- The "global" database is always the one at the bottom of the stack.
         -- This is the database we modify by default.
-      virt_global_conf = last env_stack
-
+      virt_global_conf = last' "env_stack" env_stack
   let db_flags = [ f | Just f <- map is_db_flag my_flags ]
          where is_db_flag FlagUser
                       | Just (user_conf, _user_exists) <- mb_user_conf
@@ -466,7 +467,7 @@ getPkgDatabases modify my_flags = do
                 -- rightmost on the command-line.
                 to_modify = if null db_flags
                                 then Just virt_global_conf
-                                else Just (last db_flags)
+                                else Just (last' "db_flags" db_flags)
              in
                 return (flag_stack, to_modify)
 
@@ -650,7 +651,7 @@ latestPackage my_flags pkgid = do
   show_pkg (sortBy compPkgIdVer (map package ps))
   where
     show_pkg [] = die "no matches"
-    show_pkg pids = hPutStrLn stdout (display (last pids))
+    show_pkg pids = hPutStrLn stdout (display (last' "pids" pids))
 
 -- -----------------------------------------------------------------------------
 -- Describe
@@ -707,7 +708,7 @@ describeField my_flags pkgarg fields = do
   (db_stack, _) <- getPkgDatabases False my_flags
   fns <- toFields fields
   ps <- findPackages db_stack pkgarg
-  let top_dir = takeDirectory (fst (last db_stack))
+  let top_dir = takeDirectory (fst (last' "db_stack" db_stack))
   mapM_ (selectFields fns) (mungePackagePaths top_dir ps)
   where toFields [] = return []
         toFields (f:fs) = case toField f of

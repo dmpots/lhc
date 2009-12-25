@@ -385,11 +385,14 @@ instance  RealFrac Double  where
                                 EQ -> if even n then n else m
                                 GT -> m
 
+    --ceiling (D# d) = fromIntegral (I# (double2Int# (c_ceil d)))
     ceiling x   = case properFraction x of
                     (n,r) -> if r > 0.0 then n + 1 else n
 
     floor x     = case properFraction x of
                     (n,r) -> if r < 0.0 then n - 1 else n
+
+--foreign import ccall unsafe "ceil" c_ceil :: Double# -> Double#
 
 instance  RealFloat Double  where
     floatRadix _        =  FLT_RADIX        -- from float.h
@@ -397,9 +400,9 @@ instance  RealFloat Double  where
     floatRange _        =  (DBL_MIN_EXP, DBL_MAX_EXP) -- ditto
 
     decodeFloat d
-      = decodeDouble d
+      = error "decodeDouble" -- decodeDouble d
 
-    encodeFloat i j = encodeDouble i j
+    encodeFloat i j = error "encodeDouble" -- encodeDouble i j
 
     exponent x          = case decodeFloat x of
                             (m,n) -> if m == 0 then 0 else n + floatDigits x
@@ -441,6 +444,9 @@ encodeDouble' significand' (I# exp)
 
 -- FIXME: This doesn't work with 32bit Ints.
 decodeDouble :: Double -> (Integer, Int)
+--decodeDouble (D# d#)
+--    = case decodeDoubleInteger d# of
+--        (# integer, i# #) -> ( integer, I# i# )
 decodeDouble (D# d#)
     = let sign = (i `and#` (1## `shiftL#` 63#)) `eqWord#` 0##
           exp :: Int 

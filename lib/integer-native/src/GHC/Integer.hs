@@ -25,12 +25,14 @@ module GHC.Integer
     , orInteger
     , xorInteger
     , complementInteger
+{-
 #if WORD_SIZE == 4
     , integerToWord64
     , integerToInt64
     , word64ToInteger
     , int64ToInteger
 #endif
+-}
     , wordToInteger
     , integerToWord
     , floatFromInteger
@@ -171,6 +173,7 @@ complementInteger :: Integer -> Integer
 complementInteger (Integer i)
     = mkInteger (Pure.tcComplementInteger i)
 
+{-
 #if WORD_SIZE == 4
 integerToWord64 :: Integer -> Word64#
 integerToWord64 (Integer x) = int64ToWord64# (intToInt64# x)
@@ -184,6 +187,7 @@ word64ToInteger w = Integer (int64ToInt# (word64ToInt64# w))
 int64ToInteger :: Int64# -> Integer
 int64ToInteger i = smallInteger (int64ToInt# i)
 #endif
+-}
 
 wordToInteger :: Word# -> Integer
 wordToInteger w = mkInteger (Pure.integerFromInt (I# (word2Int# w)))

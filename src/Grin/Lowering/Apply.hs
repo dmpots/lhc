@@ -45,6 +45,8 @@ lowerExpression (Case v alts)
          return $ Case v alts'
 lowerExpression (Store v)
     = liftM Store (lowerValue v)
+lowerExpression e@Update{}
+    = return e
 lowerExpression (Unit v)
     = liftM Unit (lowerValue v)
 

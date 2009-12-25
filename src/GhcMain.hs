@@ -102,6 +102,7 @@ ghcMain =
                                                             "-no-user-package-conf":
                                                             "-D__LHC__":
                                                             ("-DWORD_SIZE="++show wordSize):
+                                                            ("-DWORD_SIZE_IN_BITS="++show (wordSize*8)):
                                                             argv1)
   (argv2, staticFlagWarnings) <- parseStaticFlags argv1'
 

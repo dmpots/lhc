@@ -192,26 +192,26 @@ tyToFFITypes (Core.Tarrow (Core.Tapp (Core.Tcon state) (Core.Tcon realworld)) re
     = case ret of
         Core.Tapp (Core.Tcon tuple) (Core.Tapp (Core.Tcon state) (Core.Tcon realworld))
             | tuple == z1h && state == statezh && realworld == theRealWorld
-          -> [Unit]
+          -> [UnitType]
         Core.Tapp (Core.Tapp (Core.Tcon tuple) (Core.Tapp (Core.Tcon state) (Core.Tcon realworld))) (Core.Tcon con)
             | tuple == z2h && state == statezh && realworld == theRealWorld
           -> [conToFFIType con]
-        _ -> [Invalid]
+        _ -> [InvalidType]
     where z1h = mkPrimQual "Z1H"
           z2h = mkPrimQual "Z2H"
           statezh = mkPrimQual "Statezh"
           theRealWorld = mkPrimQual "RealWorld"
-tyToFFITypes ty = [Invalid] -- error $ "Unrecognized ffi type: " ++ show ty
+tyToFFITypes ty = [InvalidType] -- error $ "Unrecognized ffi type: " ++ show ty
 
 mkPrimQual name
     = (L.pack "ghczmprim", L.pack "GHCziPrim", L.pack name)
 
 conToFFIType :: Core.Qual Core.Tcon -> FFIType
 conToFFIType con
-    | con == wordzh = Word
-    | con == intzh  = Int
-    | con == addrzh = Addr
-    | otherwise     = Invalid
+    | con == wordzh = UnsignedType
+    | con == intzh  = SignedType
+    | con == addrzh = PointerType
+    | otherwise     = InvalidType
     where wordzh = mkPrimQual "Wordzh"
           intzh  = mkPrimQual "Intzh"
           addrzh = mkPrimQual "Addrzh"

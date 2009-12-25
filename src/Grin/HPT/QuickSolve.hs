@@ -27,13 +27,8 @@ type M a = State HeapAnalysis a
 type SharingMap = Map.Map Lhs Bool
 
 
-solve :: Equations -> ([Int], Interface.HeapAnalysis)
+solve :: Equations -> ([HeapAnalysis], HeapAnalysis)
 solve eqs
-    = case solve' eqs of
-        (iterations, hpt) -> (iterations, hpt)
-
-solve' :: Equations -> ([Int], HeapAnalysis)
-solve' eqs
     = let eqPairs = Map.toList eqs
           iterate i ls
               = forM_ ls $ \(lhs,rhs) ->
@@ -43,8 +38,8 @@ solve' eqs
           loop iter prev
               = case execState (debugMsg ("Iteration: " ++ show iter) >> iterate iter eqPairs) prev of
                   (newData) -> -- | rnf newData `seq` True ->
-                    let (iterList, finishedData) = if prev == newData then ([iter], newData) else loop (iter+1) newData
-                    in (iter : iterList, finishedData)
+                    let (iterList, finishedData) = if prev == newData then ([newData], newData) else loop (iter+1) newData
+                    in (newData : iterList, finishedData)
       in loop 1 (mkHeapAnalysis (Map.map (const mempty) eqs) (nonlinearVariables eqs))
 
 -- Scan for shared variables. A variable is shared if it is used more than once.
@@ -92,7 +87,7 @@ addReduced lhs rhs
                 mapM_ setShared (listHeapPointers rhs)
 
 listHeapPointers :: Interface.Rhs -> [HeapPointer]
-listHeapPointers (Interface.Other{rhsHeap= hps}) = Set.toList hps
+listHeapPointers (Interface.Heap hps) = Set.toList hps
 listHeapPointers _ = []
 
 
@@ -102,7 +97,7 @@ reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
 
 reduceEq :: RhsValue -> M Interface.Rhs
 reduceEq Env.Base  = return $ Interface.Base
-reduceEq (Env.Heap hp) = return $ Interface.Other Map.empty [] (Set.singleton hp)
+reduceEq (Env.Heap hp) = return $ Interface.Heap (Set.singleton hp)
 reduceEq (Ident i) = lookupEq (VarEntry i)
 reduceEq (Extract eq node n) = reduceExtract eq node n
 reduceEq (ExtractVector eq n)
@@ -116,10 +111,10 @@ reduceEq (ExtractVector eq n)
           nth (x:xs) n = nth xs (n-1)
 reduceEq (Tag t nt missing args)
     = do args' <- mapM reduceEqs args
-         return $ Other (Map.singleton (t, nt, missing) args') [] Set.empty
+         return $ Other (Map.singleton (t, nt, missing) args') []
 reduceEq (VectorTag args)
     = do args' <- mapM reduceEqs args
-         return $ Interface.Other Map.empty args' Set.empty
+         return $ Interface.Other Map.empty args'
 reduceEq (Eval i) = reduceEval i
 reduceEq (Fetch i)
     = do hpt <- get
@@ -133,14 +128,14 @@ reduceEq (PartialApply a b)
              do let f ((tag, nt, n), args)
                       | n == 0    = return mempty
                       | otherwise = do bRhs <- lookupEq (VarEntry b)
-                                       return $ Other (Map.singleton (tag, nt, (n-1)) (args ++ [bRhs])) [] Set.empty
+                                       return $ Other (Map.singleton (tag, nt, (n-1)) (args ++ [bRhs])) []
                     f t             = error $ "reduceEq: apply: " ++ show t
                 liftM mconcat $ mapM f (Map.toList nodes)
 reduceEq (Update hp val)
     = do rhs <- lookupEq (VarEntry hp)
          case rhs of
            Interface.Empty -> return mempty
-           Interface.Other{rhsHeap = hps} ->
+           Interface.Heap hps ->
              do valRhs  <- lookupEq (VarEntry val)
                 forM_ (Set.toList hps) $ \hp -> addReduced (HeapEntry hp) valRhs
                 return mempty
@@ -160,18 +155,18 @@ reduceEval i
          case lookupLhs (VarEntry i) hpt of
            Interface.Base -> return Interface.Base
            Interface.Empty -> return Interface.Empty
-           Interface.Other {rhsHeap = hps} ->
+           Interface.Heap hps ->
              do let anyShared = heapIsShared i hpt
                 let fn hp = do let worker ((t, FunctionNode, 0), args) = do rhs <- lookupEq (VarEntry t)
                                                                             when (anyShared && rhs /= mempty) $
                                                                               addReduced (HeapEntry hp) rhs
                                                                             return rhs
-                                   worker ((t, nt, missing), args)     = return $ Other (Map.singleton (t, nt, missing) args) [] Set.empty
+                                   worker ((t, nt, missing), args)     = return $ Other (Map.singleton (t, nt, missing) args) []
                                case lookupLhs (HeapEntry hp) hpt of
                                  Empty        -> return mempty
                                  Other{rhsTagged = nodes} -> liftM mconcat $ mapM worker (Map.toList nodes)
                 liftM mconcat $ mapM fn (Set.toList hps)
-           rhs -> error $ "Eval: " ++ show rhs
+           rhs -> error $ "Eval: " ++ show (rhs, i)
 
 reduceApply a b
     = do rhs <- lookupEq (VarEntry a)
@@ -183,7 +178,7 @@ reduceApply a b
                    f ((conc, nt, n), args)
                        | n == 0    = return mempty
                        | otherwise = do bRhs <- lookupEq (VarEntry b)
-                                        return $ Other (Map.singleton (conc, nt, (n-1)) (args ++ [bRhs])) [] Set.empty
+                                        return $ Other (Map.singleton (conc, nt, (n-1)) (args ++ [bRhs])) []
                liftM mconcat $ mapM f (Map.toList nodes)
 
 

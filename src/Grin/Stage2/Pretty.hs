@@ -13,6 +13,8 @@ import Text.PrettyPrint.ANSI.Leijen
 
 import qualified Data.Map as Map
 
+instance Pretty Grin where
+    pretty = ppGrin
 
 ppGrin :: Grin -> Doc
 ppGrin grin
@@ -41,7 +43,7 @@ ppNodeType nt n name
 ppRenamed (Aliased n var) = pretty var <> char '_' <> pretty n
 ppRenamed (Anonymous n)   = char 'x' <> pretty n
 ppRenamed (Builtin p)     = char '@' <> pretty p
-ppRenamed (External e)    = parens (text "foreign" <+> text e)
+ppRenamed (External e tys) = parens (text "foreign" <+> text e) -- FIXME: Show types.
 
 ppCAF :: CAF -> Doc
 ppCAF (CAF name value)

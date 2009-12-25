@@ -20,6 +20,9 @@ grinQualMap grin
           funcMap = Map.fromListWith (\_ _ -> True) [ (name, False) | FuncDef{funcDefName = Aliased _ name} <- grinFunctions grin ]
           argsMap = Map.fromListWith (\_ _ -> True) [ (name, False) | func <- grinFunctions grin, Aliased _ name <- funcDefArgs func ]
 
+instance Pretty Grin where
+    pretty = ppGrin
+
 ppGrin :: Grin -> Doc
 ppGrin grin
     = dullblue (text "Nodes:") <$$>
@@ -48,7 +51,7 @@ ppNodeType qual nt n name
 ppRenamed qual (Aliased n var) = pretty var <> if True || Map.findWithDefault False var qual then char '_' <> pretty n else empty
 ppRenamed qual (Anonymous n)   = char 'x' <> pretty n
 ppRenamed qual (Builtin p)     = char '@' <> pretty p
-ppRenamed qual (External e)    = parens (text "foreign" <+> text e)
+ppRenamed qual (External e tys)= parens (text "foreign" <+> text e) -- FIXME: Show types.
 
 ppCAF :: QualMap -> CAF -> Doc
 ppCAF qual (CAF name value)
@@ -71,6 +74,8 @@ ppExpression qual (Case value alts)
       indent 2 (vsep (map (ppAlt qual) alts))
 ppExpression qual (Application fn args)
     = hsep (ppRenamed qual fn:map (ppRenamed qual) args)
+ppExpression qual (Update size ptr val)
+    = blue (text "update") <+> int size <+> ppRenamed qual ptr <+> ppRenamed qual val
 ppExpression qual (Store v)
     = blue (text "store") <+> ppValue qual v
 ppExpression qual (a :>> c)

@@ -29,7 +29,7 @@ trimDeadCode grin
               = if isDead bind
                 then walkExp e2
                 else walkExp e1 :>>= bind :-> walkExp e2
-          walkExp fn@(Application (Builtin "update") (ptr:_))
+          walkExp fn@(Update size ptr val)
               | nodeId ptr `IntSet.member` liveSet
               = fn
               | otherwise
@@ -118,9 +118,9 @@ expGraph (e1 :>> e2)
          expGraph e2
 expGraph (Application (Builtin "updateMutVar") [ptr, val, realWorld])
     = do return $ IntSet.fromList [nodeId realWorld, nodeId ptr, nodeId val]
-expGraph (Application (Builtin "update") (ptr:vals))
+expGraph (Update size ptr val)
     = do t <- top
-         let s = IntSet.fromList (map nodeId vals)
+         let s = IntSet.singleton (nodeId val)
          modify $ insert (nodeId ptr) s
          return IntSet.empty
 expGraph (Application fn args)

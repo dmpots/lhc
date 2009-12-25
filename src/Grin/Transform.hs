@@ -1,10 +1,12 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts #-}
 module Grin.Transform
     ( Transform
-    , Trans(..)
+    , newVariable
+    , newVariableFrom
     , runTrans
     , transformExp
     , renameExp
+    , hoistToTopLevel
     ) where
 
 import Grin.Types
@@ -14,40 +16,88 @@ import Control.Monad.State.Strict
 import Control.Monad.Reader
 import Control.Applicative
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
-newtype Transform a = Transform { unTransform :: State Int a }
-    deriving (Monad, MonadState Int)
+data TState = TState { stateGrin :: !Grin }
 
-class Monad m => Trans m where
-    newVariable :: m Renamed
+newtype Transform a = Transform { unTransform :: State TState a }
+    deriving (Monad, MonadState TState)
 
-instance Trans Transform where
-    newVariable = do u <- get
-                     put $! u+1
-                     return $ Anonymous u
 
-instance Trans m => Trans (ReaderT r m) where
-    newVariable = lift newVariable
+newVariable :: MonadState TState m => m Renamed
+newVariable = do st <- get
+                 let grin = stateGrin st
+                 put $! st { stateGrin = grin{ grinUnique = grinUnique grin + 1 } }
+                 return $ Anonymous (grinUnique grin)
 
-instance Trans m => Trans (StateT s m) where
-    newVariable = lift newVariable
+newVariableFrom :: MonadState TState m => Renamed -> m Renamed
+newVariableFrom oldName
+    = liftM (mergeNames oldName) newVariable
+    where mergeNames (Aliased _ name) (Anonymous uid) = Aliased uid name
+          mergeNames _oldName newName = newName
 
-runTrans :: Transform Grin -> Grin -> Grin
+pushFuncDef :: MonadState TState m => FuncDef -> m ()
+pushFuncDef def
+    = do st <- get
+         let grin = stateGrin st
+         put $! st { stateGrin = grin{ grinFunctions = def : grinFunctions grin  } }
+
+runTrans :: Transform a -> Grin -> Grin
 runTrans action grin
-    = case runState (unTransform action) (grinUnique grin) of
-        (grin, newUnique) -> grin{grinUnique = newUnique}
+    = case execState (unTransform action) (TState grin) of
+        tstate -> stateGrin tstate
 
-transformExp :: Trans m => (Expression -> m Expression) -> Grin -> m Grin
-transformExp fn grin
-    = do defs <- mapM (transformFunc fn) (grinFunctions grin)
-         return grin{ grinFunctions = defs }
+transformExp :: MonadState TState m => (Expression -> m Expression) -> m ()
+transformExp fn
+    = do funcs <- gets (grinFunctions . stateGrin)
+         modify $ \(TState grin) -> TState (grin{grinFunctions = []})
+         defs <- mapM (transformFunc fn) funcs
+         modify $ \(TState grin) -> TState (grin{grinFunctions = defs ++ grinFunctions grin })
 
-transformFunc :: Trans m => (Expression -> m Expression) -> FuncDef -> m FuncDef
+
+transformFunc :: MonadState TState m => (Expression -> m Expression) -> FuncDef -> m FuncDef
 transformFunc fn def
     = do body <- fn (funcDefBody def)
          return def{funcDefBody = body}
 
 
+
+-- Hoist an expression to a new top-level function.
+-- The returned expression calls the new function.
+hoistToTopLevel :: Renamed -> Expression -> Transform Expression
+hoistToTopLevel oldName exp
+    = do newName <- newVariableFrom oldName
+         cafs <- gets (map cafName . grinCAFs . stateGrin)
+         let unboundArgs = Set.toList (free `Set.difference` Set.fromList cafs)
+         args <- mapM newVariableFrom unboundArgs
+         body <- renameExp (Map.fromList (zip unboundArgs args)) exp
+         let funcDef = FuncDef { funcDefName = newName
+                               , funcDefArgs = args
+                               , funcDefBody = body }
+         pushFuncDef funcDef
+         return $ Application newName unboundArgs
+    where free = freeVariables exp
+
+freeVariables :: Expression -> Set.Set Renamed
+freeVariables = worker
+    where worker (Case scrut alts) = Set.unions (Set.singleton scrut : map freeAlt alts)
+          worker (Store val) = freeValue val
+          worker (Update _size ptr val) = Set.fromList [ptr, val]
+          worker (Unit val) = freeValue val
+          worker (Application fn args)
+              = Set.fromList args
+          worker (a :>>= val :-> b)
+              = Set.unions [ worker a
+                           , worker b `Set.difference` Set.singleton val ]
+          worker (a :>> b)
+              = worker a `Set.union` worker b
+          freeAlt (val :> exp) = worker exp `Set.difference` freeValue val
+          freeValue (Node _node _nt _missing args) = Set.fromList args
+          freeValue (Vector args) = Set.fromList args
+          freeValue Lit{} = Set.empty
+          freeValue (Variable v) = Set.singleton v
+          freeValue Hole{} = Set.empty
+          freeValue Empty = Set.empty
 
 
 type Rename = ReaderT (Map.Map Renamed Renamed) Transform
@@ -63,13 +113,15 @@ renameExp' (e1 :>> e2)
     = liftM2 (:>>) (renameExp' e1) (renameExp' e2)
 renameExp' (Case scrut alts)
     = do scrut' <- rename scrut
-         Case scrut <$> mapM renameAlt alts
+         Case scrut' <$> mapM renameAlt alts
 renameExp' (Store v)
     = renameValue Store v
 renameExp' (Unit v)
     = renameValue Unit v
 renameExp' (Application fn args)
     = Application fn <$> mapM rename args
+renameExp' (Update size ptr val)
+    = return (Update size) `ap` rename ptr `ap` rename val
 
 renameAlt (Node tag nt missing args :> branch)
     = bindArguments args $ \args' ->

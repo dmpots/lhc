@@ -277,7 +277,7 @@ instance MArray IOUArray Int32 IO where
     unsafeRead (IOUArray marr) i = stToIO (unsafeRead marr i)
     {-# INLINE unsafeWrite #-}
     unsafeWrite (IOUArray marr) i e = stToIO (unsafeWrite marr i e)
-
+{-
 instance MArray IOUArray Int64 IO where
     {-# INLINE getBounds #-}
     getBounds (IOUArray arr) = stToIO $ getBounds arr
@@ -295,7 +295,7 @@ instance MArray IOUArray Int64 IO where
     unsafeRead (IOUArray marr) i = stToIO (unsafeRead marr i)
     {-# INLINE unsafeWrite #-}
     unsafeWrite (IOUArray marr) i e = stToIO (unsafeWrite marr i e)
-
+-}
 instance MArray IOUArray Word8 IO where
     {-# INLINE getBounds #-}
     getBounds (IOUArray arr) = stToIO $ getBounds arr
@@ -349,7 +349,7 @@ instance MArray IOUArray Word32 IO where
     unsafeRead (IOUArray marr) i = stToIO (unsafeRead marr i)
     {-# INLINE unsafeWrite #-}
     unsafeWrite (IOUArray marr) i e = stToIO (unsafeWrite marr i e)
-
+{-
 instance MArray IOUArray Word64 IO where
     {-# INLINE getBounds #-}
     getBounds (IOUArray arr) = stToIO $ getBounds arr
@@ -367,7 +367,7 @@ instance MArray IOUArray Word64 IO where
     unsafeRead (IOUArray marr) i = stToIO (unsafeRead marr i)
     {-# INLINE unsafeWrite #-}
     unsafeWrite (IOUArray marr) i e = stToIO (unsafeWrite marr i e)
-
+-}
 -- | Casts an 'IOUArray' with one element type into one with a
 -- different element type.  All the elements of the resulting array
 -- are undefined (unless you know what you\'re doing...).
