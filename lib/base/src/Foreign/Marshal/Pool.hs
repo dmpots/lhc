@@ -48,8 +48,8 @@ module Foreign.Marshal.Pool (
 import GHC.Base              ( Int, Monad(..), (.), not )
 import GHC.Err               ( undefined )
 import GHC.Exception         ( throw )
-import GHC.IOBase            ( IO, IORef, newIORef, readIORef, writeIORef,
-                               block, unblock, catchAny )
+import GHC.IO                ( IO, block, unblock, catchAny )
+import GHC.IORef             ( IORef, newIORef, readIORef, writeIORef )
 import GHC.List              ( elem, length )
 import GHC.Num               ( Num(..) )
 #else
@@ -143,7 +143,7 @@ pooledRealloc = pr undefined
 pooledReallocBytes :: Pool -> Ptr a -> Int -> IO (Ptr a)
 pooledReallocBytes (Pool pool) ptr size = do
    let cPtr = castPtr ptr
-   throwIf (not . (cPtr `elem`)) (\_ -> "pointer not in pool") (readIORef pool)
+   _ <- throwIf (not . (cPtr `elem`)) (\_ -> "pointer not in pool") (readIORef pool)
    newPtr <- reallocBytes cPtr size
    ptrs <- readIORef pool
    writeIORef pool (newPtr : delete cPtr ptrs)

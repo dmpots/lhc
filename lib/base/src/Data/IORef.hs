@@ -23,7 +23,7 @@ module Data.IORef
         modifyIORef,          -- :: IORef a -> (a -> a) -> IO ()
         atomicModifyIORef,    -- :: IORef a -> (a -> (a,b)) -> IO b
 
-#if !defined(__PARALLEL_HASKELL__) && defined(__GLASGOW_HASKELL__) && !defined(__LHC__)
+#if !defined(__PARALLEL_HASKELL__) && defined(__GLASGOW_HASKELL__)
         mkWeakIORef,          -- :: IORef a -> IO () -> IO (Weak (IORef a))
 #endif
         ) where
@@ -35,8 +35,10 @@ import Hugs.IORef
 #ifdef __GLASGOW_HASKELL__
 import GHC.Base
 import GHC.STRef
-import GHC.IOBase
-#if !defined(__PARALLEL_HASKELL__) && !defined(__LHC__)
+-- import GHC.IO
+import GHC.IORef hiding (atomicModifyIORef)
+import qualified GHC.IORef
+#if !defined(__PARALLEL_HASKELL__)
 import GHC.Weak
 #endif
 #endif /* __GLASGOW_HASKELL__ */
@@ -51,7 +53,7 @@ import NHC.IOExtras
     )
 #endif
 
-#if defined(__GLASGOW_HASKELL__) && !defined(__PARALLEL_HASKELL__) && !defined(__LHC__)
+#if defined(__GLASGOW_HASKELL__) && !defined(__PARALLEL_HASKELL__)
 -- |Make a 'Weak' pointer to an 'IORef'
 mkWeakIORef :: IORef a -> IO () -> IO (Weak (IORef a))
 mkWeakIORef r@(IORef (STRef r#)) f = IO $ \s ->
@@ -75,7 +77,7 @@ modifyIORef ref f = readIORef ref >>= writeIORef ref . f
 --
 atomicModifyIORef :: IORef a -> (a -> (a,b)) -> IO b
 #if defined(__GLASGOW_HASKELL__)
-atomicModifyIORef (IORef (STRef r#)) f = IO $ \s -> atomicModifyMutVar# r# f s
+atomicModifyIORef = GHC.IORef.atomicModifyIORef
 
 #elif defined(__HUGS__)
 atomicModifyIORef = plainModifyIORef    -- Hugs has no preemption

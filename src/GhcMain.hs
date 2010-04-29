@@ -20,7 +20,7 @@ import System.Directory
 import qualified GHC
 import GHC		( DynFlags(..), HscTarget(..),
                           GhcMode(..), GhcLink(..),
-			  LoadHowMuch(..), dopt, DynFlag(..) )
+			  LoadHowMuch(..), dopt, DynFlag(..), defaultCallbacks )
 import CmdLineParser
 
 -- Implementations of the various modes (--show-iface, mkdependHS. etc.)
@@ -76,7 +76,7 @@ import qualified LhcMain as Lhc
 -----------------------------------------------------------------------------
 -- GHC's command-line interface
 
-getLibdir
+getUserLibdir
     = do appdir <- getAppUserDataDirectory "lhc"
          let targetARCH = arch
              targetOS   = os
@@ -84,20 +84,22 @@ getLibdir
          return (appdir </> subdir)
 
 main :: IO ()
-main = do Lhc.tryMain -- This call will exit if it recognized the command arguments.
-          ghcMain
-
-ghcMain :: IO ()
-ghcMain = 
-  GHC.defaultErrorHandler defaultDynFlags $ do
+main = do 
   -- 1. extract the -B flag from the args
-  argv0 <- getArgs
-  libdir <- getLibdir
-  let
-        (minusB_args, argv1) = partition ("-B" `isPrefixOf`) argv0
-        mbMinusB | null minusB_args = Just libdir
-                 | otherwise = Just (drop 2 (last minusB_args))
-        wordSize = sizeOf (undefined :: Word)
+  argv0      <- getArgs
+  userLibdir <- getUserLibdir
+  let { 
+      (minusB_args, argv1) = partition ("-B" `isPrefixOf`) argv0
+    ; libdir   | null minusB_args = userLibdir
+               | otherwise = (drop 2 (last minusB_args))
+  }
+  Lhc.tryMain argv1 libdir -- This call will exit if it recognized the command arguments.
+  ghcMain argv1 libdir
+
+ghcMain :: [String] -> FilePath -> IO ()
+ghcMain argv1 libdir = 
+  GHC.defaultErrorHandler defaultDynFlags $ do
+  let wordSize = sizeOf (undefined :: Word)
   let argv1' = map (mkGeneralLocated "on the commandline") ("-fext-core":
                                                             "-no-user-package-conf":
                                                             "-D__LHC__":
@@ -131,7 +133,7 @@ ghcMain =
     Nothing -> return ()
 
   -- start our GHC session
-  GHC.runGhc mbMinusB $ do
+  GHC.runGhc (Just libdir) $ do
 
   dflags0 <- GHC.getSessionDynFlags
 
@@ -177,7 +179,8 @@ ghcMain =
   let flagWarnings = staticFlagWarnings
                   ++ modeFlagWarnings
                   ++ dynamicFlagWarnings
-  liftIO $ handleFlagWarnings dflags2 flagWarnings
+  --liftIO $ handleFlagWarnings dflags2 flagWarnings
+  handleFlagWarnings dflags2 flagWarnings
 
         -- make sure we clean up after ourselves
   GHC.defaultCleanupHandler dflags2 $ do
@@ -535,7 +538,7 @@ doMake srcs  = do
 
 doShowIface :: DynFlags -> FilePath -> IO ()
 doShowIface dflags file = do
-  hsc_env <- newHscEnv dflags
+  hsc_env <- newHscEnv defaultCallbacks dflags
   showIface hsc_env file
 
 -- ---------------------------------------------------------------------------
@@ -565,8 +568,10 @@ showBanner _cli_mode dflags = do
 showInfo :: IO ()
 showInfo = do
     let sq x = " [" ++ x ++ "\n ]"
-    putStrLn $ sq $ concat $ intersperse "\n ," $ map show compilerInfo
+    putStrLn $ sq $ concat $ intersperse "\n ," $ map showInfo compilerInfo
     exitWith ExitSuccess
+  where showInfo (s, String str)     = show (s, str)
+        showInfo (s, FromDynFlags f) = show (s, f defaultDynFlags)
 
 showSupportedLanguages :: IO ()
 showSupportedLanguages = do mapM_ putStrLn supportedLanguages

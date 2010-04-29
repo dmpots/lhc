@@ -8,6 +8,7 @@ import System.IO
 import System.Exit
 import qualified Data.Map as Map
 import Data.Binary
+import Data.List
 import Data.Maybe
 import Control.Monad
 import Data.Time; import Text.Printf
@@ -38,40 +39,41 @@ import qualified Grin.Stage2.DeadCode  as Stage2
 import qualified Grin.Stage2.Rename    as Stage2
 
 import Manager
+import Paths_lhc
 
 --import Tick
 
 -- TODO: We need proper command line parsing.
-tryMain :: IO ()
-tryMain = do args <- getArgs
-             case args of
-               ("install":files)      -> mapM_ installCoreFile files >> exitWith ExitSuccess
-               ("compile":files)  -> build Compile files >> exitWith ExitSuccess
-               ("benchmark":files) -> build Benchmark files >> exitWith ExitSuccess
-               ("llvm":files) -> build LLVM files >> exitWith ExitSuccess
-               _ -> return ()
+tryMain :: [String] -> FilePath -> IO ()
+tryMain args libdir = do 
+  case args of
+    ("install":files)   -> mapM_ (installCoreFile libdir) files >> exitWith ExitSuccess
+    ("compile":files)   -> build Compile libdir files >> exitWith ExitSuccess
+    ("benchmark":files) -> build Benchmark libdir files >> exitWith ExitSuccess
+    ("llvm":files) -> build LLVM libdir files >> exitWith ExitSuccess
+    _ -> return ()
 
-
-installCoreFile :: FilePath -> IO ()
-installCoreFile path
+installCoreFile :: FilePath -> FilePath -> IO ()
+installCoreFile libdir path
     = do inp <- L.readFile path
          hPutStr stderr $ "Parsing " ++ path ++ "..."
          hFlush stdout
          case Core.parseModule "file" inp of
            Left errs -> hPutStrLn stderr "errors: " >> print errs
            Right mod  -> do hPutStrLn stderr " done"
-                            dataDir <- getAppUserDataDirectory "lhc"
-                            let packagesDir = dataDir </> "packages"
+                            --dataDir <- getAppUserDataDirectory "lhc"
+                            --let packagesDir = dataDir </> "packages"
+                            let packagesDir = libdir </> "packages"
                             let smod = coreToSimpleCore mod
                             createDirectoryIfMissing False (packagesDir </> modulePackage smod)
                             encodeFile (packagesDir </> modulePackage smod </> moduleName smod) smod
 
 data Action = Compile | Benchmark | LLVM
 
-build :: Action -> [FilePath] -> IO ()
-build action files@(file:_)
+build :: Action -> FilePath -> [FilePath] -> IO ()
+build action libdir files@(file:_)
     = do mods <- mapM parseCore files
-         libs <- loadAllLibraries
+         libs <- loadAllLibraries libdir
          let primModule = SimpleModule { modulePackage = "ghczmprim"
                                        , moduleName    = "GHCziPrim"
                                        , moduleTypes   = [SimpleType (fromString "ghc-prim:GHC.Prim.(# #)") 1
@@ -141,10 +143,11 @@ outputGrin2 file variant grin
          writeFile outputFile (show $ Stage2.ppGrin grin)
          return ()
 
-loadAllLibraries :: IO (Map.Map ModuleIdent SimpleModule)
-loadAllLibraries
-    = do dataDir <- getAppUserDataDirectory "lhc"
-         let packageDir = dataDir </> "packages"
+loadAllLibraries :: FilePath -> IO (Map.Map ModuleIdent SimpleModule)
+loadAllLibraries libdir
+    = do --dataDir <- getAppUserDataDirectory "lhc"
+         --let packageDir = dataDir </> "packages"
+         let packageDir = libdir </> "packages"
          packages <- getDirectoryContents packageDir
          smods <- forM (filter (`notElem` [".",".."]) packages) $ \package ->
                   do modules <- getDirectoryContents (packageDir </> package)

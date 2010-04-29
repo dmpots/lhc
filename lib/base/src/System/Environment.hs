@@ -34,7 +34,8 @@ import Foreign
 import Foreign.C
 import Control.Exception.Base   ( bracket )
 import Control.Monad
-import GHC.IOBase
+-- import GHC.IO
+import GHC.IO.Exception
 #endif
 
 #ifdef __HUGS__
@@ -123,7 +124,7 @@ getEnv name =
       if litstring /= nullPtr
         then peekCString litstring
         else ioException (IOError Nothing NoSuchThing "getEnv"
-                          "no environment variable" (Just name))
+                          "no environment variable" Nothing (Just name))
 
 foreign import ccall unsafe "getenv"
    c_getenv :: CString -> IO (Ptr CChar)
@@ -154,7 +155,8 @@ withArgv new_args act = do
   pName <- System.Environment.getProgName
   existing_args <- System.Environment.getArgs
   bracket (setArgs new_args)
-          (\argv -> do setArgs (pName:existing_args); freeArgv argv)
+          (\argv -> do _ <- setArgs (pName:existing_args)
+                       freeArgv argv)
           (const act)
 
 freeArgv :: Ptr CString -> IO ()

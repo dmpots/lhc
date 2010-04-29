@@ -99,7 +99,6 @@ import Data.Word
 import GHC.List
 import GHC.Real
 import GHC.Num
-import GHC.IOBase
 import GHC.Base
 #else
 import Data.Char ( chr, ord )

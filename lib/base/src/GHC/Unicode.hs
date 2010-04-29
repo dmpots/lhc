@@ -25,6 +25,7 @@ module GHC.Unicode (
     isLower, isAlpha,  isDigit,
     isOctDigit, isHexDigit, isAlphaNum,
     toUpper, toLower, toTitle,
+    wgencat,
   ) where
 
 import GHC.Base
@@ -32,6 +33,7 @@ import GHC.Real        (fromIntegral)
 import Foreign.C.Types (CInt)
 import GHC.Num         (fromInteger)
 
+#include "HsBaseConfig.h"
 
 -- | Selects the first 128 characters of the Unicode character set,
 -- corresponding to the ASCII character set.
@@ -74,7 +76,7 @@ isSpace c               =  c == ' '     ||
                            c == '\f'    ||
                            c == '\v'    ||
                            c == '\xa0'  ||
-                           False -- iswspace (fromIntegral (ord c)) /= 0
+                           iswspace (fromIntegral (ord c)) /= 0
 
 -- | Selects upper-case or title-case alphabetic Unicode characters (letters).
 -- Title case is used by a small number of letter ligatures like the
@@ -128,7 +130,7 @@ toTitle                 :: Char -> Char
 -- Implementation with the supplied auto-generated Unicode character properties
 -- table (default)
 
-#if 0
+#if 1
 
 -- Regardless of the O/S and Library, use the functions contained in WCsubst.c
 
@@ -216,8 +218,6 @@ toLower c@(C# c#)
   | isAscii c      = c
   | isUpper c      = unsafeChr (ord c `minusInt` ord 'A' `plusInt` ord 'a')
   | otherwise      =  c
-
-toTitle c = c
 
 #endif
 

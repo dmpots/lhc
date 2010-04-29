@@ -40,7 +40,7 @@ import Foreign.Ptr              ( Ptr, nullPtr, FunPtr )
 
 #ifdef __GLASGOW_HASKELL__
 import Foreign.ForeignPtr       ( FinalizerPtr )
-import GHC.IOBase
+import GHC.IO.Exception
 import GHC.Real
 import GHC.Ptr
 import GHC.Err
@@ -192,7 +192,10 @@ failWhenNULL :: String -> IO (Ptr a) -> IO (Ptr a)
 failWhenNULL name f = do
    addr <- f
    if addr == nullPtr
-#if __GLASGOW_HASKELL__ || __HUGS__
+#if __GLASGOW_HASKELL__
+      then ioError (IOError Nothing ResourceExhausted name 
+                                        "out of memory" Nothing Nothing)
+#elif __HUGS__
       then ioError (IOError Nothing ResourceExhausted name 
                                         "out of memory" Nothing)
 #else

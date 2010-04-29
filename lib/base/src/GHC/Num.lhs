@@ -1,4 +1,5 @@
 \begin{code}
+{-# OPTIONS_GHC -XNoImplicitPrelude #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK hide #-}
 -----------------------------------------------------------------------------
@@ -15,10 +16,11 @@
 --
 -----------------------------------------------------------------------------
 
-#if WORD_SIZE == 4
+#include "MachDeps.h"
+#if SIZEOF_HSWORD == 4
 #define DIGITS       9
 #define BASE         1000000000
-#elif WORD_SIZE == 8
+#elif SIZEOF_HSWORD == 8
 #define DIGITS       18
 #define BASE         1000000000000000000
 #else
@@ -178,8 +180,8 @@ integerToString n0 cs0
     jsplith p (n:ns) =
         case n `quotRemInteger` p of
         (# q, r #) ->
-            if q > 0 then fromInteger q : fromInteger r : jsplitb p ns
-                     else fromInteger r : jsplitb p ns
+            if q > 0 then q : r : jsplitb p ns
+                     else     r : jsplitb p ns
     jsplith _ [] = error "jsplith: []"
 
     jsplitb :: Integer -> [Integer] -> [Integer]
@@ -291,6 +293,8 @@ enumDeltaInteger x d = x `seq` (x : enumDeltaInteger (x+d) d)
 --     head (drop 1000000 [1 .. ]
 -- works
 
+{-# NOINLINE [0] enumDeltaToIntegerFB #-}
+-- Don't inline this until RULE "enumDeltaToInteger" has had a chance to fire
 enumDeltaToIntegerFB :: (Integer -> a -> a) -> a
                      -> Integer -> Integer -> Integer -> a
 enumDeltaToIntegerFB c n x delta lim

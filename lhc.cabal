@@ -137,7 +137,7 @@ flag lhc-pkg
 flag with-libs
   default:            False
 
-Executable lhc
+Executable lhc-exe
  main-is:            GhcMain.hs
  Hs-Source-Dirs:     src
  ghc-prof-options:   -auto-all
@@ -177,7 +177,7 @@ Executable lhc-regress
   build-depends:    base >= 4 && < 5, process, extensible-exceptions, HUnit, QuickCheck, test-framework,
                     test-framework-hunit, test-framework-quickcheck
 
-Executable lhc-pkg
+Executable lhc-pkg-exe
   if flag(lhc-pkg)
     Buildable:      True
   else
@@ -185,9 +185,9 @@ Executable lhc-pkg
   hs-source-dirs: lhc-pkg/
   main-is: Main.hs
   Extensions: CPP, ForeignFunctionInterface
-  Other-modules: Paths_lhc
+  Other-modules: Paths_lhc, Distribution.InstalledPackageInfo.Binary
+  Build-Depends: base >= 4 && < 5, directory, process, pretty, haskell98, filepath, Cabal, terminfo
 
-  Build-Depends: base >= 4 && < 5, directory, process, pretty, haskell98, filepath, Cabal
   if !os(windows)
       Build-Depends: unix
 

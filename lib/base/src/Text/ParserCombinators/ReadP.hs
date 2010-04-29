@@ -35,6 +35,7 @@ module Text.ParserCombinators.ReadP
   
   -- * Other operations
   pfail,      -- :: ReadP a
+  eof,        -- :: ReadP ()
   satisfy,    -- :: (Char -> Bool) -> ReadP Char
   char,       -- :: Char -> ReadP Char
   string,     -- :: String -> ReadP String
@@ -76,7 +77,7 @@ import Control.Monad( MonadPlus(..), sequence, liftM2 )
 #ifndef __HADDOCK__
 import {-# SOURCE #-} GHC.Unicode ( isSpace  )
 #endif
-import GHC.List ( replicate )
+import GHC.List ( replicate, null )
 import GHC.Base
 #else
 import Data.Char( isSpace )
@@ -275,25 +276,35 @@ char :: Char -> ReadP Char
 -- ^ Parses and returns the specified character.
 char c = satisfy (c ==)
 
+eof :: ReadP ()
+-- ^ Succeeds iff we are at the end of input
+eof = do { s <- look 
+         ; if null s then return () 
+                     else pfail }
+
 string :: String -> ReadP String
 -- ^ Parses and returns the specified string.
 string this = do s <- look; scan this s
  where
   scan []     _               = do return this
-  scan (x:xs) (y:ys) | x == y = do get; scan xs ys
+  scan (x:xs) (y:ys) | x == y = do _ <- get; scan xs ys
   scan _      _               = do pfail
 
 munch :: (Char -> Bool) -> ReadP String
 -- ^ Parses the first zero or more characters satisfying the predicate.
+--   Always succeds, exactly once having consumed all the characters
+--   Hence NOT the same as (many (satisfy p))
 munch p =
   do s <- look
      scan s
  where
-  scan (c:cs) | p c = do get; s <- scan cs; return (c:s)
+  scan (c:cs) | p c = do _ <- get; s <- scan cs; return (c:s)
   scan _            = do return ""
 
 munch1 :: (Char -> Bool) -> ReadP String
 -- ^ Parses the first one or more characters satisfying the predicate.
+--   Fails if none, else succeeds exactly once having consumed all the characters
+--   Hence NOT the same as (many1 (satisfy p))
 munch1 p =
   do c <- get
      if p c then do s <- munch p; return (c:s) else pfail
@@ -310,7 +321,7 @@ skipSpaces =
   do s <- look
      skip s
  where
-  skip (c:s) | isSpace c = do get; skip s
+  skip (c:s) | isSpace c = do _ <- get; skip s
   skip _                 = do return ()
 
 count :: Int -> ReadP a -> ReadP [a]
@@ -321,9 +332,9 @@ count n p = sequence (replicate n p)
 between :: ReadP open -> ReadP close -> ReadP a -> ReadP a
 -- ^ @between open close p@ parses @open@, followed by @p@ and finally
 --   @close@. Only the value of @p@ is returned.
-between open close p = do open
+between open close p = do _ <- open
                           x <- p
-                          close
+                          _ <- close
                           return x
 
 option :: a -> ReadP a -> ReadP a
@@ -364,12 +375,12 @@ sepBy1 p sep = liftM2 (:) p (many (sep >> p))
 endBy :: ReadP a -> ReadP sep -> ReadP [a]
 -- ^ @endBy p sep@ parses zero or more occurrences of @p@, separated and ended
 --   by @sep@.
-endBy p sep = many (do x <- p ; sep ; return x)
+endBy p sep = many (do x <- p ; _ <- sep ; return x)
 
 endBy1 :: ReadP a -> ReadP sep -> ReadP [a]
 -- ^ @endBy p sep@ parses one or more occurrences of @p@, separated and ended
 --   by @sep@.
-endBy1 p sep = many1 (do x <- p ; sep ; return x)
+endBy1 p sep = many1 (do x <- p ; _ <- sep ; return x)
 
 chainr :: ReadP a -> ReadP (a -> a -> a) -> a -> ReadP a
 -- ^ @chainr p op x@ parses zero or more occurrences of @p@, separated by @op@.

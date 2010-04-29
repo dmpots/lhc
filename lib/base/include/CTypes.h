@@ -8,9 +8,7 @@
 #ifndef CTYPES__H
 #define CTYPES__H
 
-{-
-//include "Typeable.h"
--}
+#include "Typeable.h"
 
 {-
 // As long as there is no automatic derivation of classes for newtypes we resort

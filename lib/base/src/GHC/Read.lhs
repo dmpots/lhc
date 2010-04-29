@@ -70,7 +70,7 @@ import GHC.Real
 import GHC.Float ()
 import GHC.Show
 import GHC.Base
---import GHC.Arr
+import GHC.Arr
 \end{code}
 
 
@@ -421,7 +421,7 @@ instance Read a => Read [a] where
   readPrec     = readListPrec
   readListPrec = readListPrecDefault
   readList     = readListDefault
-{-
+
 instance  (Ix a, Read a, Read b) => Read (Array a b)  where
     readPrec = parens $ prec appPrec $
                do L.Ident "array" <- lexP
@@ -431,7 +431,7 @@ instance  (Ix a, Read a, Read b) => Read (Array a b)  where
 
     readListPrec = readListPrecDefault
     readList     = readListDefault
--}
+
 instance Read L.Lexeme where
   readPrec     = lexP
   readListPrec = readListPrecDefault

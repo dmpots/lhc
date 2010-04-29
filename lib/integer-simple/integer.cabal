@@ -1,0 +1,23 @@
+name:           integer-gmp
+version:        0.1.0.0
+license:        BSD3
+license-file:   LICENSE
+maintainer:     igloo@earth.li
+synopsis:       Simple Integer library
+description:
+    This package contains an simple Integer library.
+cabal-version:  >=1.2
+build-type: Simple
+
+Library {
+    build-depends: ghc-prim
+    exposed-modules: GHC.Integer
+                     GHC.Integer.Simple.Internals
+    other-modules: GHC.Integer.Type
+    extensions: CPP, MagicHash, BangPatterns, UnboxedTuples,
+                ForeignFunctionInterface, UnliftedFFITypes,
+                NoImplicitPrelude
+    -- We need to set the package name to integer-simple
+    -- (without a version number) as it's magic.
+    ghc-options: -package-name integer-gmp -Wall -Werror
+}

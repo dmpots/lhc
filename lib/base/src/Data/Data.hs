@@ -54,6 +54,8 @@ module Data.Data (
         mkIntType,      -- :: String -> DataType
         mkFloatType,    -- :: String -> DataType
         mkStringType,   -- :: String -> DataType
+        mkCharType,     -- :: String -> DataType
+        mkNoRepType,    -- :: String -> DataType
         mkNorepType,    -- :: String -> DataType
         -- ** Observers
         dataTypeName,   -- :: DataType -> String
@@ -74,8 +76,11 @@ module Data.Data (
         -- ** Constructors
         mkConstr,       -- :: DataType -> String -> Fixity -> Constr
         mkIntConstr,    -- :: DataType -> Integer -> Constr
-        mkFloatConstr,  -- :: DataType -> Double  -> Constr
+        mkFloatConstr,  -- :: DataType -> Double -> Constr
+        mkIntegralConstr,-- :: (Integral a) => DataType -> a -> Constr
+        mkRealConstr,   -- :: (Real a) => DataType -> a -> Constr
         mkStringConstr, -- :: DataType -> String  -> Constr
+        mkCharConstr,   -- :: DataType -> Char -> Constr
         -- ** Observers
         constrType,     -- :: Constr   -> DataType
         ConstrRep(..),  -- instance of: Eq, Show
@@ -109,7 +114,6 @@ import Data.Maybe
 import Control.Monad
 
 -- Imports for the instances
-import Data.Typeable
 import Data.Int              -- So we can give Data instance for Int8, ...
 import Data.Word             -- So we can give Data instance for Word8, ...
 #ifdef __GLASGOW_HASKELL__
@@ -125,14 +129,9 @@ import GHC.Arr               -- So we can give Data instance for Array
 # ifdef __HUGS__
 import Hugs.Prelude( Ratio(..) )
 # endif
-import System.IO
 import Foreign.Ptr
 import Foreign.ForeignPtr
-import Foreign.StablePtr
-import Control.Monad.ST
-import Control.Concurrent
 import Data.Array
-import Data.IORef
 #endif
 
 #include "Typeable.h"
@@ -437,7 +436,7 @@ newtype Mp m x = Mp { unMp :: m (x, Bool) }
 
 -- | Build a term skeleton
 fromConstr :: Data a => Constr -> a
-fromConstr = fromConstrB undefined
+fromConstr = fromConstrB (error "Data.Data.fromConstr")
 
 
 -- | Build a term and use a generic function for subterms
@@ -481,8 +480,9 @@ data DataType = DataType
 
               deriving Show
 
-
--- | Representation of constructors
+-- | Representation of constructors. Note that equality on constructors
+-- with different types may not work -- i.e. the constructors for 'False' and
+-- 'Nothing' may compare equal.
 data Constr = Constr
                         { conrep    :: ConstrRep
                         , constring :: String
@@ -504,7 +504,7 @@ instance Eq Constr where
 data DataRep = AlgRep [Constr]
              | IntRep
              | FloatRep
-             | StringRep
+             | CharRep
              | NoRep
 
             deriving (Eq,Show)
@@ -514,8 +514,8 @@ data DataRep = AlgRep [Constr]
 -- | Public representation of constructors
 data ConstrRep = AlgConstr    ConIndex
                | IntConstr    Integer
-               | FloatConstr  Double
-               | StringConstr String
+               | FloatConstr  Rational
+               | CharConstr   Char
 
                deriving (Eq,Show)
 
@@ -566,8 +566,8 @@ repConstr dt cr =
       case (dataTypeRep dt, cr) of
         (AlgRep cs, AlgConstr i)      -> cs !! (i-1)
         (IntRep,    IntConstr i)      -> mkIntConstr dt i
-        (FloatRep,  FloatConstr f)    -> mkFloatConstr dt f
-        (StringRep, StringConstr str) -> mkStringConstr dt str
+        (FloatRep,  FloatConstr f)    -> mkRealConstr dt f
+        (CharRep,   CharConstr c)     -> mkCharConstr dt c
         _ -> error "repConstr"
 
 
@@ -640,8 +640,8 @@ readConstr dt str =
       case dataTypeRep dt of
         AlgRep cons -> idx cons
         IntRep      -> mkReadCon (\i -> (mkPrimCon dt str (IntConstr i)))
-        FloatRep    -> mkReadCon (\f -> (mkPrimCon dt str (FloatConstr f)))
-        StringRep   -> Just (mkStringConstr dt str)
+        FloatRep    -> mkReadCon ffloat
+        CharRep     -> mkReadCon (\c -> (mkPrimCon dt str (CharConstr c)))
         NoRep       -> Nothing
   where
 
@@ -658,6 +658,8 @@ readConstr dt str =
                      then Nothing
                      else Just (head fit)
 
+    ffloat :: Double -> Constr
+    ffloat =  mkPrimCon dt str . FloatConstr . toRational
 
 ------------------------------------------------------------------------------
 --
@@ -712,9 +714,14 @@ mkFloatType :: String -> DataType
 mkFloatType = mkPrimType FloatRep
 
 
--- | Constructs the 'String' type
+-- | This function is now deprecated. Please use 'mkCharType' instead.
+{-# DEPRECATED mkStringType "Use mkCharType instead" #-}
 mkStringType :: String -> DataType
-mkStringType = mkPrimType StringRep
+mkStringType = mkCharType
+
+-- | Constructs the 'Char' type
+mkCharType :: String -> DataType
+mkCharType = mkPrimType CharRep
 
 
 -- | Helper for 'mkIntType', 'mkFloatType', 'mkStringType'
@@ -735,23 +742,41 @@ mkPrimCon dt str cr = Constr
                         , confixity = error "constrFixity"
                         }
 
-
+-- | This function is now deprecated. Please use 'mkIntegralConstr' instead.
+{-# DEPRECATED mkIntConstr "Use mkIntegralConstr instead" #-}
 mkIntConstr :: DataType -> Integer -> Constr
-mkIntConstr dt i = case datarep dt of
-                  IntRep -> mkPrimCon dt (show i) (IntConstr i)
-                  _ -> error "mkIntConstr"
+mkIntConstr = mkIntegralConstr
 
+mkIntegralConstr :: (Integral a) => DataType -> a -> Constr
+mkIntegralConstr dt i = case datarep dt of
+                  IntRep -> mkPrimCon dt (show i) (IntConstr (toInteger  i))
+                  _ -> error "mkIntegralConstr"
 
+-- | This function is now deprecated. Please use 'mkRealConstr' instead.
+{-# DEPRECATED mkFloatConstr "Use mkRealConstr instead" #-}
 mkFloatConstr :: DataType -> Double -> Constr
-mkFloatConstr dt f = case datarep dt of
-                    FloatRep -> mkPrimCon dt (show f) (FloatConstr f)
-                    _ -> error "mkFloatConstr"
+mkFloatConstr dt = mkRealConstr dt . toRational
 
+mkRealConstr :: (Real a) => DataType -> a -> Constr
+mkRealConstr dt f = case datarep dt of
+                    FloatRep -> mkPrimCon dt (show f) (FloatConstr (toRational f))
+                    _ -> error "mkRealConstr"
 
+-- | This function is now deprecated. Please use 'mkCharConstr' instead.
+{-# DEPRECATED mkStringConstr "Use mkCharConstr instead" #-}
 mkStringConstr :: DataType -> String -> Constr
-mkStringConstr dt str = case datarep dt of
-                       StringRep -> mkPrimCon dt str (StringConstr str)
-                       _ -> error "mkStringConstr"
+mkStringConstr dt str =
+  case datarep dt of
+    CharRep -> case str of
+      [c] -> mkPrimCon dt (show c) (CharConstr c)
+      _ -> error "mkStringConstr: input String must contain a single character"
+    _ -> error "mkStringConstr"
+
+-- | Makes a constructor for 'Char'.
+mkCharConstr :: DataType -> Char -> Constr
+mkCharConstr dt c = case datarep dt of
+                   CharRep -> mkPrimCon dt (show c) (CharConstr c)
+                   _ -> error "mkCharConstr"
 
 
 ------------------------------------------------------------------------------
@@ -761,13 +786,20 @@ mkStringConstr dt str = case datarep dt of
 ------------------------------------------------------------------------------
 
 
--- | Constructs a non-representation for a non-presentable type
+-- | Deprecated version (misnamed)
+{-# DEPRECATED mkNorepType "Use mkNoRepType instead" #-}
 mkNorepType :: String -> DataType
 mkNorepType str = DataType
                         { tycon   = str
                         , datarep = NoRep
                         }
 
+-- | Constructs a non-representation for a non-presentable type
+mkNoRepType :: String -> DataType
+mkNoRepType str = DataType
+                        { tycon   = str
+                        , datarep = NoRep
+                        }
 
 -- | Test for a non-representable type
 isNorepType :: DataType -> Bool
@@ -836,12 +868,12 @@ instance Data Bool where
 ------------------------------------------------------------------------------
 
 charType :: DataType
-charType = mkStringType "Prelude.Char"
+charType = mkCharType "Prelude.Char"
 
 instance Data Char where
-  toConstr x = mkStringConstr charType [x]
+  toConstr x = mkCharConstr charType x
   gunfold _ z c = case constrRep c of
-                    (StringConstr [x]) -> z x
+                    (CharConstr x) -> z x
                     _ -> error "gunfold"
   dataTypeOf _ = charType
 
@@ -852,7 +884,7 @@ floatType :: DataType
 floatType = mkFloatType "Prelude.Float"
 
 instance Data Float where
-  toConstr x = mkFloatConstr floatType (realToFrac x)
+  toConstr = mkRealConstr floatType
   gunfold _ z c = case constrRep c of
                     (FloatConstr x) -> z (realToFrac x)
                     _ -> error "gunfold"
@@ -865,9 +897,9 @@ doubleType :: DataType
 doubleType = mkFloatType "Prelude.Double"
 
 instance Data Double where
-  toConstr = mkFloatConstr floatType
+  toConstr = mkRealConstr doubleType
   gunfold _ z c = case constrRep c of
-                    (FloatConstr x) -> z x
+                    (FloatConstr x) -> z (realToFrac x)
                     _ -> error "gunfold"
   dataTypeOf _ = doubleType
 
@@ -1265,7 +1297,7 @@ instance (Data a, Data b, Data c, Data d, Data e, Data f, Data g)
 instance Typeable a => Data (Ptr a) where
   toConstr _   = error "toConstr"
   gunfold _ _  = error "gunfold"
-  dataTypeOf _ = mkNorepType "GHC.Ptr.Ptr"
+  dataTypeOf _ = mkNoRepType "GHC.Ptr.Ptr"
 
 
 ------------------------------------------------------------------------------
@@ -1273,7 +1305,7 @@ instance Typeable a => Data (Ptr a) where
 instance Typeable a => Data (ForeignPtr a) where
   toConstr _   = error "toConstr"
   gunfold _ _  = error "gunfold"
-  dataTypeOf _ = mkNorepType "GHC.ForeignPtr.ForeignPtr"
+  dataTypeOf _ = mkNoRepType "GHC.ForeignPtr.ForeignPtr"
 
 
 ------------------------------------------------------------------------------
@@ -1284,5 +1316,5 @@ instance (Typeable a, Data b, Ix a) => Data (Array a b)
   gfoldl f z a = z (listArray (bounds a)) `f` (elems a)
   toConstr _   = error "toConstr"
   gunfold _ _  = error "gunfold"
-  dataTypeOf _ = mkNorepType "Data.Array.Array"
+  dataTypeOf _ = mkNoRepType "Data.Array.Array"
 

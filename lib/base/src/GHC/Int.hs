@@ -14,7 +14,7 @@
 --
 -----------------------------------------------------------------------------
 
-#define WORD_SIZE_IN_BITS_ (WORD_SIZE_IN_BITS#)
+#include "MachDeps.h"
 
 -- #hide
 module GHC.Int (
@@ -24,14 +24,12 @@ module GHC.Int (
 
 import Data.Bits
 
-{-
-#if WORD_SIZE < 4
+#if WORD_SIZE_IN_BITS < 32
 import GHC.IntWord32
 #endif
-#if WORD_SIZE < 8
+#if WORD_SIZE_IN_BITS < 64
 import GHC.IntWord64
 #endif
--}
 
 import GHC.Base
 import GHC.Enum
@@ -39,10 +37,9 @@ import GHC.Num
 import GHC.Real
 import GHC.Read
 import GHC.Arr
+import GHC.Err
 import GHC.Word hiding (uncheckedShiftL64#, uncheckedShiftRL64#)
 import GHC.Show
-
-import GHC.Integer (smallInteger)
 
 ------------------------------------------------------------------------
 -- type Int8
@@ -53,10 +50,6 @@ import GHC.Integer (smallInteger)
 
 data Int8 = I8# Int# deriving (Eq, Ord)
 -- ^ 8-bit signed integer type
-
-{-# RULES
-"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I8# (narrow8Int# x)
-  #-}
 
 instance Show Int8 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -149,8 +142,8 @@ instance Bits Int8 where
         = I8# (narrow8Int# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
                                        (x'# `uncheckedShiftRL#` (8# -# i'#)))))
         where
-        x'# = narrow8Word# (int2Word# x#)
-        i'# = word2Int# (int2Word# i# `and#` int2Word# 7#)
+        !x'# = narrow8Word# (int2Word# x#)
+        !i'# = word2Int# (int2Word# i# `and#` int2Word# 7#)
     bitSize  _                = 8
     isSigned _                = True
 
@@ -173,10 +166,6 @@ instance Bits Int8 where
 
 data Int16 = I16# Int# deriving (Eq, Ord)
 -- ^ 16-bit signed integer type
-
-{-# RULES
-"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I16# (narrow16Int# x)
-  #-}
 
 instance Show Int16 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -269,8 +258,8 @@ instance Bits Int16 where
         = I16# (narrow16Int# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
                                          (x'# `uncheckedShiftRL#` (16# -# i'#)))))
         where
-        x'# = narrow16Word# (int2Word# x#)
-        i'# = word2Int# (int2Word# i# `and#` int2Word# 15#)
+        !x'# = narrow16Word# (int2Word# x#)
+        !i'# = word2Int# (int2Word# i# `and#` int2Word# 15#)
     bitSize  _                 = 16
     isSigned _                 = True
 
@@ -290,6 +279,142 @@ instance Bits Int16 where
 -- type Int32
 ------------------------------------------------------------------------
 
+#if WORD_SIZE_IN_BITS < 32
+
+data Int32 = I32# Int32#
+-- ^ 32-bit signed integer type
+
+instance Eq Int32 where
+    (I32# x#) == (I32# y#) = x# `eqInt32#` y#
+    (I32# x#) /= (I32# y#) = x# `neInt32#` y#
+
+instance Ord Int32 where
+    (I32# x#) <  (I32# y#) = x# `ltInt32#` y#
+    (I32# x#) <= (I32# y#) = x# `leInt32#` y#
+    (I32# x#) >  (I32# y#) = x# `gtInt32#` y#
+    (I32# x#) >= (I32# y#) = x# `geInt32#` y#
+
+instance Show Int32 where
+    showsPrec p x = showsPrec p (toInteger x)
+
+instance Num Int32 where
+    (I32# x#) + (I32# y#)  = I32# (x# `plusInt32#`  y#)
+    (I32# x#) - (I32# y#)  = I32# (x# `minusInt32#` y#)
+    (I32# x#) * (I32# y#)  = I32# (x# `timesInt32#` y#)
+    negate (I32# x#)       = I32# (negateInt32# x#)
+    abs x | x >= 0         = x
+          | otherwise      = negate x
+    signum x | x > 0       = 1
+    signum 0               = 0
+    signum _               = -1
+    fromInteger (S# i#)    = I32# (intToInt32# i#)
+    fromInteger (J# s# d#) = I32# (integerToInt32# s# d#)
+
+instance Enum Int32 where
+    succ x
+        | x /= maxBound = x + 1
+        | otherwise     = succError "Int32"
+    pred x
+        | x /= minBound = x - 1
+        | otherwise     = predError "Int32"
+    toEnum (I# i#)      = I32# (intToInt32# i#)
+    fromEnum x@(I32# x#)
+        | x >= fromIntegral (minBound::Int) && x <= fromIntegral (maxBound::Int)
+                        = I# (int32ToInt# x#)
+        | otherwise     = fromEnumError "Int32" x
+    enumFrom            = integralEnumFrom
+    enumFromThen        = integralEnumFromThen
+    enumFromTo          = integralEnumFromTo
+    enumFromThenTo      = integralEnumFromThenTo
+
+instance Integral Int32 where
+    quot    x@(I32# x#) y@(I32# y#)
+        | y == 0                     = divZeroError
+        | x == minBound && y == (-1) = overflowError
+        | otherwise                  = I32# (x# `quotInt32#` y#)
+    rem     x@(I32# x#) y@(I32# y#)
+        | y == 0                  = divZeroError
+        | x == minBound && y == (-1) = overflowError
+        | otherwise               = I32# (x# `remInt32#` y#)
+    div     x@(I32# x#) y@(I32# y#)
+        | y == 0                  = divZeroError
+        | x == minBound && y == (-1) = overflowError
+        | otherwise               = I32# (x# `divInt32#` y#)
+    mod     x@(I32# x#) y@(I32# y#)
+        | y == 0                  = divZeroError
+        | x == minBound && y == (-1) = overflowError
+        | otherwise               = I32# (x# `modInt32#` y#)
+    quotRem x@(I32# x#) y@(I32# y#)
+        | y == 0                  = divZeroError
+        | x == minBound && y == (-1) = overflowError
+        | otherwise               = (I32# (x# `quotInt32#` y#),
+                                     I32# (x# `remInt32#` y#))
+    divMod  x@(I32# x#) y@(I32# y#)
+        | y == 0                  = divZeroError
+        | x == minBound && y == (-1) = overflowError
+        | otherwise               = (I32# (x# `divInt32#` y#),
+                                     I32# (x# `modInt32#` y#))
+    toInteger x@(I32# x#)
+	| x >= fromIntegral (minBound::Int) && x <= fromIntegral (maxBound::Int)
+                                  = smallInteger (int32ToInt# x#)
+        | otherwise               = case int32ToInteger# x# of (# s, d #) -> J# s d
+
+divInt32#, modInt32# :: Int32# -> Int32# -> Int32#
+x# `divInt32#` y#
+    | (x# `gtInt32#` intToInt32# 0#) && (y# `ltInt32#` intToInt32# 0#)
+        = ((x# `minusInt32#` y#) `minusInt32#` intToInt32# 1#) `quotInt32#` y#
+    | (x# `ltInt32#` intToInt32# 0#) && (y# `gtInt32#` intToInt32# 0#)
+        = ((x# `minusInt32#` y#) `plusInt32#` intToInt32# 1#) `quotInt32#` y#
+    | otherwise                = x# `quotInt32#` y#
+x# `modInt32#` y#
+    | (x# `gtInt32#` intToInt32# 0#) && (y# `ltInt32#` intToInt32# 0#) ||
+      (x# `ltInt32#` intToInt32# 0#) && (y# `gtInt32#` intToInt32# 0#)
+        = if r# `neInt32#` intToInt32# 0# then r# `plusInt32#` y# else intToInt32# 0#
+    | otherwise = r#
+    where
+    r# = x# `remInt32#` y#
+
+instance Read Int32 where
+    readsPrec p s = [(fromInteger x, r) | (x, r) <- readsPrec p s]
+
+instance Bits Int32 where
+    {-# INLINE shift #-}
+
+    (I32# x#) .&.   (I32# y#)  = I32# (word32ToInt32# (int32ToWord32# x# `and32#` int32ToWord32# y#))
+    (I32# x#) .|.   (I32# y#)  = I32# (word32ToInt32# (int32ToWord32# x# `or32#`  int32ToWord32# y#))
+    (I32# x#) `xor` (I32# y#)  = I32# (word32ToInt32# (int32ToWord32# x# `xor32#` int32ToWord32# y#))
+    complement (I32# x#)       = I32# (word32ToInt32# (not32# (int32ToWord32# x#)))
+    (I32# x#) `shift` (I# i#)
+        | i# >=# 0#            = I32# (x# `iShiftL32#` i#)
+        | otherwise            = I32# (x# `iShiftRA32#` negateInt# i#)
+    (I32# x#) `rotate` (I# i#)
+        | i'# ==# 0# 
+        = I32# x#
+        | otherwise
+        = I32# (word32ToInt32# ((x'# `shiftL32#` i'#) `or32#`
+                                (x'# `shiftRL32#` (32# -# i'#))))
+        where
+        x'# = int32ToWord32# x#
+        i'# = word2Int# (int2Word# i# `and#` int2Word# 31#)
+    bitSize  _                 = 32
+    isSigned _                 = True
+
+    {-# INLINE shiftR #-}
+    -- same as the default definition, but we want it inlined (#2376)
+    x `shiftR`  i = x `shift`  (-i)
+
+{-# RULES
+"fromIntegral/Int->Int32"    fromIntegral = \(I#   x#) -> I32# (intToInt32# x#)
+"fromIntegral/Word->Int32"   fromIntegral = \(W#   x#) -> I32# (word32ToInt32# (wordToWord32# x#))
+"fromIntegral/Word32->Int32" fromIntegral = \(W32# x#) -> I32# (word32ToInt32# x#)
+"fromIntegral/Int32->Int"    fromIntegral = \(I32# x#) -> I#   (int32ToInt# x#)
+"fromIntegral/Int32->Word"   fromIntegral = \(I32# x#) -> W#   (int2Word# (int32ToInt# x#))
+"fromIntegral/Int32->Word32" fromIntegral = \(I32# x#) -> W32# (int32ToWord32# x#)
+"fromIntegral/Int32->Int32"  fromIntegral = id :: Int32 -> Int32
+  #-}
+
+#else 
+
 -- Int32 is represented in the same way as Int.
 #if WORD_SIZE_IN_BITS > 32
 -- Operations may assume and must ensure that it holds only values
@@ -298,11 +423,6 @@ instance Bits Int16 where
 
 data Int32 = I32# Int# deriving (Eq, Ord)
 -- ^ 32-bit signed integer type
-
-{-# RULES
-"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I32# (narrow32Int# x)
-  #-}
-
 
 instance Show Int32 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -387,8 +507,8 @@ instance Bits Int32 where
         = I32# (narrow32Int# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
                                          (x'# `uncheckedShiftRL#` (32# -# i'#)))))
         where
-        x'# = narrow32Word# (int2Word# x#)
-        i'# = word2Int# (int2Word# i# `and#` int2Word# 31#)
+        !x'# = narrow32Word# (int2Word# x#)
+        !i'# = word2Int# (int2Word# i# `and#` int2Word# 31#)
     bitSize  _                 = 32
     isSigned _                 = True
 
@@ -406,6 +526,8 @@ instance Bits Int32 where
 "fromIntegral/Int32->a"      fromIntegral = \(I32# x#) -> fromIntegral (I# x#)
   #-}
 
+#endif 
+
 instance Real Int32 where
     toRational x = toInteger x % 1
 
@@ -421,7 +543,7 @@ instance Ix Int32 where
 ------------------------------------------------------------------------
 -- type Int64
 ------------------------------------------------------------------------
-{-
+
 #if WORD_SIZE_IN_BITS < 64
 
 data Int64 = I64# Int64#
@@ -512,7 +634,7 @@ x# `modInt64#` y#
         = if r# `neInt64#` intToInt64# 0# then r# `plusInt64#` y# else intToInt64# 0#
     | otherwise = r#
     where
-    r# = x# `remInt64#` y#
+    !r# = x# `remInt64#` y#
 
 instance Read Int64 where
     readsPrec p s = [(fromInteger x, r) | (x, r) <- readsPrec p s]
@@ -534,8 +656,8 @@ instance Bits Int64 where
         = I64# (word64ToInt64# ((x'# `uncheckedShiftL64#` i'#) `or64#`
                                 (x'# `uncheckedShiftRL64#` (64# -# i'#))))
         where
-        x'# = int64ToWord64# x#
-        i'# = word2Int# (int2Word# i# `and#` int2Word# 63#)
+        !x'# = int64ToWord64# x#
+        !i'# = word2Int# (int2Word# i# `and#` int2Word# 63#)
     bitSize  _                 = 64
     isSigned _                 = True
 
@@ -569,19 +691,14 @@ a `iShiftRA64#` b | b >=# 64# = if a `ltInt64#` (intToInt64# 0#)
 "fromIntegral/Int64->Int64"  fromIntegral = id :: Int64 -> Int64
   #-}
 
-#endif
--}
+#else 
+
 -- Int64 is represented in the same way as Int.
 -- Operations may assume and must ensure that it holds only values
 -- from its logical range.
 
 data Int64 = I64# Int# deriving (Eq, Ord)
 -- ^ 64-bit signed integer type
-
-{-# RULES
-"smallInteger/fromInteger" forall x. fromInteger (smallInteger x) = I64# x
-  #-}
-
 
 instance Show Int64 where
     showsPrec p x = showsPrec p (fromIntegral x :: Int)
@@ -657,8 +774,8 @@ instance Bits Int64 where
         = I64# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
                            (x'# `uncheckedShiftRL#` (64# -# i'#))))
         where
-        x'# = int2Word# x#
-        i'# = word2Int# (int2Word# i# `and#` int2Word# 63#)
+        !x'# = int2Word# x#
+        !i'# = word2Int# (int2Word# i# `and#` int2Word# 63#)
     bitSize  _                 = 64
     isSigned _                 = True
 
@@ -676,7 +793,7 @@ uncheckedIShiftL64#  = uncheckedIShiftL#
 
 uncheckedIShiftRA64# :: Int# -> Int# -> Int#
 uncheckedIShiftRA64# = uncheckedIShiftRA#
-
+#endif
 
 instance Real Int64 where
     toRational x = toInteger x % 1
@@ -689,4 +806,3 @@ instance Ix Int64 where
     range (m,n)         = [m..n]
     unsafeIndex (m,_) i = fromIntegral i - fromIntegral m
     inRange (m,n) i     = m <= i && i <= n
-

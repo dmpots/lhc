@@ -43,13 +43,11 @@ module Data.Bits (
 -- individual operations.
 
 #if defined(__GLASGOW_HASKELL__) || defined(__HUGS__)
-#define WORD_SIZE_IN_BITS_ (WORD_SIZE# *# 8#)
-#define WORD_SIZE_IN_BITS (WORD_SIZE * 8)
+#include "MachDeps.h"
 #endif
 
 #ifdef __GLASGOW_HASKELL__
 import GHC.Num
-import GHC.Real
 import GHC.Base
 #endif
 
@@ -219,9 +217,9 @@ instance Bits Int where
         I# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
                        (x'# `uncheckedShiftRL#` (wsib -# i'#))))
       where
-        x'# = int2Word# x#
-        i'# = word2Int# (int2Word# i# `and#` int2Word# (wsib -# 1#))
-        wsib = WORD_SIZE_IN_BITS_   {- work around preprocessor problem (??) -}
+        !x'# = int2Word# x#
+        !i'# = word2Int# (int2Word# i# `and#` int2Word# (wsib -# 1#))
+        !wsib = WORD_SIZE_IN_BITS#   {- work around preprocessor problem (??) -}
     bitSize  _             = WORD_SIZE_IN_BITS
 
     {-# INLINE shiftR #-}
@@ -293,8 +291,8 @@ instance Bits Integer where
    complement a = -1 - a
 #endif
 
-   shift x i | i >= 0    = x * 2^i
-             | otherwise = x `div` 2^(-i)
+   shift x i@(I# i#) | i >= 0    = shiftLInteger x i#
+                     | otherwise = shiftRInteger x (negateInt# i#)
 
    rotate x i = shift x i   -- since an Integer never wraps around
 

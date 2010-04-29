@@ -24,6 +24,8 @@ module GHC.TopHandler (
    reportStackOverflow, reportError,
   ) where
 
+#include "HsBaseConfig.h"
+
 import Control.Exception
 import Data.Maybe
 import Data.Dynamic (toDyn)
@@ -34,9 +36,12 @@ import GHC.Base
 import GHC.Conc hiding (throwTo)
 import GHC.Num
 import GHC.Real
-import GHC.Handle
-import GHC.IOBase
---import GHC.Weak
+import GHC.MVar
+import GHC.IO
+import GHC.IO.Handle.FD
+import GHC.IO.Handle
+import GHC.IO.Exception
+import GHC.Weak
 import Data.Typeable
 #if defined(mingw32_HOST_OS)
 import GHC.ConsoleHandler
@@ -48,13 +53,13 @@ import GHC.ConsoleHandler
 runMainIO :: IO a -> IO a
 runMainIO main = 
     do 
-      {-main_thread_id <- myThreadId
+      main_thread_id <- myThreadId
       weak_tid <- mkWeakThreadId main_thread_id
       install_interrupt_handler $ do
            m <- deRefWeak weak_tid 
            case m of
                Nothing  -> return ()
-               Just tid -> throwTo tid (toException UserInterrupt)-}
+               Just tid -> throwTo tid (toException UserInterrupt)
       a <- main
       cleanUp
       return a
@@ -64,7 +69,7 @@ runMainIO main =
 install_interrupt_handler :: IO () -> IO ()
 #ifdef mingw32_HOST_OS
 install_interrupt_handler handler = do
-  GHC.ConsoleHandler.installHandler $
+  _ <- GHC.ConsoleHandler.installHandler $
      Catch $ \event -> 
         case event of
            ControlC -> handler
@@ -73,13 +78,13 @@ install_interrupt_handler handler = do
            _ -> return ()
   return ()
 #else
--- #include "Signals.h"
+#include "rts/Signals.h"
 -- specialised version of System.Posix.Signals.installHandler, which
 -- isn't available here.
 install_interrupt_handler handler = do
-   --let sig = CONST_SIGINT :: CInt
-   --setHandler sig (Just (const handler, toDyn handler))
-   --stg_sig_install sig STG_SIG_RST nullPtr
+   let sig = CONST_SIGINT :: CInt
+   _ <- setHandler sig (Just (const handler, toDyn handler))
+   _ <- stg_sig_install sig STG_SIG_RST nullPtr
      -- STG_SIG_RST: the second ^C kills us for real, just in case the
      -- RTS or program is unresponsive.
    return ()
@@ -95,12 +100,11 @@ foreign import ccall unsafe
 -- make a weak pointer to a ThreadId: holding the weak pointer doesn't
 -- keep the thread alive and prevent it from being identified as
 -- deadlocked.  Vitally important for the main thread.
-{-
 mkWeakThreadId :: ThreadId -> IO (Weak ThreadId)
 mkWeakThreadId t@(ThreadId t#) = IO $ \s ->
    case mkWeak# t# t (unsafeCoerce# 0#) s of 
       (# s1, w #) -> (# s1, Weak w #)
--}
+
 -- | 'runIO' is wrapped around every @foreign export@ and @foreign
 -- import \"wrapper\"@ to mop up any uncaught exceptions.  Thus, the
 -- result of running 'System.Exit.exitWith' in a foreign-exported
@@ -159,8 +163,14 @@ real_handler exit se@(SomeException exn) =
            Just ExitSuccess     -> exit 0
            Just (ExitFailure n) -> exit n
 
-           _ -> do reportError se
-                   exit 1
+           -- EPIPE errors received for stdout are ignored (#2699)
+           _ -> case cast exn of
+                Just IOError{ ioe_type = ResourceVanished,
+                              ioe_errno = Just ioe,
+                              ioe_handle = Just hdl }
+                   | Errno ioe == ePIPE, hdl == stdout -> exit 0
+                _ -> do reportError se
+                        exit 1
            
 
 -- try to flush stdout/stderr, but don't worry if we fail
@@ -183,8 +193,7 @@ exitInterrupted =
 #else
   -- we must exit via the default action for SIGINT, so that the
   -- parent of this process can take appropriate action (see #2301)
-  --unsafeCoerce# (shutdownHaskellAndSignal CONST_SIGINT)
-  error "exitInterrupted"
+  unsafeCoerce# (shutdownHaskellAndSignal CONST_SIGINT)
 
 foreign import ccall "shutdownHaskellAndSignal"
   shutdownHaskellAndSignal :: CInt -> IO ()

@@ -21,13 +21,11 @@ module System.IO.Error (
 
     userError,                  -- :: String  -> IOError
 
-#ifndef __NHC__
     mkIOError,                  -- :: IOErrorType -> String -> Maybe Handle
                                 --    -> Maybe FilePath -> IOError
 
     annotateIOError,            -- :: IOError -> String -> Maybe Handle
                                 --    -> Maybe FilePath -> IOError
-#endif
 
     -- ** Classifying I\/O errors
     isAlreadyExistsError,       -- :: IOError -> Bool
@@ -40,21 +38,17 @@ module System.IO.Error (
     isUserError,
 
     -- ** Attributes of I\/O errors
-#ifndef __NHC__
     ioeGetErrorType,            -- :: IOError -> IOErrorType
     ioeGetLocation,             -- :: IOError -> String
-#endif
     ioeGetErrorString,          -- :: IOError -> String
     ioeGetHandle,               -- :: IOError -> Maybe Handle
     ioeGetFileName,             -- :: IOError -> Maybe FilePath
 
-#ifndef __NHC__
     ioeSetErrorType,            -- :: IOError -> IOErrorType -> IOError
     ioeSetErrorString,          -- :: IOError -> String -> IOError
     ioeSetLocation,             -- :: IOError -> String -> IOError
     ioeSetHandle,               -- :: IOError -> Handle -> IOError
     ioeSetFileName,             -- :: IOError -> FilePath -> IOError
-#endif
 
     -- * Types of I\/O error
     IOErrorType,                -- abstract
@@ -85,10 +79,12 @@ module System.IO.Error (
     catch,                      -- :: IO a -> (IOError -> IO a) -> IO a
     try,                        -- :: IO a -> IO (Either IOError a)
 
-#ifndef __NHC__
     modifyIOError,              -- :: (IOError -> IOError) -> IO a -> IO a
-#endif
   ) where
+
+#ifndef __HUGS__
+import qualified Control.Exception.Base as New (catch)
+#endif
 
 #ifndef __HUGS__
 import Data.Either
@@ -96,11 +92,10 @@ import Data.Either
 import Data.Maybe
 
 #ifdef __GLASGOW_HASKELL__
-import {-# SOURCE #-} Prelude (catch)
-import qualified Control.Exception.Base as New
-
 import GHC.Base
-import GHC.IOBase
+import GHC.IO
+import GHC.IO.Exception
+import GHC.IO.Handle.Types
 import Text.Show
 #endif
 
@@ -111,6 +106,7 @@ import Hugs.Prelude(Handle, IOException(..), IOErrorType(..), IO)
 #ifdef __NHC__
 import IO
   ( IOError ()
+  , Handle ()
   , try
   , ioError
   , userError
@@ -126,8 +122,10 @@ import IO
   , ioeGetHandle                -- :: IOError -> Maybe Handle
   , ioeGetFileName              -- :: IOError -> Maybe FilePath
   )
---import Data.Maybe (fromJust)
---import Control.Monad (MonadPlus(mplus))
+import qualified NHC.Internal as NHC (IOError(..))
+import qualified NHC.DErrNo as NHC (ErrNo(..))
+import Data.Maybe (fromJust)
+import Control.Monad (MonadPlus(mplus))
 #endif
 
 -- | The construct 'try' @comp@ exposes IO errors which occur within a
@@ -156,25 +154,28 @@ mkIOError t location maybe_hdl maybe_filename =
                IOError{ ioe_type = t, 
                         ioe_location = location,
                         ioe_description = "",
+#if defined(__GLASGOW_HASKELL__)
+                        ioe_errno = Nothing,
+#endif
                         ioe_handle = maybe_hdl, 
                         ioe_filename = maybe_filename
                         }
+#endif /* __GLASGOW_HASKELL__ || __HUGS__ */
 #ifdef __NHC__
 mkIOError EOF       location maybe_hdl maybe_filename =
-    EOFError location (fromJust maybe_hdl)
+    NHC.EOFError location (fromJust maybe_hdl)
 mkIOError UserError location maybe_hdl maybe_filename =
-    UserError location ""
+    NHC.UserError location ""
 mkIOError t         location maybe_hdl maybe_filename =
-    NHC.FFI.mkIOError location maybe_filename maybe_handle (ioeTypeToInt t)
+    NHC.IOError location maybe_filename maybe_hdl (ioeTypeToErrNo t)
   where
-    ioeTypeToInt AlreadyExists     = fromEnum EEXIST
-    ioeTypeToInt NoSuchThing       = fromEnum ENOENT
-    ioeTypeToInt ResourceBusy      = fromEnum EBUSY
-    ioeTypeToInt ResourceExhausted = fromEnum ENOSPC
-    ioeTypeToInt IllegalOperation  = fromEnum EPERM
-    ioeTypeToInt PermissionDenied  = fromEnum EACCES
-#endif
-#endif /* __GLASGOW_HASKELL__ || __HUGS__ */
+    ioeTypeToErrNo AlreadyExists     = NHC.EEXIST
+    ioeTypeToErrNo NoSuchThing       = NHC.ENOENT
+    ioeTypeToErrNo ResourceBusy      = NHC.EBUSY
+    ioeTypeToErrNo ResourceExhausted = NHC.ENOSPC
+    ioeTypeToErrNo IllegalOperation  = NHC.EPERM
+    ioeTypeToErrNo PermissionDenied  = NHC.EACCES
+#endif /* __NHC__ */
 
 #ifndef __NHC__
 -- -----------------------------------------------------------------------------
@@ -355,6 +356,47 @@ ioeSetLocation    ioe str      = ioe{ ioe_location = str }
 ioeSetHandle      ioe hdl      = ioe{ ioe_handle = Just hdl }
 ioeSetFileName    ioe filename = ioe{ ioe_filename = Just filename }
 
+#elif defined(__NHC__)
+ioeGetErrorType       :: IOError -> IOErrorType
+ioeGetLocation        :: IOError -> String
+
+ioeGetErrorType e | isAlreadyExistsError e = AlreadyExists
+                  | isDoesNotExistError e  = NoSuchThing
+                  | isAlreadyInUseError e  = ResourceBusy
+                  | isFullError e          = ResourceExhausted
+                  | isEOFError e           = EOF
+                  | isIllegalOperation e   = IllegalOperation
+                  | isPermissionError e    = PermissionDenied
+                  | isUserError e          = UserError
+
+ioeGetLocation (NHC.IOError _ _ _ _)  = "unknown location"
+ioeGetLocation (NHC.EOFError _ _ )    = "unknown location"
+ioeGetLocation (NHC.PatternError loc) = loc
+ioeGetLocation (NHC.UserError loc _)  = loc
+
+ioeSetErrorType   :: IOError -> IOErrorType -> IOError
+ioeSetErrorString :: IOError -> String      -> IOError
+ioeSetLocation    :: IOError -> String      -> IOError
+ioeSetHandle      :: IOError -> Handle      -> IOError
+ioeSetFileName    :: IOError -> FilePath    -> IOError
+
+ioeSetErrorType e _ = e
+ioeSetErrorString   (NHC.IOError _ f h e) s = NHC.IOError s f h e
+ioeSetErrorString   (NHC.EOFError _ f)    s = NHC.EOFError s f
+ioeSetErrorString e@(NHC.PatternError _)  _ = e
+ioeSetErrorString   (NHC.UserError l _)   s = NHC.UserError l s
+ioeSetLocation e@(NHC.IOError _ _ _ _) _ = e
+ioeSetLocation e@(NHC.EOFError _ _)    _ = e
+ioeSetLocation   (NHC.PatternError _)  l = NHC.PatternError l
+ioeSetLocation   (NHC.UserError _ m)   l = NHC.UserError l m
+ioeSetHandle   (NHC.IOError o f _ e) h = NHC.IOError o f (Just h) e
+ioeSetHandle   (NHC.EOFError o _)    h = NHC.EOFError o h
+ioeSetHandle e@(NHC.PatternError _)  _ = e
+ioeSetHandle e@(NHC.UserError _ _)   _ = e
+ioeSetFileName (NHC.IOError o _ h e) f = NHC.IOError o (Just f) h e
+ioeSetFileName e _ = e
+#endif
+
 -- | Catch any 'IOError' that occurs in the computation and throw a
 -- modified version.
 modifyIOError :: (IOError -> IOError) -> IO a -> IO a
@@ -371,20 +413,46 @@ annotateIOError :: IOError
               -> Maybe Handle 
               -> Maybe FilePath 
               -> IOError 
-annotateIOError (IOError ohdl errTy _ str opath) loc hdl path = 
-  IOError (hdl `mplus` ohdl) errTy loc str (path `mplus` opath)
+
+#if defined(__GLASGOW_HASKELL__) || defined(__HUGS__)
+annotateIOError ioe loc hdl path = 
+  ioe{ ioe_handle = hdl `mplus` ioe_handle ioe,
+       ioe_location = loc, ioe_filename = path `mplus` ioe_filename ioe }
   where
     Nothing `mplus` ys = ys
     xs      `mplus` _  = xs
 #endif /* __GLASGOW_HASKELL__ || __HUGS__ */
 
-#if 0 /*__NHC__*/
-annotateIOError (IOError msg file hdl code) msg' file' hdl' =
-    IOError (msg++'\n':msg') (file`mplus`file') (hdl`mplus`hdl') code
-annotateIOError (EOFError msg hdl) msg' file' hdl' =
-    EOFError (msg++'\n':msg') (hdl`mplus`hdl')
-annotateIOError (UserError loc msg) msg' file' hdl' =
-    UserError loc (msg++'\n':msg')
-annotateIOError (PatternError loc) msg' file' hdl' =
-    PatternError (loc++'\n':msg')
+#if defined(__NHC__)
+annotateIOError (NHC.IOError msg file hdl code) msg' hdl' file' =
+    NHC.IOError (msg++'\n':msg') (file`mplus`file') (hdl`mplus`hdl') code
+annotateIOError (NHC.EOFError msg hdl) msg' _ _ =
+    NHC.EOFError (msg++'\n':msg') hdl
+annotateIOError (NHC.UserError loc msg) msg' _ _ =
+    NHC.UserError loc (msg++'\n':msg')
+annotateIOError (NHC.PatternError loc) msg' _ _ =
+    NHC.PatternError (loc++'\n':msg')
 #endif
+
+#ifndef __HUGS__
+-- | The 'catch' function establishes a handler that receives any 'IOError'
+-- raised in the action protected by 'catch'.  An 'IOError' is caught by
+-- the most recent handler established by 'catch'.  These handlers are
+-- not selective: all 'IOError's are caught.  Exception propagation
+-- must be explicitly provided in a handler by re-raising any unwanted
+-- exceptions.  For example, in
+--
+-- > f = catch g (\e -> if IO.isEOFError e then return [] else ioError e)
+--
+-- the function @f@ returns @[]@ when an end-of-file exception
+-- (cf. 'System.IO.Error.isEOFError') occurs in @g@; otherwise, the
+-- exception is propagated to the next outer handler.
+--
+-- When an exception propagates outside the main program, the Haskell
+-- system prints the associated 'IOError' value and exits the program.
+--
+-- Non-I\/O exceptions are not caught by this variant; to catch all
+-- exceptions, use 'Control.Exception.catch' from "Control.Exception".
+catch :: IO a -> (IOError -> IO a) -> IO a
+catch = New.catch
+#endif /* !__HUGS__ */

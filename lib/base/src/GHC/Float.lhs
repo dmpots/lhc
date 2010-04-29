@@ -24,6 +24,7 @@ module GHC.Float( module GHC.Float, Float(..), Double(..), Float#, Double# )
 
 import Data.Maybe
 
+import Data.Bits
 import GHC.Base
 import GHC.List
 import GHC.Enum
@@ -31,8 +32,6 @@ import GHC.Show
 import GHC.Num
 import GHC.Real
 import GHC.Arr
-
-import Data.Bits
 
 infixr 8  **
 \end{code}
@@ -201,16 +200,22 @@ instance  RealFrac Float  where
     {-# INLINE floor #-}
     {-# INLINE truncate #-}
 
-    properFraction x
-      = case (decodeFloat x)      of { (m,n) ->
-        let  b = floatRadix x     in
-        if n >= 0 then
-            (fromInteger m * fromInteger b ^ n, 0.0)
-        else
-            case (quotRem m (b^(negate n))) of { (w,r) ->
-            (fromInteger w, encodeFloat r n)
-            }
-        }
+-- We assume that FLT_RADIX is 2 so that we can use more efficient code
+#if FLT_RADIX != 2
+#error FLT_RADIX must be 2
+#endif
+    properFraction (F# x#)
+      = case decodeFloat_Int# x# of
+        (# m#, n# #) ->
+            let m = I# m#
+                n = I# n#
+            in
+            if n >= 0
+            then (fromIntegral m * (2 ^ n), 0.0)
+            else let i = if m >= 0 then                m `shiftR` negate n
+                                   else negate (negate m `shiftR` negate n)
+                     f = m - (i `shiftL` negate n)
+                 in (fromIntegral i, encodeFloat (fromIntegral f) n)
 
     truncate x  = case properFraction x of
                      (n,_) -> n
@@ -257,10 +262,10 @@ instance  RealFloat Float  where
     floatDigits _       =  FLT_MANT_DIG     -- ditto
     floatRange _        =  (FLT_MIN_EXP, FLT_MAX_EXP) -- ditto
 
-    decodeFloat (F# f#) = error "decodeFloat"{-case decodeFloatInteger f# of
-                          (# i, e #) -> (i, I# e)-}
+    decodeFloat (F# f#) = case decodeFloat_Int# f# of
+                          (# i, e #) -> (smallInteger i, I# e)
 
-    encodeFloat i (I# e) = error "encodeFloat" --F# (encodeFloatInteger i e)
+    encodeFloat i (I# e) = F# (encodeFloatInteger i e)
 
     exponent x          = case decodeFloat x of
                             (m,n) -> if m == 0 then 0 else n + floatDigits x
@@ -313,7 +318,7 @@ instance  Num Double  where
              | otherwise = negate 1
 
     {-# INLINE fromInteger #-}
-    fromInteger i = fromRat (i % 1) -- D# (doubleFromInteger i)
+    fromInteger i = D# (doubleFromInteger i)
 
 
 instance  Real Double  where
@@ -385,24 +390,22 @@ instance  RealFrac Double  where
                                 EQ -> if even n then n else m
                                 GT -> m
 
-    --ceiling (D# d) = fromIntegral (I# (double2Int# (c_ceil d)))
     ceiling x   = case properFraction x of
                     (n,r) -> if r > 0.0 then n + 1 else n
 
     floor x     = case properFraction x of
                     (n,r) -> if r < 0.0 then n - 1 else n
 
---foreign import ccall unsafe "ceil" c_ceil :: Double# -> Double#
-
 instance  RealFloat Double  where
     floatRadix _        =  FLT_RADIX        -- from float.h
     floatDigits _       =  DBL_MANT_DIG     -- ditto
     floatRange _        =  (DBL_MIN_EXP, DBL_MAX_EXP) -- ditto
 
-    decodeFloat d
-      = error "decodeDouble" -- decodeDouble d
+    decodeFloat (D# x#)
+      = case decodeDoubleInteger x#   of
+          (# i, j #) -> (i, I# j)
 
-    encodeFloat i j = error "encodeDouble" -- encodeDouble i j
+    encodeFloat i (I# j) = D# (encodeDoubleInteger i j)
 
     exponent x          = case decodeFloat x of
                             (m,n) -> if m == 0 then 0 else n + floatDigits x
@@ -419,51 +422,6 @@ instance  RealFloat Double  where
     isNegativeZero x    = 0 /= isDoubleNegativeZero x
     isIEEE _            = True
 
---castDouble :: Double# -> Word#
---castDouble d#  = 0## -- (unsafeCoerce# d#)
-
-foreign import ccall "lhc_prim_castDoubleToWord" castDoubleToWord :: Double# -> Word#
-foreign import ccall "lhc_prim_castWordToDouble" castWordToDouble :: Word# -> Double#
-
-encodeDouble :: Integer -> Int -> Double
-encodeDouble significand exp
-    = d
-    where (mantisse, scaledExp) = fromRat'' (significand % 1) d
-          d = encodeDouble' mantisse (exp + scaledExp)
-
-encodeDouble' :: Integer -> Int -> Double
-encodeDouble' significand' (I# exp)
-    = let I# significand = fromInteger (abs significand')
-          significandW = int2Word# significand
-          sign = if significand' < 0 then 1## `shiftL#` 63# else 0##
-          mantisse = significandW `and#` ((1## `shiftL#` 52#) `xor#` not# 0##)
-          exp' = int2Word# (exp +# 0x3ff# +# 52#) `shiftL#` 52#
-          w = sign `or#` exp' `or#` mantisse
-      in D# (castWordToDouble w)
-
-
--- FIXME: This doesn't work with 32bit Ints.
-decodeDouble :: Double -> (Integer, Int)
---decodeDouble (D# d#)
---    = case decodeDoubleInteger d# of
---        (# integer, i# #) -> ( integer, I# i# )
-decodeDouble (D# d#)
-    = let sign = (i `and#` (1## `shiftL#` 63#)) `eqWord#` 0##
-          exp :: Int 
-          exp  = I# (word2Int# ((i `shiftL#` 1#) `shiftRL#` 53#))
-          mantissa :: Integer
-          mantissa  = fromIntegral (I# (word2Int# ((i `shiftL#` 12#) `shiftRL#` 12#)))
-          significand = if exp == 0 then mantissa else setBit mantissa 52
-      in (if sign then significand else -significand, exp-0x3ff-52)
-    where i = castDoubleToWord d#
-
-
-{-
-decodeDouble :: Double# -> (Int, Integer)
-decodeDouble d#
-    = case decodeDouble_2Int d# of
-        (# sign, hi, lo, exp #) -> ( I# exp, fromIntegral (W# lo) + fromIntegral (W# hi) * 2^32)
--}
 instance  Show Double  where
     showsPrec   x = showSignedFloat showFloat x
     showList = showList__ (showsPrec 0) 
@@ -667,7 +625,9 @@ floatToDigits base x =
         -- Haskell promises that p-1 <= logBase b f < p.
         (p - 1 + e0) * 3 `div` 10
      else
-        ceiling ((log (fromInteger (f+1)) +
+	-- f :: Integer, log :: Float -> Float, 
+        --               ceiling :: Float -> Int
+        ceiling ((log (fromInteger (f+1) :: Float) +
                  fromIntegral e * log (fromInteger b)) /
                    log (fromInteger base))
 --WAS:            fromInt e * log (fromInteger b))
@@ -785,12 +745,6 @@ fromRat (n :% d) | n > 0     = fromRat' (n :% d)
 fromRat' :: (RealFloat a) => Rational -> a
 -- Invariant: argument is strictly positive
 fromRat' x = r
-    where (mantisse, exp) = fromRat'' x r
-          r = encodeFloat mantisse exp
-
-fromRat'' :: (RealFloat a) => Rational -> a -> (Integer, Int)
--- Invariant: argument is strictly positive
-fromRat'' x r = (round x', p')
   where b = floatRadix r
         p = floatDigits r
         (minExp0, _) = floatRange r
@@ -800,6 +754,7 @@ fromRat'' x r = (round x', p')
         p0 = (integerLogBase b (numerator x) - integerLogBase b (denominator x) - p) `max` minExp
         f = if p0 < 0 then 1 % expt b (-p0) else expt b p0 % 1
         (x', p') = scaleRat (toRational b) minExp xMin xMax p0 (x / f)
+        r = encodeFloat (round x') p'
 
 -- Scale x until xMin <= x < xMax, or p (the exponent) <= minExp.
 scaleRat :: Rational -> Int -> Rational -> Rational -> Int -> Rational -> (Rational, Int)
@@ -950,20 +905,11 @@ powerDouble  (D# x) (D# y) = D# (x **## y)
 \end{code}
 
 \begin{code}
-foreign import ccall unsafe "__encodeFloat"
-        encodeFloat# :: Int# -> ByteArray# -> Int -> Float
-foreign import ccall unsafe "__int_encodeFloat"
-        int_encodeFloat# :: Int# -> Int -> Float
-
-
 foreign import ccall unsafe "isFloatNaN" isFloatNaN :: Float -> Int
 foreign import ccall unsafe "isFloatInfinite" isFloatInfinite :: Float -> Int
 foreign import ccall unsafe "isFloatDenormalized" isFloatDenormalized :: Float -> Int
 foreign import ccall unsafe "isFloatNegativeZero" isFloatNegativeZero :: Float -> Int
 
-
-foreign import ccall unsafe "__encodeDouble"
-        encodeDouble# :: Int# -> ByteArray# -> Int -> Double
 
 foreign import ccall unsafe "isDoubleNaN" isDoubleNaN :: Double -> Int
 foreign import ccall unsafe "isDoubleInfinite" isDoubleInfinite :: Double -> Int

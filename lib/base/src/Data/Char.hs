@@ -134,9 +134,7 @@ data GeneralCategory
 
 -- | The Unicode general category of the character.
 generalCategory :: Char -> GeneralCategory
-#if defined(__LHC__)
-generalCategory c = NotAssigned
-#elif defined(__GLASGOW_HASKELL__) || defined(__NHC__)
+#if defined(__GLASGOW_HASKELL__) || defined(__NHC__)
 generalCategory c = toEnum $ fromIntegral $ wgencat $ fromIntegral $ ord c
 #endif
 #ifdef __HUGS__

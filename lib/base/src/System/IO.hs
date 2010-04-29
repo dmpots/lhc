@@ -159,6 +159,65 @@ module System.IO (
 
     openTempFile,
     openBinaryTempFile,
+    openTempFileWithDefaultPermissions,
+    openBinaryTempFileWithDefaultPermissions,
+
+#if !defined(__NHC__) && !defined(__HUGS__)
+    -- * Unicode encoding\/decoding
+
+    -- | A text-mode 'Handle' has an associated 'TextEncoding', which
+    -- is used to decode bytes into Unicode characters when reading,
+    -- and encode Unicode characters into bytes when writing.
+    --
+    -- The default 'TextEncoding' is the same as the default encoding
+    -- on your system, which is also available as 'localeEncoding'.
+    -- (GHC note: on Windows, we currently do not support double-byte
+    -- encodings; if the console\'s code page is unsupported, then
+    -- 'localeEncoding' will be 'latin1'.)
+    --
+    -- Encoding and decoding errors are always detected and reported,
+    -- except during lazy I/O ('hGetContents', 'getContents', and
+    -- 'readFile'), where a decoding error merely results in
+    -- termination of the character stream, as with other I/O errors.
+
+    hSetEncoding, 
+    hGetEncoding,
+
+    -- ** Unicode encodings
+    TextEncoding, 
+    latin1,
+    utf8, utf8_bom,
+    utf16, utf16le, utf16be,
+    utf32, utf32le, utf32be, 
+    localeEncoding,
+    mkTextEncoding,
+#endif
+
+#if !defined(__NHC__) && !defined(__HUGS__)
+    -- * Newline conversion
+    
+    -- | In Haskell, a newline is always represented by the character
+    -- '\n'.  However, in files and external character streams, a
+    -- newline may be represented by another character sequence, such
+    -- as '\r\n'.
+    --
+    -- A text-mode 'Handle' has an associated 'NewlineMode' that
+    -- specifies how to transate newline characters.  The
+    -- 'NewlineMode' specifies the input and output translation
+    -- separately, so that for instance you can translate '\r\n'
+    -- to '\n' on input, but leave newlines as '\n' on output.
+    --
+    -- The default 'NewlineMode' for a 'Handle' is
+    -- 'nativeNewlineMode', which does no translation on Unix systems,
+    -- but translates '\r\n' to '\n' and back on Windows.
+    --
+    -- Binary-mode 'Handle's do no newline translation at all.
+    --
+    hSetNewlineMode, 
+    Newline(..), nativeNewline, 
+    NewlineMode(..), 
+    noNewlineTranslation, universalNewlineMode, nativeNewlineMode,
+#endif
   ) where
 
 import Control.Exception.Base
@@ -168,17 +227,22 @@ import Data.Bits
 import Data.List
 import Data.Maybe
 import Foreign.C.Error
-import Foreign.C.String
 import Foreign.C.Types
 import System.Posix.Internals
+import System.Posix.Types
 #endif
 
 #ifdef __GLASGOW_HASKELL__
 import GHC.Base
-import GHC.IOBase       -- Together these four Prelude modules define
-import GHC.Handle       -- all the stuff exported by IO for the GHC version
-import GHC.IO
-import GHC.Exception
+import GHC.Real
+import GHC.IO hiding ( onException )
+import GHC.IO.IOMode
+import GHC.IO.Handle.FD
+import qualified GHC.IO.FD as FD
+import GHC.IO.Handle
+import GHC.IORef
+import GHC.IO.Exception ( userError )
+import GHC.IO.Encoding
 import GHC.Num
 import Text.Read
 import GHC.Show
@@ -428,14 +492,29 @@ openTempFile :: FilePath   -- ^ Directory in which to create the file
                            -- the created file will be \"fooXXX.ext\" where XXX is some
                            -- random number.
              -> IO (FilePath, Handle)
-openTempFile tmp_dir template = openTempFile' "openTempFile" tmp_dir template False
+openTempFile tmp_dir template
+    = openTempFile' "openTempFile" tmp_dir template False 0o600
 
 -- | Like 'openTempFile', but opens the file in binary mode. See 'openBinaryFile' for more comments.
 openBinaryTempFile :: FilePath -> String -> IO (FilePath, Handle)
-openBinaryTempFile tmp_dir template = openTempFile' "openBinaryTempFile" tmp_dir template True
+openBinaryTempFile tmp_dir template
+    = openTempFile' "openBinaryTempFile" tmp_dir template True 0o600
 
-openTempFile' :: String -> FilePath -> String -> Bool -> IO (FilePath, Handle)
-openTempFile' loc tmp_dir template binary = do
+-- | Like 'openTempFile', but uses the default file permissions
+openTempFileWithDefaultPermissions :: FilePath -> String
+                                   -> IO (FilePath, Handle)
+openTempFileWithDefaultPermissions tmp_dir template
+    = openTempFile' "openBinaryTempFile" tmp_dir template False 0o666
+
+-- | Like 'openBinaryTempFile', but uses the default file permissions
+openBinaryTempFileWithDefaultPermissions :: FilePath -> String
+                                         -> IO (FilePath, Handle)
+openBinaryTempFileWithDefaultPermissions tmp_dir template
+    = openTempFile' "openBinaryTempFile" tmp_dir template True 0o666
+
+openTempFile' :: String -> FilePath -> String -> Bool -> CMode
+              -> IO (FilePath, Handle)
+openTempFile' loc tmp_dir template binary mode = do
   pid <- c_getpid
   findTempName pid
   where
@@ -466,13 +545,13 @@ openTempFile' loc tmp_dir template binary = do
     oflags = oflags1 .|. binary_flags
 #endif
 
-#ifdef __NHC__
+#if defined(__NHC__)
     findTempName x = do h <- openFile filepath ReadWriteMode
                         return (filepath, h)
-#else
+#elif defined(__GLASGOW_HASKELL__)
     findTempName x = do
-      fd <- withCString filepath $ \ f ->
-              c_open f oflags 0o600
+      fd <- withFilePath filepath $ \ f ->
+              c_open f oflags mode
       if fd < 0
        then do
          errno <- getErrno
@@ -480,12 +559,20 @@ openTempFile' loc tmp_dir template binary = do
            then findTempName (x+1)
            else ioError (errnoToIOError loc errno Nothing (Just tmp_dir))
        else do
-         -- XXX We want to tell fdToHandle what the filepath is,
-         -- as any exceptions etc will only be able to report the
-         -- fd currently
+
+         (fD,fd_type) <- FD.mkFD (fromIntegral fd) ReadWriteMode Nothing{-no stat-}
+                              False{-is_socket-} 
+                              True{-is_nonblock-}
+
+         h <- mkHandleFromFD fD fd_type filepath ReadWriteMode False{-set non-block-}
+                           (Just localeEncoding)
+
+         return (filepath, h)
+#else
          h <- fdToHandle fd `onException` c_close fd
          return (filepath, h)
 #endif
+
       where
         filename        = prefix ++ show x ++ suffix
         filepath        = tmp_dir `combine` filename

@@ -15,9 +15,7 @@
 --
 -----------------------------------------------------------------------------
 
--- include "MachDeps.h"
-
-#define WORD_SIZE_IN_BITS 64
+#include "MachDeps.h"
 
 -- #hide
 module GHC.IntWord32 (

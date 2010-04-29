@@ -32,17 +32,30 @@
 #define HTYPE_UID_T
 #define HTYPE_GID_T
 #else
+#include "HsBaseConfig.h"
 #endif
 
 module System.Posix.Types (
 
   -- * POSIX data types
+#if defined(HTYPE_DEV_T)
   CDev,
+#endif
+#if defined(HTYPE_INO_T)
   CIno,
+#endif
+#if defined(HTYPE_MODE_T)
   CMode,
+#endif
+#if defined(HTYPE_OFF_T)
   COff,
+#endif
+#if defined(HTYPE_PID_T)
   CPid,
+#endif
+#if defined(HTYPE_SSIZE_T)
   CSsize,
+#endif
 
 #if defined(HTYPE_GID_T)
   CGid,
@@ -97,15 +110,15 @@ import Foreign.C
 
 import Foreign
 import Foreign.C
---import Data.Typeable
-import Data.Bits
+import Data.Typeable
+-- import Data.Bits
 
 #ifdef __GLASGOW_HASKELL__
 import GHC.Base
 import GHC.Enum
 import GHC.Num
 import GHC.Real
-import GHC.Prim
+-- import GHC.Prim
 import GHC.Read
 import GHC.Show
 #else
@@ -113,13 +126,6 @@ import Control.Monad
 #endif
 
 #include "CTypes.h"
-
-newtype CDev = CDev Word64 deriving (Show,Eq,Ord,Num,Storable,Integral,Real,Enum)
-newtype CIno = CIno Word64 deriving (Show,Eq,Ord,Num,Storable,Integral,Real,Enum)
-newtype CMode = CMode Word32 deriving (Show,Eq,Ord,Num,Storable,Integral,Real,Enum)
-newtype CPid = CPid Int32 deriving (Show,Eq,Ord,Num,Storable,Integral,Real,Enum)
-newtype COff = COff Int64 deriving (Show,Eq,Ord,Num,Storable,Integral,Real,Enum)
-newtype CSsize = CSsize Int64 deriving (Show,Eq,Ord,Num,Storable,Integral,Real,Enum)
 
 #if defined(HTYPE_DEV_T)
 ARITHMETIC_TYPE(CDev,tyConCDev,"CDev",HTYPE_DEV_T)
@@ -168,9 +174,7 @@ INTEGRAL_TYPE(CRLim,tyConCRlim,"CRLim",HTYPE_RLIM_T)
 -- suseconds_t, timer_t, useconds_t
 
 -- Make an Fd type rather than using CInt everywhere
-{-INTEGRAL_TYPE(Fd,tyConFd,"Fd",CInt)-}
-newtype Fd = Fd CInt deriving (Show,Eq,Ord,Num,Storable,Integral,Real,Enum)
-
+INTEGRAL_TYPE(Fd,tyConFd,"Fd",CInt)
 
 -- nicer names, and backwards compatibility with POSIX library:
 #if defined(HTYPE_NLINK_T)

@@ -1,19 +1,29 @@
 name:           ghc-prim
-version:        0.1.0.0
+version:        0.2.0.0
 license:        BSD3
 license-file:   LICENSE
 maintainer:     libraries@haskell.org
 synopsis:       GHC primitives
 description:
     GHC primitives.
-cabal-version:  >=1.2
+cabal-version:  >=1.6
 build-type: Custom
+
+source-repository head
+    type:     darcs
+    location: http://darcs.haskell.org/packages/ghc-prim/
+
+flag include-ghc-prim {
+    Description: Include GHC.Prim in exposed-modules
+    default: False
+}
 
 Library {
     if impl(ghc)
       build-depends: rts
     exposed-modules:
         GHC.Bool
+        GHC.Debug
         GHC.Generics
         GHC.Ordering
         GHC.PrimopWrappers
@@ -22,6 +32,14 @@ Library {
         GHC.Tuple
         GHC.Types
         GHC.Unit
+
+    if flag(include-ghc-prim) {
+        exposed-modules: GHC.Prim
+    }
+
+    c-sources:
+        cbits/debug.c
+        cbits/longlong.c
     extensions: CPP, MagicHash, ForeignFunctionInterface, UnliftedFFITypes,
                 UnboxedTuples, EmptyDataDecls, NoImplicitPrelude
     -- We need to set the package name to ghc-prim (without a version number)

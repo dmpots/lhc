@@ -36,16 +36,18 @@ import NHC.FFI (Storable(..),Ptr,FunPtr,StablePtr
 
 import Control.Monad            ( liftM )
 
+#include "MachDeps.h"
+#include "HsBaseConfig.h"
 
 #ifdef __GLASGOW_HASKELL__
 import GHC.Storable
 import GHC.Stable       ( StablePtr )
+import GHC.IO()		-- Instance Monad IO
 import GHC.Num
 import GHC.Int
 import GHC.Word
 import GHC.Ptr
 import GHC.Err
-import GHC.IOBase
 import GHC.Base
 #else
 import Data.Int
@@ -171,53 +173,6 @@ sizeOfPtr px x = sizeOf x
 
 -- System-dependent, but rather obvious instances
 
-#define HTYPE_INT       Int32
-
-#define SIZEOF_INT32    4
-#define ALIGNMENT_INT32 4
-
-#define SIZEOF_HSINT    WORD_SIZE
-#define ALIGNMENT_HSINT WORD_SIZE
-
-#define SIZEOF_HSWORD    WORD_SIZE
-#define ALIGNMENT_HSWORD WORD_SIZE
-
-#define SIZEOF_HSPTR    WORD_SIZE
-#define ALIGNMENT_HSPTR WORD_SIZE
-
-#define SIZEOF_HSFLOAT  4
-#define ALIGNMENT_HSFLOAT 4
-
-#define SIZEOF_HSDOUBLE 8
-#define ALIGNMENT_HSDOUBLE 8
-
-#define SIZEOF_HSFUNPTR    WORD_SIZE
-#define ALIGNMENT_HSFUNPTR WORD_SIZE
-
-#define SIZEOF_WORD8    1
-#define ALIGNMENT_WORD8 1
-
-#define SIZEOF_WORD16    2
-#define ALIGNMENT_WORD16 2
-
-#define SIZEOF_WORD32    4
-#define ALIGNMENT_WORD32 4
-
-#define SIZEOF_WORD64    8
-#define ALIGNMENT_WORD64 8
-
-#define SIZEOF_INT8    1
-#define ALIGNMENT_INT8 1
-
-#define SIZEOF_INT16    2
-#define ALIGNMENT_INT16 2
-
-#define SIZEOF_INT32    4
-#define ALIGNMENT_INT32 4
-
-#define SIZEOF_INT64    8
-#define ALIGNMENT_INT64 8
-
 instance Storable Bool where
    sizeOf _          = sizeOf (undefined::HTYPE_INT)
    alignment _       = alignment (undefined::HTYPE_INT)
@@ -252,10 +207,10 @@ STORABLE((Ptr a),SIZEOF_HSPTR,ALIGNMENT_HSPTR,
 
 STORABLE((FunPtr a),SIZEOF_HSFUNPTR,ALIGNMENT_HSFUNPTR,
          readFunPtrOffPtr,writeFunPtrOffPtr)
-{-
+
 STORABLE((StablePtr a),SIZEOF_HSSTABLEPTR,ALIGNMENT_HSSTABLEPTR,
          readStablePtrOffPtr,writeStablePtrOffPtr)
--}
+
 STORABLE(Float,SIZEOF_HSFLOAT,ALIGNMENT_HSFLOAT,
          readFloatOffPtr,writeFloatOffPtr)
 
@@ -282,6 +237,7 @@ STORABLE(Int16,SIZEOF_INT16,ALIGNMENT_INT16,
 
 STORABLE(Int32,SIZEOF_INT32,ALIGNMENT_INT32,
          readInt32OffPtr,writeInt32OffPtr)
+
 STORABLE(Int64,SIZEOF_INT64,ALIGNMENT_INT64,
          readInt64OffPtr,writeInt64OffPtr)
 

@@ -53,7 +53,6 @@ import Foreign.C.Types          ( CSize )
 import Foreign.Marshal.Alloc    ( malloc, alloca )
 
 #ifdef __GLASGOW_HASKELL__
-import GHC.IOBase
 import GHC.Real                 ( fromIntegral )
 import GHC.Num
 import GHC.Base
@@ -159,14 +158,14 @@ withMany withFoo (x:xs) f = withFoo x $ \x' ->
 -- first (destination); the copied areas may /not/ overlap
 --
 copyBytes               :: Ptr a -> Ptr a -> Int -> IO ()
-copyBytes dest src size  = do memcpy dest src (fromIntegral size)
+copyBytes dest src size  = do _ <- memcpy dest src (fromIntegral size)
                               return ()
 
 -- |Copies the given number of bytes from the second area (source) into the
 -- first (destination); the copied areas /may/ overlap
 --
 moveBytes               :: Ptr a -> Ptr a -> Int -> IO ()
-moveBytes dest src size  = do memmove dest src (fromIntegral size)
+moveBytes dest src size  = do _ <- memmove dest src (fromIntegral size)
                               return ()
 
 

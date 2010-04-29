@@ -1,122 +1,196 @@
 name:           base
-version:        4.1.0.0
+version:        4.2.0.1
 license:        BSD3
 license-file:   LICENSE
-maintainer:     lhc@haskell.org
+maintainer:     libraries@haskell.org
+bug-reports: http://hackage.haskell.org/trac/ghc/newticket?component=libraries/base
 synopsis:       Basic libraries
 description:
     This package contains the Prelude and its support libraries,
     and a large collection of useful libraries ranging from data
     structures to parsing combinators and debugging utilities.
-cabal-version:  >=1.2
-build-type:     Simple
+cabal-version:  >=1.6
+build-type: Simple
+
+source-repository head
+    type:     darcs
+    location: http://darcs.haskell.org/packages/base/
+
+Flag integer-simple
+    Description: Use integer-simple
+    Default: False
 
 Library {
-   extensions: CPP, NoImplicitPrelude, MagicHash
-   build-depends: ghc-prim, integer
-   ghc-options: -package-name base -fglasgow-exts
-   include-dirs: includes/
-
-   Exposed-modules:
-      Prelude
-      Data.List
-      Data.Function
-      Data.Traversable
-      Data.Ix
-      Data.Char
-      Data.Data
-      Data.String
-      Data.Foldable
-      Data.Monoid
-      Data.Version
-      Data.Maybe
-      Data.Either
-      Data.Tuple
-      Data.Bits
-      Data.Word
-      Data.Int
-      Data.HashTable
-      Data.Typeable
-      Data.Dynamic
-      Data.IORef
-      Data.Ratio
-      Data.Complex
-      Text.ParserCombinators.ReadP
-      Text.ParserCombinators.ReadPrec
-      Text.Read.Lex
-      Text.Show
-      Text.Read
-      Text.Printf
---      Text.Show.Functions
-      Numeric
-      System.IO.Unsafe
-      System.IO.Error
-      System.IO
-      System.Posix.Types
-      System.Posix.Internals
-      System.Environment
-      System.Exit
-      System.Console.GetOpt
-
-      Debug.Trace
-
-      GHC.Base
-      GHC.Exts
-      GHC.Unicode
-      GHC.Read
-      GHC.Float
-      GHC.Arr
-      GHC.Classes
-      GHC.Exception
-      GHC.Err
-      GHC.List
-      GHC.Show
-      GHC.Enum
-      GHC.Num
-      GHC.ST
-      GHC.STRef
-      GHC.Word
-      GHC.Int
-      GHC.Real
-      GHC.Ptr
-      GHC.Stable
-      GHC.Storable
-      GHC.ForeignPtr
-      GHC.Pack
-      GHC.Conc
-      GHC.Handle
-      GHC.IO
-      GHC.TopHandler
-      GHC.IOBase
-      Unsafe.Coerce
-      Foreign.C.Types
-      Foreign.C.String
-      Foreign.C.Error
-      Foreign.C
-      Foreign.Ptr
-      Foreign.ForeignPtr
-      Foreign.StablePtr
-      Foreign.Storable
-      Foreign.Marshal.Alloc
-      Foreign.Marshal.Utils
-      Foreign.Marshal.Array
-      Foreign.Marshal.Error
-      Foreign.Marshal.Pool
-      Foreign.Marshal
-      Foreign
-
-      Control.Monad
-      Control.Monad.Instances
-      Control.Monad.Fix
-      Control.Monad.ST
-      Control.Monad.ST.Lazy
-      Control.Monad.ST.Strict
-      Control.Exception.Base
-      Control.Exception
-      Control.Concurrent.MVar
-      Control.Applicative
-      Control.Arrow
-      Control.Category
-
-   Hs-source-dirs: src
+    exposed-modules:
+        Foreign.Concurrent,
+        GHC.Arr,
+        GHC.Base,
+        GHC.Classes,
+        GHC.Conc,
+--        GHC.ConsoleHandler,
+        GHC.Desugar,
+        GHC.Enum,
+        GHC.Environment,
+        GHC.Err,
+        GHC.Exception,
+        GHC.Exts,
+        GHC.Float,
+        GHC.ForeignPtr,
+        GHC.MVar,
+        GHC.IO,
+        GHC.IO.IOMode,
+        GHC.IO.Buffer,
+        GHC.IO.Device,
+        GHC.IO.BufferedIO,
+        GHC.IO.FD,
+        GHC.IO.Exception,
+        GHC.IO.Encoding,
+        GHC.IO.Encoding.Latin1,
+        GHC.IO.Encoding.UTF8,
+        GHC.IO.Encoding.UTF16,
+        GHC.IO.Encoding.UTF32,
+        GHC.IO.Encoding.Types,
+        GHC.IO.Encoding.Iconv,
+        GHC.IO.Encoding.CodePage,
+        GHC.IO.Handle,
+        GHC.IO.Handle.Types,
+        GHC.IO.Handle.Internals,
+        GHC.IO.Handle.FD,
+        GHC.IO.Handle.Text,
+        GHC.IOBase,
+        GHC.Handle,
+        GHC.IORef,
+        GHC.IOArray,
+        GHC.Int,
+        GHC.List,
+        GHC.Num,
+        GHC.PArr,
+        GHC.Pack,
+        GHC.Ptr,
+        GHC.Read,
+        GHC.Real,
+        GHC.ST,
+        GHC.STRef,
+        GHC.Show,
+        GHC.Stable,
+        GHC.Storable,
+        GHC.TopHandler,
+        GHC.Unicode,
+        GHC.Weak,
+        GHC.Word,
+        --System.Timeout
+        Control.Applicative,
+        Control.Arrow,
+        Control.Category,
+        --Control.Concurrent,
+        Control.Concurrent.Chan,
+        Control.Concurrent.MVar,
+        Control.Concurrent.QSem,
+        Control.Concurrent.QSemN,
+        Control.Concurrent.SampleVar,
+        Control.Exception,
+        Control.Exception.Base
+        Control.OldException,
+        Control.Monad,
+        Control.Monad.Fix,
+        Control.Monad.Instances,
+        Control.Monad.ST
+        Control.Monad.ST.Lazy
+        Control.Monad.ST.Strict
+        Data.Bits,
+        Data.Bool,
+        Data.Char,
+        Data.Complex,
+        Data.Dynamic,
+        Data.Either,
+        Data.Eq,
+        Data.Data,
+        Data.Fixed,
+        Data.Foldable
+        Data.Function,
+        Data.Functor,
+        Data.HashTable,
+        Data.IORef,
+        Data.Int,
+        Data.Ix,
+        Data.List,
+        Data.Maybe,
+        Data.Monoid,
+        Data.Ord,
+        Data.Ratio,
+        Data.STRef
+        Data.STRef.Lazy
+        Data.STRef.Strict
+        Data.String,
+        Data.Traversable
+        Data.Tuple,
+        Data.Typeable,
+        Data.Unique,
+        Data.Version,
+        Data.Word,
+        Debug.Trace,
+        Foreign,
+        Foreign.C,
+        Foreign.C.Error,
+        Foreign.C.String,
+        Foreign.C.Types,
+        Foreign.ForeignPtr,
+        Foreign.Marshal,
+        Foreign.Marshal.Alloc,
+        Foreign.Marshal.Array,
+        Foreign.Marshal.Error,
+        Foreign.Marshal.Pool,
+        Foreign.Marshal.Utils,
+        Foreign.Ptr,
+        Foreign.StablePtr,
+        Foreign.Storable,
+        Numeric,
+        Prelude,
+        System.Console.GetOpt
+        System.CPUTime,
+        System.Environment,
+        System.Exit,
+        System.IO,
+        System.IO.Error,
+        System.IO.Unsafe,
+        System.Info,
+        System.Mem,
+        System.Mem.StableName,
+        System.Mem.Weak,
+        System.Posix.Internals,
+        System.Posix.Types,
+        Text.ParserCombinators.ReadP,
+        Text.ParserCombinators.ReadPrec,
+        Text.Printf,
+        Text.Read,
+        Text.Read.Lex,
+        Text.Show,
+        Text.Show.Functions
+        Unsafe.Coerce
+    c-sources:
+        cbits/PrelIOUtils.c
+        cbits/WCsubst.c
+        cbits/Win32Utils.c
+        cbits/consUtils.c
+        cbits/iconv.c
+        cbits/inputReady.c
+        cbits/selectUtils.c
+        cbits/primFloat.c
+    include-dirs: include
+    install-includes:    HsBase.h HsBaseConfig.h WCsubst.h consUtils.h Typeable.h
+    if os(windows) {
+        extra-libraries: wsock32, user32, shell32
+    }
+    extensions: CPP, MagicHash, ExistentialQuantification, Rank2Types,
+                ScopedTypeVariables, UnboxedTuples,
+                ForeignFunctionInterface, UnliftedFFITypes,
+                DeriveDataTypeable, GeneralizedNewtypeDeriving,
+                FlexibleInstances, StandaloneDeriving,
+                PatternGuards, EmptyDataDecls, NoImplicitPrelude
+    -- We need to set the package name to base (without a version number)
+    -- as it's magic.
+    ghc-options: -package-name base
+    nhc98-options: -H4M -K3M
+    hs-source-dirs: src
+    build-depends:  ghc-prim, integer-gmp
 }

@@ -54,9 +54,6 @@ quotInt# a1 a2 = (GHC.Prim.quotInt#) a1 a2
 {-# NOINLINE remInt# #-}
 remInt# :: Int# -> Int# -> Int#
 remInt# a1 a2 = (GHC.Prim.remInt#) a1 a2
-{-# NOINLINE gcdInt# #-}
-gcdInt# :: Int# -> Int# -> Int#
-gcdInt# a1 a2 = (GHC.Prim.gcdInt#) a1 a2
 {-# NOINLINE negateInt# #-}
 negateInt# :: Int# -> Int#
 negateInt# a1 = (GHC.Prim.negateInt#) a1
@@ -96,9 +93,6 @@ int2Float# a1 = (GHC.Prim.int2Float#) a1
 {-# NOINLINE int2Double# #-}
 int2Double# :: Int# -> Double#
 int2Double# a1 = (GHC.Prim.int2Double#) a1
-{-# NOINLINE int2Integer# #-}
-int2Integer# :: Int# -> (# Int#,ByteArray# #)
-int2Integer# a1 = (GHC.Prim.int2Integer#) a1
 {-# NOINLINE uncheckedIShiftL# #-}
 uncheckedIShiftL# :: Int# -> Int# -> Int#
 uncheckedIShiftL# a1 a2 = (GHC.Prim.uncheckedIShiftL#) a1 a2
@@ -144,9 +138,6 @@ uncheckedShiftRL# a1 a2 = (GHC.Prim.uncheckedShiftRL#) a1 a2
 {-# NOINLINE word2Int# #-}
 word2Int# :: Word# -> Int#
 word2Int# a1 = (GHC.Prim.word2Int#) a1
-{-# NOINLINE word2Integer# #-}
-word2Integer# :: Word# -> (# Int#,ByteArray# #)
-word2Integer# a1 = (GHC.Prim.word2Integer#) a1
 {-# NOINLINE gtWord# #-}
 gtWord# :: Word# -> Word# -> Bool
 gtWord# a1 a2 = (GHC.Prim.gtWord#) a1 a2
@@ -183,60 +174,6 @@ narrow16Word# a1 = (GHC.Prim.narrow16Word#) a1
 {-# NOINLINE narrow32Word# #-}
 narrow32Word# :: Word# -> Word#
 narrow32Word# a1 = (GHC.Prim.narrow32Word#) a1
-{-# NOINLINE plusInteger# #-}
-plusInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-plusInteger# a1 a2 a3 a4 = (GHC.Prim.plusInteger#) a1 a2 a3 a4
-{-# NOINLINE minusInteger# #-}
-minusInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-minusInteger# a1 a2 a3 a4 = (GHC.Prim.minusInteger#) a1 a2 a3 a4
-{-# NOINLINE timesInteger# #-}
-timesInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-timesInteger# a1 a2 a3 a4 = (GHC.Prim.timesInteger#) a1 a2 a3 a4
-{-# NOINLINE gcdInteger# #-}
-gcdInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-gcdInteger# a1 a2 a3 a4 = (GHC.Prim.gcdInteger#) a1 a2 a3 a4
-{-# NOINLINE gcdIntegerInt# #-}
-gcdIntegerInt# :: Int# -> ByteArray# -> Int# -> Int#
-gcdIntegerInt# a1 a2 a3 = (GHC.Prim.gcdIntegerInt#) a1 a2 a3
-{-# NOINLINE divExactInteger# #-}
-divExactInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-divExactInteger# a1 a2 a3 a4 = (GHC.Prim.divExactInteger#) a1 a2 a3 a4
-{-# NOINLINE quotInteger# #-}
-quotInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-quotInteger# a1 a2 a3 a4 = (GHC.Prim.quotInteger#) a1 a2 a3 a4
-{-# NOINLINE remInteger# #-}
-remInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-remInteger# a1 a2 a3 a4 = (GHC.Prim.remInteger#) a1 a2 a3 a4
-{-# NOINLINE cmpInteger# #-}
-cmpInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> Int#
-cmpInteger# a1 a2 a3 a4 = (GHC.Prim.cmpInteger#) a1 a2 a3 a4
-{-# NOINLINE cmpIntegerInt# #-}
-cmpIntegerInt# :: Int# -> ByteArray# -> Int# -> Int#
-cmpIntegerInt# a1 a2 a3 = (GHC.Prim.cmpIntegerInt#) a1 a2 a3
-{-# NOINLINE quotRemInteger# #-}
-quotRemInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray#,Int#,ByteArray# #)
-quotRemInteger# a1 a2 a3 a4 = (GHC.Prim.quotRemInteger#) a1 a2 a3 a4
-{-# NOINLINE divModInteger# #-}
-divModInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray#,Int#,ByteArray# #)
-divModInteger# a1 a2 a3 a4 = (GHC.Prim.divModInteger#) a1 a2 a3 a4
-{-# NOINLINE integer2Int# #-}
-integer2Int# :: Int# -> ByteArray# -> Int#
-integer2Int# a1 a2 = (GHC.Prim.integer2Int#) a1 a2
-{-# NOINLINE integer2Word# #-}
-integer2Word# :: Int# -> ByteArray# -> Word#
-integer2Word# a1 a2 = (GHC.Prim.integer2Word#) a1 a2
-{-# NOINLINE andInteger# #-}
-andInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-andInteger# a1 a2 a3 a4 = (GHC.Prim.andInteger#) a1 a2 a3 a4
-{-# NOINLINE orInteger# #-}
-orInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-orInteger# a1 a2 a3 a4 = (GHC.Prim.orInteger#) a1 a2 a3 a4
-{-# NOINLINE xorInteger# #-}
-xorInteger# :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#,ByteArray# #)
-xorInteger# a1 a2 a3 a4 = (GHC.Prim.xorInteger#) a1 a2 a3 a4
-{-# NOINLINE complementInteger# #-}
-complementInteger# :: Int# -> ByteArray# -> (# Int#,ByteArray# #)
-complementInteger# a1 a2 = (GHC.Prim.complementInteger#) a1 a2
 {-# NOINLINE (>##) #-}
 (>##) :: Double# -> Double# -> Bool
 (>##) a1 a2 = (GHC.Prim.>##) a1 a2
@@ -315,9 +252,6 @@ tanhDouble# a1 = (GHC.Prim.tanhDouble#) a1
 {-# NOINLINE (**##) #-}
 (**##) :: Double# -> Double# -> Double#
 (**##) a1 a2 = (GHC.Prim.**##) a1 a2
-{-# NOINLINE decodeDouble# #-}
-decodeDouble# :: Double# -> (# Int#,Int#,ByteArray# #)
-decodeDouble# a1 = (GHC.Prim.decodeDouble#) a1
 {-# NOINLINE decodeDouble_2Int# #-}
 decodeDouble_2Int# :: Double# -> (# Int#,Word#,Word#,Int# #)
 decodeDouble_2Int# a1 = (GHC.Prim.decodeDouble_2Int#) a1
@@ -399,9 +333,6 @@ powerFloat# a1 a2 = (GHC.Prim.powerFloat#) a1 a2
 {-# NOINLINE float2Double# #-}
 float2Double# :: Float# -> Double#
 float2Double# a1 = (GHC.Prim.float2Double#) a1
-{-# NOINLINE decodeFloat# #-}
-decodeFloat# :: Float# -> (# Int#,Int#,ByteArray# #)
-decodeFloat# a1 = (GHC.Prim.decodeFloat#) a1
 {-# NOINLINE decodeFloat_Int# #-}
 decodeFloat_Int# :: Float# -> (# Int#,Int# #)
 decodeFloat_Int# a1 = (GHC.Prim.decodeFloat_Int#) a1
@@ -825,6 +756,9 @@ newTVar# a1 a2 = (GHC.Prim.newTVar#) a1 a2
 {-# NOINLINE readTVar# #-}
 readTVar# :: TVar# s a -> State# s -> (# State# s,a #)
 readTVar# a1 a2 = (GHC.Prim.readTVar#) a1 a2
+{-# NOINLINE readTVarIO# #-}
+readTVarIO# :: TVar# s a -> State# s -> (# State# s,a #)
+readTVarIO# a1 a2 = (GHC.Prim.readTVarIO#) a1 a2
 {-# NOINLINE writeTVar# #-}
 writeTVar# :: TVar# s a -> a -> State# s -> State# s
 writeTVar# a1 a2 a3 = (GHC.Prim.writeTVar#) a1 a2 a3
@@ -924,6 +858,9 @@ stableNameToInt# a1 = (GHC.Prim.stableNameToInt#) a1
 {-# NOINLINE reallyUnsafePtrEquality# #-}
 reallyUnsafePtrEquality# :: a -> a -> Int#
 reallyUnsafePtrEquality# a1 a2 = (GHC.Prim.reallyUnsafePtrEquality#) a1 a2
+{-# NOINLINE getSpark# #-}
+getSpark# :: State# s -> (# State# s,Int#,a #)
+getSpark# a1 = (GHC.Prim.getSpark#) a1
 {-# NOINLINE dataToTag# #-}
 dataToTag# :: a -> Int#
 dataToTag# a1 = (GHC.Prim.dataToTag#) a1
@@ -942,3 +879,9 @@ unpackClosure# a1 = (GHC.Prim.unpackClosure#) a1
 {-# NOINLINE getApStackVal# #-}
 getApStackVal# :: a -> Int# -> (# Int#,b #)
 getApStackVal# a1 a2 = (GHC.Prim.getApStackVal#) a1 a2
+{-# NOINLINE traceCcs# #-}
+traceCcs# :: a -> b -> b
+traceCcs# a1 a2 = (GHC.Prim.traceCcs#) a1 a2
+{-# NOINLINE traceEvent# #-}
+traceEvent# :: Addr# -> State# s -> State# s
+traceEvent# a1 a2 = (GHC.Prim.traceEvent#) a1 a2

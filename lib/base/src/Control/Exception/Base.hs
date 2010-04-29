@@ -37,8 +37,8 @@ module Control.Exception.Base (
         NestedAtomically(..),
 #endif
 
-        BlockedOnDeadMVar(..),
-        BlockedIndefinitely(..),
+        BlockedIndefinitelyOnMVar(..),
+        BlockedIndefinitelyOnSTM(..),
         Deadlock(..),
         NoMethodError(..),
         PatternMatchFail(..),
@@ -106,10 +106,11 @@ module Control.Exception.Base (
 
 #ifdef __GLASGOW_HASKELL__
 import GHC.Base
-import GHC.IOBase
+import GHC.IO hiding (finally,onException)
+import GHC.IO.Exception
+import GHC.Exception
 import GHC.Show
-import GHC.IOBase
-import GHC.Exception hiding ( Exception )
+-- import GHC.Exception hiding ( Exception )
 import GHC.Conc
 #endif
 
@@ -128,9 +129,8 @@ import Data.Either
 import Data.Maybe
 
 #ifdef __NHC__
-import qualified System.IO.Error as H'98 (catch)
-import System.IO.Error (ioError)
-import IO              (bracket)
+import qualified IO as H'98 (catch)
+import IO              (bracket,ioError)
 import DIOError         -- defn of IOError type
 import System          (ExitCode())
 import System.IO.Unsafe (unsafePerformIO)
@@ -189,8 +189,8 @@ instance Show AssertionFailed
 instance Show PatternMatchFail
 instance Show NoMethodError
 instance Show Deadlock
-instance Show BlockedOnDeadMVar
-instance Show BlockedIndefinitely
+instance Show BlockedIndefinitelyOnMVar
+instance Show BlockedIndefinitelyOnSTM
 instance Show ErrorCall
 instance Show RecConError
 instance Show RecSelError
@@ -234,8 +234,8 @@ INSTANCE_TYPEABLE0(ExitCode,exitCodeTc,"ExitCode")
 INSTANCE_TYPEABLE0(ErrorCall,errorCallTc,"ErrorCall")
 INSTANCE_TYPEABLE0(AssertionFailed,assertionFailedTc,"AssertionFailed")
 INSTANCE_TYPEABLE0(AsyncException,asyncExceptionTc,"AsyncException")
-INSTANCE_TYPEABLE0(BlockedOnDeadMVar,blockedOnDeadMVarTc,"BlockedOnDeadMVar")
-INSTANCE_TYPEABLE0(BlockedIndefinitely,blockedIndefinitelyTc,"BlockedIndefinitely")
+INSTANCE_TYPEABLE0(BlockedIndefinitelyOnMVar,blockedIndefinitelyOnMVarTc,"BlockedIndefinitelyOnMVar")
+INSTANCE_TYPEABLE0(BlockedIndefinitelyOnSTM,blockedIndefinitelyOnSTM,"BlockedIndefinitelyOnSTM")
 INSTANCE_TYPEABLE0(Deadlock,deadlockTc,"Deadlock")
 
 instance Exception SomeException where
@@ -272,8 +272,8 @@ instance Exception ErrorCall where
     fromException (Hugs.Exception.ErrorCall s) = Just (ErrorCall s)
     fromException _ = Nothing
 
-data BlockedOnDeadMVar = BlockedOnDeadMVar
-data BlockedIndefinitely = BlockedIndefinitely
+data BlockedIndefinitelyOnMVar = BlockedIndefinitelyOnMVar
+data BlockedIndefinitelyOnSTM = BlockedIndefinitelyOnSTM
 data Deadlock = Deadlock
 data AssertionFailed = AssertionFailed String
 data AsyncException
@@ -283,8 +283,8 @@ data AsyncException
   | UserInterrupt
   deriving (Eq, Ord)
 
-instance Show BlockedOnDeadMVar where
-    showsPrec _ BlockedOnDeadMVar = showString "thread blocked indefinitely"
+instance Show BlockedIndefinitelyOnMVar where
+    showsPrec _ BlockedIndefinitelyOnMVar = showString "thread blocked indefinitely"
 
 instance Show BlockedIndefinitely where
     showsPrec _ BlockedIndefinitely = showString "thread blocked indefinitely"
@@ -340,8 +340,8 @@ blocked  = return False
 --
 -- Note that we have to give a type signature to @e@, or the program
 -- will not typecheck as the type is ambiguous. While it is possible
--- to catch exceptions of any type, see $catchall for an explanation
--- of the problems with doing so.
+-- to catch exceptions of any type, see the previous section \"Catching all
+-- exceptions\" for an explanation of the problems with doing so.
 --
 -- For catching exceptions in pure (non-'IO') expressions, see the
 -- function 'evaluate'.
@@ -383,7 +383,7 @@ catch   :: Exception e
         -> (e -> IO a)  -- ^ Handler to invoke if an exception is raised
         -> IO a
 #if __GLASGOW_HASKELL__
-catch = GHC.IOBase.catchException
+catch = GHC.IO.catchException
 #elif __HUGS__
 catch m h = Hugs.Exception.catchException m h'
   where h' e = case fromException e of
@@ -474,7 +474,7 @@ tryJust p a = do
 -- | Like 'finally', but only performs the final action if there was an
 -- exception raised by the computation.
 onException :: IO a -> IO b -> IO a
-onException io what = io `catch` \e -> do what
+onException io what = io `catch` \e -> do _ <- what
                                           throw (e :: SomeException)
 
 -----------------------------------------------------------------------------
@@ -509,7 +509,7 @@ bracket before after thing =
   block (do
     a <- before
     r <- unblock (thing a) `onException` after a
-    after a
+    _ <- after a
     return r
  )
 #endif
@@ -524,7 +524,7 @@ finally :: IO a         -- ^ computation to run first
 a `finally` sequel =
   block (do
     r <- unblock a `onException` sequel
-    sequel
+    _ <- sequel
     return r
   )
 
@@ -691,8 +691,6 @@ instance Exception NestedAtomically
 
 -----
 
-instance Exception Dynamic
-
 #endif /* __GLASGOW_HASKELL__ || __HUGS__ */
 
 #ifdef __GLASGOW_HASKELL__
@@ -700,8 +698,9 @@ recSelError, recConError, irrefutPatError, runtimeError,
              nonExhaustiveGuardsError, patError, noMethodBindingError
         :: Addr# -> a   -- All take a UTF8-encoded C string
 
-recSelError              s = throw (RecSelError (unpackCStringUtf8# s)) -- No location info unfortunately
-runtimeError             s = error (unpackCStringUtf8# s)               -- No location info unfortunately
+recSelError              s = throw (RecSelError ("No match in record selector "
+			                         ++ unpackCStringUtf8# s))  -- No location info unfortunately
+runtimeError             s = error (unpackCStringUtf8# s)                   -- No location info unfortunately
 
 nonExhaustiveGuardsError s = throw (PatternMatchFail (untangle s "Non-exhaustive guards in"))
 irrefutPatError          s = throw (PatternMatchFail (untangle s "Irrefutable pattern failed for pattern"))

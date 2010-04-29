@@ -50,7 +50,6 @@ module Foreign.Ptr (
 
 #ifdef __GLASGOW_HASKELL__
 import GHC.Ptr
-import GHC.IOBase
 import GHC.Base
 import GHC.Num
 import GHC.Read
@@ -59,7 +58,7 @@ import GHC.Show
 import GHC.Enum
 import GHC.Word         ( Word(..) )
 
-import Data.Int
+-- import Data.Int
 import Data.Word
 #else
 import Control.Monad    ( liftM )
@@ -67,7 +66,7 @@ import Foreign.C.Types
 #endif
 
 import Data.Bits
---import Data.Typeable
+import Data.Typeable
 import Foreign.Storable ( Storable(..) )
 
 #ifdef __NHC__
@@ -101,19 +100,18 @@ foreign import ccall unsafe "freeHaskellFunctionPtr"
 #endif
 
 #ifndef __NHC__
+# include "HsBaseConfig.h"
 # include "CTypes.h"
 
 # ifdef __GLASGOW_HASKELL__
 -- | An unsigned integral type that can be losslessly converted to and from
 -- @Ptr@.
-newtype WordPtr = WordPtr Word deriving (Eq,Ord,Show,Num)
-{-INTEGRAL_TYPE(WordPtr,tyConWordPtr,"WordPtr",Word)-}
+INTEGRAL_TYPE(WordPtr,tyConWordPtr,"WordPtr",Word)
         -- Word and Int are guaranteed pointer-sized in GHC
 
 -- | A signed integral type that can be losslessly converted to and from
 -- @Ptr@.
-newtype IntPtr = IntPtr Int deriving (Eq,Ord,Show,Num)
-{-INTEGRAL_TYPE(IntPtr,tyConIntPtr,"IntPtr",Int)-}
+INTEGRAL_TYPE(IntPtr,tyConIntPtr,"IntPtr",Int)
         -- Word and Int are guaranteed pointer-sized in GHC
 
 -- | casts a @Ptr@ to a @WordPtr@

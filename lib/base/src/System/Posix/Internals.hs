@@ -23,6 +23,11 @@
 -- #hide
 module System.Posix.Internals where
 
+#ifdef __NHC__
+#define HTYPE_TCFLAG_T
+#else
+# include "HsBaseConfig.h"
+#endif
 
 #if ! (defined(mingw32_HOST_OS) || defined(__MINGW32__))
 import Control.Monad
@@ -32,30 +37,38 @@ import System.Posix.Types
 import Foreign
 import Foreign.C
 
-import Data.Bits
+-- import Data.Bits
 import Data.Maybe
+
+#if !defined(HTYPE_TCFLAG_T)
+import System.IO.Error
+#endif
 
 #if __GLASGOW_HASKELL__
 import GHC.Base
 import GHC.Num
 import GHC.Real
-import GHC.IOBase
+import GHC.IO
+import GHC.IO.IOMode
+import GHC.IO.Exception
+import GHC.IO.Device
 #elif __HUGS__
 import Hugs.Prelude (IOException(..), IOErrorType(..))
 import Hugs.IO (IOMode(..))
-#else
+#elif __NHC__
+import GHC.IO.Device	-- yes, I know, but its portable, really!
 import System.IO
+import Control.Exception
+import DIOError
 #endif
 
 #ifdef __HUGS__
-{-# CFILES cbits/PrelIOUtils.c cbits/dirUtils.c cbits/consUtils.c #-}
+{-# CFILES cbits/PrelIOUtils.c cbits/consUtils.c #-}
 #endif
 
 -- ---------------------------------------------------------------------------
 -- Types
 
-type CDir       = ()
-type CDirent    = ()
 type CFLock     = ()
 type CGroup     = ()
 type CLconv     = ()
@@ -69,9 +82,7 @@ type CTms       = ()
 type CUtimbuf   = ()
 type CUtsname   = ()
 
-#ifndef __GLASGOW_HASKELL__
 type FD = CInt
-#endif
 
 -- ---------------------------------------------------------------------------
 -- stat()-related stuff
@@ -79,42 +90,39 @@ type FD = CInt
 fdFileSize :: FD -> IO Integer
 fdFileSize fd = 
   allocaBytes sizeof_stat $ \ p_stat -> do
-    throwErrnoIfMinus1Retry "fileSize" $
+    throwErrnoIfMinus1Retry_ "fileSize" $
         c_fstat fd p_stat
     c_mode <- st_mode p_stat :: IO CMode 
     if not (s_isreg c_mode)
         then return (-1)
         else do
-    c_size <- st_size p_stat
-    return (fromIntegral c_size)
+      c_size <- st_size p_stat
+      return (fromIntegral c_size)
 
-data FDType  = Directory | Stream | RegularFile | RawDevice
-               deriving (Eq)
-
-fileType :: FilePath -> IO FDType
+fileType :: FilePath -> IO IODeviceType
 fileType file =
   allocaBytes sizeof_stat $ \ p_stat -> do
-  withCString file $ \p_file -> do
-    throwErrnoIfMinus1Retry "fileType" $
+  withFilePath file $ \p_file -> do
+    throwErrnoIfMinus1Retry_ "fileType" $
       c_stat p_file p_stat
     statGetType p_stat
 
 -- NOTE: On Win32 platforms, this will only work with file descriptors
 -- referring to file handles. i.e., it'll fail for socket FDs.
-fdStat :: FD -> IO (FDType, CDev, CIno)
+fdStat :: FD -> IO (IODeviceType, CDev, CIno)
 fdStat fd = 
   allocaBytes sizeof_stat $ \ p_stat -> do
-    throwErrnoIfMinus1Retry "fdType" $
+    throwErrnoIfMinus1Retry_ "fdType" $
         c_fstat fd p_stat
     ty <- statGetType p_stat
     dev <- st_dev p_stat
     ino <- st_ino p_stat
     return (ty,dev,ino)
     
-fdType :: FD -> IO FDType
+fdType :: FD -> IO IODeviceType
 fdType fd = do (ty,_,_) <- fdStat fd; return ty
 
-statGetType :: Ptr CStat -> IO FDType
+statGetType :: Ptr CStat -> IO IODeviceType
 statGetType p_stat = do
   c_mode <- st_mode p_stat :: IO CMode
   case () of
@@ -127,17 +135,15 @@ statGetType p_stat = do
         | otherwise             -> ioError ioe_unknownfiletype
     
 ioe_unknownfiletype :: IOException
+#ifndef __NHC__
 ioe_unknownfiletype = IOError Nothing UnsupportedOperation "fdType"
-                        "unknown file type" Nothing
-
-#if __GLASGOW_HASKELL__ && (defined(mingw32_HOST_OS) || defined(__MINGW32__))
-closeFd :: Bool -> CInt -> IO CInt
-closeFd isStream fd 
-  | isStream  = c_closesocket fd
-  | otherwise = c_close fd
-
-foreign import stdcall unsafe "HsBase.h closesocket"
-   c_closesocket :: CInt -> IO CInt
+                        "unknown file type"
+#  if __GLASGOW_HASKELL__
+                        Nothing
+#  endif
+                        Nothing
+#else
+ioe_unknownfiletype = UserError "fdType" "unknown file type"
 #endif
 
 fdGetMode :: FD -> IO IOMode
@@ -164,11 +170,16 @@ fdGetMode fd = do
           
     return mode
 
+#ifdef mingw32_HOST_OS
+withFilePath :: FilePath -> (CWString -> IO a) -> IO a
+withFilePath = withCWString 
+#else
+withFilePath :: FilePath -> (CString -> IO a) -> IO a
+withFilePath = withCString
+#endif
+
 -- ---------------------------------------------------------------------------
 -- Terminal-related stuff
-
-fdIsTTY :: FD -> IO Bool
-fdIsTTY fd = c_isatty fd >>= return.toBool
 
 #if defined(HTYPE_TCFLAG_T)
 
@@ -208,7 +219,7 @@ setCooked fd cooked =
 tcSetAttr :: FD -> (Ptr CTermios -> IO a) -> IO a
 tcSetAttr fd fun = do
      allocaBytes sizeof_termios  $ \p_tios -> do
-        throwErrnoIfMinus1Retry "tcSetAttr"
+        throwErrnoIfMinus1Retry_ "tcSetAttr"
            (c_tcgetattr fd p_tios)
 
 #ifdef __GLASGOW_HASKELL__
@@ -228,14 +239,18 @@ tcSetAttr fd fun = do
         -- wrapper which temporarily blocks SIGTTOU around the call, making it
         -- transparent.
         allocaBytes sizeof_sigset_t $ \ p_sigset -> do
-        allocaBytes sizeof_sigset_t $ \ p_old_sigset -> do
-             c_sigemptyset p_sigset
-             c_sigaddset   p_sigset const_sigttou
-             c_sigprocmask const_sig_block p_sigset p_old_sigset
+          allocaBytes sizeof_sigset_t $ \ p_old_sigset -> do
+             throwErrnoIfMinus1_ "sigemptyset" $
+                 c_sigemptyset p_sigset
+             throwErrnoIfMinus1_ "sigaddset" $
+                 c_sigaddset   p_sigset const_sigttou
+             throwErrnoIfMinus1_ "sigprocmask" $
+                 c_sigprocmask const_sig_block p_sigset p_old_sigset
              r <- fun p_tios  -- do the business
              throwErrnoIfMinus1Retry_ "tcSetAttr" $
                  c_tcsetattr fd const_tcsanow p_tios
-             c_sigprocmask const_sig_setmask p_old_sigset nullPtr
+             throwErrnoIfMinus1_ "sigprocmask" $
+                 c_sigprocmask const_sig_setmask p_old_sigset nullPtr
              return r
 
 #ifdef __GLASGOW_HASKELL__
@@ -265,7 +280,11 @@ setCooked fd cooked = do
 
 ioe_unk_error :: String -> String -> IOException
 ioe_unk_error loc msg 
- = IOError Nothing OtherError loc msg Nothing
+#ifndef __NHC__
+ = ioeSetErrorString (mkIOError OtherError loc Nothing Nothing) msg
+#else
+ = UserError loc msg
+#endif
 
 -- Note: echoing goes hand in hand with enabling 'line input' / raw-ness
 -- for Win32 consoles, hence setEcho ends up being the inverse of setCooked.
@@ -297,21 +316,23 @@ foreign import ccall unsafe "consUtils.h get_console_echo__"
 -- ---------------------------------------------------------------------------
 -- Turning on non-blocking for a file descriptor
 
-setNonBlockingFD :: FD -> IO ()
+setNonBlockingFD :: FD -> Bool -> IO ()
 #if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
-setNonBlockingFD fd = do
+setNonBlockingFD fd set = do
   flags <- throwErrnoIfMinus1Retry "setNonBlockingFD"
                  (c_fcntl_read fd const_f_getfl)
   -- An error when setting O_NONBLOCK isn't fatal: on some systems 
   -- there are certain file handles on which this will fail (eg. /dev/null
   -- on FreeBSD) so we throw away the return code from fcntl_write.
-  unless (testBit flags (fromIntegral o_NONBLOCK)) $ do
-    c_fcntl_write fd const_f_setfl (fromIntegral (flags .|. o_NONBLOCK))
+  let flags' | set       = flags .|. o_NONBLOCK
+             | otherwise = flags .&. complement o_NONBLOCK
+  unless (flags == flags') $ do
+    _ <- c_fcntl_write fd const_f_setfl (fromIntegral flags')
     return ()
 #else
 
 -- bogus defns for win32
-setNonBlockingFD _ = return ()
+setNonBlockingFD _ _ = return ()
 
 #endif
 
@@ -321,13 +342,18 @@ setNonBlockingFD _ = return ()
 #if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
 setCloseOnExec :: FD -> IO ()
 setCloseOnExec fd = do
-  throwErrnoIfMinus1 "setCloseOnExec" $
+  throwErrnoIfMinus1_ "setCloseOnExec" $
     c_fcntl_write fd const_f_setfd const_fd_cloexec
-  return ()
 #endif
 
 -- -----------------------------------------------------------------------------
 -- foreign imports
+
+#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
+type CFilePath = CString
+#else
+type CFilePath = CWString
+#endif
 
 foreign import ccall unsafe "HsBase.h access"
    c_access :: CString -> CInt -> IO CInt
@@ -337,9 +363,6 @@ foreign import ccall unsafe "HsBase.h chmod"
 
 foreign import ccall unsafe "HsBase.h close"
    c_close :: CInt -> IO CInt
-
-foreign import ccall unsafe "HsBase.h closedir" 
-   c_closedir :: Ptr CDir -> IO CInt
 
 foreign import ccall unsafe "HsBase.h creat"
    c_creat :: CString -> CMode -> IO CInt
@@ -356,10 +379,7 @@ foreign import ccall unsafe "HsBase.h __hscore_fstat"
 foreign import ccall unsafe "HsBase.h isatty"
    c_isatty :: CInt -> IO CInt
 
-#if defined(__LHC__)
-foreign import ccall unsafe "unistd.h lseek"
-   c_lseek :: CInt -> COff -> CInt -> IO COff
-#elif defined(mingw32_HOST_OS) || defined(__MINGW32__)
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
 foreign import ccall unsafe "HsBase.h __hscore_lseek"
    c_lseek :: CInt -> Int64 -> CInt -> IO Int64
 #else
@@ -368,31 +388,28 @@ foreign import ccall unsafe "HsBase.h __hscore_lseek"
 #endif
 
 foreign import ccall unsafe "HsBase.h __hscore_lstat"
-   lstat :: CString -> Ptr CStat -> IO CInt
+   lstat :: CFilePath -> Ptr CStat -> IO CInt
 
-foreign import ccall unsafe "HsBase.h __hscore_open"
-   c_open :: CString -> CInt -> CMode -> IO CInt
-
-foreign import ccall unsafe "HsBase.h opendir" 
-   c_opendir :: CString  -> IO (Ptr CDir)
-
-foreign import ccall unsafe "HsBase.h __hscore_mkdir"
-   mkdir :: CString -> CInt -> IO CInt
+foreign import ccall unsafe "__hscore_open"
+   c_open :: CFilePath -> CInt -> CMode -> IO CInt
 
 foreign import ccall unsafe "HsBase.h read" 
-   c_read :: CInt -> Ptr CChar -> CSize -> IO CSsize
+   c_read :: CInt -> Ptr Word8 -> CSize -> IO CSsize
 
-foreign import ccall unsafe "HsBase.h rewinddir"
-   c_rewinddir :: Ptr CDir -> IO ()
+foreign import ccall safe "read"
+   c_safe_read :: CInt -> Ptr Word8 -> CSize -> IO CSsize
 
-foreign import ccall unsafe "HsBase.h __hscore_stat"
-   c_stat :: CString -> Ptr CStat -> IO CInt
+foreign import ccall unsafe "__hscore_stat"
+   c_stat :: CFilePath -> Ptr CStat -> IO CInt
 
 foreign import ccall unsafe "HsBase.h umask"
    c_umask :: CMode -> IO CMode
 
 foreign import ccall unsafe "HsBase.h write" 
-   c_write :: CInt -> Ptr CChar -> CSize -> IO CSsize
+   c_write :: CInt -> Ptr Word8 -> CSize -> IO CSsize
+
+foreign import ccall safe "write"
+   c_safe_write :: CInt -> Ptr Word8 -> CSize -> IO CSsize
 
 foreign import ccall unsafe "HsBase.h __hscore_ftruncate"
    c_ftruncate :: CInt -> COff -> IO CInt
@@ -404,13 +421,13 @@ foreign import ccall unsafe "HsBase.h getpid"
    c_getpid :: IO CPid
 
 #if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
-foreign import ccall unsafe "HsBase.h fcntl"
+foreign import ccall unsafe "HsBase.h fcntl_read"
    c_fcntl_read  :: CInt -> CInt -> IO CInt
 
-foreign import ccall unsafe "HsBase.h fcntl"
+foreign import ccall unsafe "HsBase.h fcntl_write"
    c_fcntl_write :: CInt -> CInt -> CLong -> IO CInt
 
-foreign import ccall unsafe "HsBase.h fcntl"
+foreign import ccall unsafe "HsBase.h fcntl_lock"
    c_fcntl_lock  :: CInt -> CInt -> Ptr CFLock -> IO CInt
 
 foreign import ccall unsafe "HsBase.h fork"
@@ -440,25 +457,12 @@ foreign import ccall unsafe "HsBase.h tcgetattr"
 foreign import ccall unsafe "HsBase.h tcsetattr"
    c_tcsetattr :: CInt -> CInt -> Ptr CTermios -> IO CInt
 
-foreign import ccall unsafe "HsBase.h utime"
+foreign import ccall unsafe "HsBase.h __hscore_utime"
    c_utime :: CString -> Ptr CUtimbuf -> IO CInt
 
 foreign import ccall unsafe "HsBase.h waitpid"
    c_waitpid :: CPid -> Ptr CInt -> CInt -> IO CPid
 #endif
-
--- traversing directories
-foreign import ccall unsafe "dirUtils.h __hscore_readdir"
-  readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt
- 
-foreign import ccall unsafe "HsBase.h __hscore_free_dirent"
-  freeDirEnt  :: Ptr CDirent -> IO ()
- 
-foreign import ccall unsafe "HsBase.h __hscore_end_of_dir"
-  end_of_dir :: CInt
- 
-foreign import ccall unsafe "HsBase.h __hscore_d_name"
-  d_name :: Ptr CDirent -> IO CString
 
 -- POSIX flags only:
 foreign import ccall unsafe "HsBase.h __hscore_o_rdonly" o_RDONLY :: CInt
@@ -531,3 +535,8 @@ foreign import ccall unsafe "HsBase.h __hscore_s_issock" c_s_issock :: CMode -> 
 #else
 s_issock _ = False
 #endif
+
+foreign import ccall unsafe "__hscore_bufsiz"   dEFAULT_BUFFER_SIZE :: Int
+foreign import ccall unsafe "__hscore_seek_cur" sEEK_CUR :: CInt
+foreign import ccall unsafe "__hscore_seek_set" sEEK_SET :: CInt
+foreign import ccall unsafe "__hscore_seek_end" sEEK_END :: CInt

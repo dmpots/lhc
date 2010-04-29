@@ -399,6 +399,9 @@ unionBy eq xs ys        =  xs ++ foldl (flip (deleteBy eq)) (nubBy eq ys) xs
 -- > [1,2,3,4] `intersect` [2,4,6,8] == [2,4]
 --
 -- If the first list contains duplicates, so will the result.
+--
+-- > [1,2,2,3,4] `intersect` [6,4,4,2] == [2,2,4]
+--
 -- It is a special case of 'intersectBy', which allows the programmer to
 -- supply their own equality test.
 
@@ -567,6 +570,17 @@ minimumBy cmp xs        =  foldl1 minBy xs
 genericLength           :: (Num i) => [b] -> i
 genericLength []        =  0
 genericLength (_:l)     =  1 + genericLength l
+
+{-# RULES
+  "genericLengthInt"     genericLength = (strictGenericLength :: [a] -> Int);
+  "genericLengthInteger" genericLength = (strictGenericLength :: [a] -> Integer);
+ #-}
+
+strictGenericLength     :: (Num i) => [b] -> i
+strictGenericLength l   =  gl l 0
+                        where
+                           gl [] a     = a
+                           gl (_:xs) a = let a' = a + 1 in a' `seq` gl xs a'
 
 -- | The 'genericTake' function is an overloaded version of 'take', which
 -- accepts any 'Integral' value as the number of elements to take.
