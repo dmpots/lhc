@@ -9,7 +9,7 @@ import Test.QuickCheck
 import Data.Monoid
 import Control.Monad
 import Grin.Types
-import Grin.HPT.Environment
+import Grin.HPT.Environment as Env
 
 instance Arbitrary Rhs where
     arbitrary = do rhsValues <- arbitrary
@@ -19,7 +19,7 @@ instance Arbitrary RhsValue where
     arbitrary = oneof [ liftM3 Extract arbitrary arbitrary arbitrary
                       , liftM2 ExtractVector arbitrary arbitrary
                       , liftM Eval arbitrary
-                      , liftM2 Update arbitrary arbitrary
+                      , liftM2 Env.Update arbitrary arbitrary
                       , liftM2 Apply arbitrary arbitrary
                       , liftM2 PartialApply arbitrary arbitrary
                       , liftM Ident arbitrary

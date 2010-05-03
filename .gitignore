@@ -116,3 +116,4 @@ ring-hs
 dist/
 *.hcr
 Setup
+*.grin_*
