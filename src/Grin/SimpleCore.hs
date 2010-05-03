@@ -1,10 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-
+{-|
 SimpleCore is a subset of External Core that can more easily be translated to Grin.
 
-We do
- * Hoist out local functions (lets and lambdas)
+The data structures for the simplified core is similar to plain core with a few exceptions:
 
+  * Hoist out local functions (lets and lambdas)
+
+  * Lets always have the form 'let x = fn a b c in'
+
+  * Lambdas have been removed
+
+  * Application chains have been converted to lists of arguments.
 -}
 module Grin.SimpleCore
   ( SimpleModule(..)
@@ -39,12 +45,6 @@ import Data.Maybe
 
 import Traverse
 
-{-
-The data structures for the simplified core is similar to plain core with a few exceptions:
- * Lets always have the form 'let x = fn a b c in'
- * Lambdas have been removed
- * Application chains have been converted to lists of arguments.
--}
 
 
 
@@ -284,7 +284,7 @@ lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
              (args,body) = splitExp exp
          lambdaScopeTyped <- mapM (\var -> do t <- varType var; return (var, t)) lambdaScope
          let
-             realArgs = map qualToCompact (lambdaScope ++ map fst args)
+             realArgs = map qualToCompact (lambdaScope ++ map fst args) -- both lambda lifted and original args
              toplevelName = (pkg,mod,L.pack "@lifted@_" `L.append` ident `L.append` L.pack (show unique))
              selfDef = Core.Case (foldl Core.App (Core.Var toplevelName) (map Core.Var lambdaScope))
                                  (vdefName vdef,vdefType vdef)
@@ -298,8 +298,8 @@ lambdaLift vdef@Vdef{vdefName = (_pkg,_mod,ident), vdefExp = exp}
 
          return ( qualToCompact (vdefName vdef)
                 , qualToCompact toplevelName
-                , map qualToCompact lambdaScope
-                , length realArgs )
+                , map qualToCompact lambdaScope -- args:  lambda lifted args
+                , length realArgs )             -- arity: lambda lifted + orig args
 
 lambdaLiftExp :: Core.Exp -> M SimpleExp
 lambdaLiftExp e@Core.Var{} = expToSimpleExp e

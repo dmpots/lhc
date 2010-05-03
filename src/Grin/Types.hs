@@ -151,12 +151,16 @@ uniqueId (Builtin prim)      = error $ "Grin.Types.uniqueId: Primitive: " ++ sho
 uniqueId (External fn tys)   = error $ "Grin.Types.uniqueId: External: " ++ show fn
 
 data Value
-    = Node Renamed NodeType Int [Renamed]
-    | Vector [Renamed]
-    | Lit Lit
-    | Variable Renamed
-    | Hole Int
-    | Empty
+      -- | Node represents a constructor or function application.
+      --   The Int is the number of missing arguments for function
+      --   to represent a partial application. The list of [Renamed]
+      --   is the arguments to the application
+    = Node Renamed NodeType Int [Renamed]     
+    | Vector [Renamed] -- ^ Unboxed tuple
+    | Lit Lit          -- ^ Unboxed literal
+    | Variable Renamed -- ^ Variable
+    | Hole Int         -- ^ Hole for recursive let
+    | Empty            -- ^ The unit value (e.g. @()@)
     deriving (Show,Eq)
 
 
