@@ -146,14 +146,24 @@ Executable lhc-exe
                      derive, unix, xhtml, pretty, ghc >= 6.10, time,
                      parallel, libffi
 
- other-modules:      Paths_lhc, LhcMain, CompactString, Traverse, Setup,
-                     Grin.Eval.Compile, Grin.Eval.Methods, Grin.Eval.Primitives,
-                     Grin.Eval.Types, Grin.FromCore, Grin.HPT.Environment,
-                     Grin.HPT.Lower, Grin.HPT.Solve, Grin.HPT,
-                     Grin.Lowering.Apply,
-                     Grin.Lowering.GHCism, Grin.Optimize.Simple, Grin.Pretty,
-                     Grin.SimpleCore.DeadCode, Grin.SimpleCore.Types,
-                     Grin.SimpleCore, Grin.Types
+ other-modules:        Paths_lhc
+                     , LhcMain
+                     , CompactString
+                     , Traverse
+                     , Setup
+                     , Grin.FromCore
+                     , Grin.HPT.Environment
+                     , Grin.HPT.Lower
+                     , Grin.HPT.FastSolve
+                     , Grin.HPT
+                     , Grin.Lowering.Apply
+                     , Grin.Lowering.GHCism
+                     , Grin.Optimize.Simple
+                     , Grin.Pretty
+                     , Grin.SimpleCore.DeadCode
+                     , Grin.SimpleCore.Types
+                     , Grin.SimpleCore
+                     , Grin.Types
 
  ghc-options:        -fwarn-unused-imports -fwarn-unused-binds -fwarn-incomplete-patterns
  Extensions:         ScopedTypeVariables

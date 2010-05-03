@@ -37,7 +37,7 @@ solve eqs
                      addReduced lhs reducedRhs
           loop iter prev
               = case execState (debugMsg ("Iteration: " ++ show iter) >> iterate iter eqPairs) prev of
-                  (newData) -> -- | rnf newData `seq` True ->
+                  (newData) -> 
                     let (iterList, finishedData) = if prev == newData then ([newData], newData) else loop (iter+1) newData
                     in (newData : iterList, finishedData)
       in loop 1 (mkHeapAnalysis (Map.map (const mempty) eqs) (nonlinearVariables eqs))
