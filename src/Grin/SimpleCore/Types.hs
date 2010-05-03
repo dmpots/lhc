@@ -47,6 +47,7 @@ data SimpleExp
     | Dcon CompactString
     | Lit Lit
     | App SimpleExp [SimpleExp]
+    -- | let x = fn a r g s in exp -> @Let x fn [args] (arity of fn) exp@
     | Let CompactString CompactString [CompactString] Int SimpleExp
     | LetRec [(CompactString, CompactString, [CompactString], Int)] SimpleExp
     | LetStrict CompactString SimpleExp SimpleExp

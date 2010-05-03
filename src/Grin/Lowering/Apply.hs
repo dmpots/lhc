@@ -1,4 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- |The main purpose of this module is lowering the @evalApply@ builin
+--  that was generated during translation from "Grin.SimpleCore". The evalApply
+--  primitive is lowered to an eval primitive to get the function to whnf
+--  followed by an apply primitive that applys the function to the argument.
 module Grin.Lowering.Apply
     ( lower
     ) where

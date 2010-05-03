@@ -151,7 +151,7 @@ uniqueId (Builtin prim)      = error $ "Grin.Types.uniqueId: Primitive: " ++ sho
 uniqueId (External fn tys)   = error $ "Grin.Types.uniqueId: External: " ++ show fn
 
 data Value
-    = Node Renamed NodeType Int [Renamed]
+    = Node Renamed NodeType Int [Renamed] -- Int is number of missing arguments for function or constructor
     | Vector [Renamed]
     | Lit Lit
     | Variable Renamed
