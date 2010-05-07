@@ -102,6 +102,8 @@ import Control.Monad.Writer
 
 import Control.Parallel.Strategies
 
+import LHC.Prim
+
 type HeapPointer = Int
 -- | Left hand side of the heap points to equations. We model both the
 --   environment and the  heap. The envirnement tracks values for each variable
@@ -220,37 +222,6 @@ setupEnvGrin grin
               forM_ (zip (funcDefArgs function) [0..]) $ \(arg, n) ->
                 addEquation (VarEntry arg) -- For applications resulting from the apply primitive
                             (singleton $ Extract applications (funcDefName function, FunctionNode, 0) n)
-
--- FIXME: Put these in order.
-baseBuiltins, vectorBuiltins, unsupportedBuiltins :: [CompactString]
-baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
-                      ,"uncheckedIShiftRA#","and#","==#", "remInt#", "noDuplicate#"
-                      ,"narrow8Word#", "writeInt8OffAddr#", "writeWord8OffAddr#"
-                      ,"narrow8Int#", "byteArrayContents#","touch#"
-                      ,"uncheckedIShiftL#", "negateInt#", "not#"
-                      ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
-                      ,"neWord#", "ltWord#", "gtWord#", "remWord#"
-                      ,"ord#","chr#","or#","narrow32Word#","uncheckedShiftL#","plusWord#"
-                      ,"uncheckedShiftRL#","neChar#","narrow16Int#","timesWord#"
-                      ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#", "quotWord#"
-                      ,"writeDoubleOffAddr#"
-                      ,"leWord#","/=#","writeCharArray#","xor#", "realWorld#"
-                      ,"waitWrite#", "negateDouble#", "negateFloat#", "sqrtDouble#", "expDouble#", "**##"
-                      ,"sinDouble#", "tanDouble#", "cosDouble#", "asinDouble#", "atanDouble#"
-                      ,"acosDouble#", "asinhDouble#", "sinhDouble#", "tanhDouble#", "coshDouble#"
-                      ,"<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##"
-                      ,"ltFloat#", "eqFloat#", "writeWord8Array#"
-                      ,"coerceDoubleToWord", "coerceWordToDouble", "logDouble#", "int2Double#", "double2Int#"
-                      ,"int2Float#", "divideFloat#", "timesFloat#", "minusFloat#", "plusFloat#"
-                      ,"gtFloat#", "geFloat#", "leFloat#", "sqrtFloat#" ]
-vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
-                      , "word2Integer#","integer2Int#", "newByteArray#", "newPinnedByteArray#"
-                      ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"
-                      ,"readWord8Array#", "readDoubleOffAddr#", "writeDoubleOffAddr#"
-                      ,"mkWeak#", "readCharArray#"]
-unsupportedBuiltins = ["raise#","atomicModifyMutVar#","writeTVar#"
-                      ,"raiseIO#","fork#","atomically#"]
-
 
 setupEnv :: Expression -> GenM Rhs
 setupEnv (Store val)
