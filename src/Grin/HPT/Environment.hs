@@ -1,4 +1,83 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-|
+  This module contains the datatype for the abstract heap and environment used
+  in the heap-points-to analysis. The description is based on the paper
+  /GRIN: a Highly Optimizing Back End for Lazy Functional Languages/ by Boquist
+  and Johnsson.
+
+  The points two analysis operates over two abstract program structures.
+
+    * The abstract /environment/ contains the variables in the GRIN program plus one
+  variable for each procedure which denotes the return value for that procedure.
+
+    * The abstract /heap/ has one entry for each @store@ that occurs in the GRIN
+  program. This entry points to the set of possible nodes that can be stored in
+  that location.
+
+  /Initial Environment/
+
+  The initial enviornment is created with the 'mkEnvironment' function. It
+  creates the initial mapping from 'Lhs' to 'RhsValue'. The enviornment is
+  initialized as follows.
+
+    * Each variable that is a basic value gets mapped to the 'Base' constructor.
+      A variable gets a basic value from a statement like @v <- unit 3@.
+
+    * For each @store@ in the program a new heap pointer is created. The /heap/
+      ('HeapEntry') maps this pointer to the value ('RhsValue') being stored. The
+      /environment/ maps the bound varaible ('VarEntry') returned from the store
+      to the new heap pointer ('Heap').
+
+    * CAFs are treated as a store of the CAF value that defines the CAF varaible.
+
+    * Formal parameter variables to functions get the union of all the actual
+      arguments ('Ident') used in calls to that function. This includes both
+      lazy calls represented by constructing @(Ffun ...)@ nodes and direct calls
+      to the function.
+
+    * Variables bound as the result of an @v <- eval p@ get the @'Eval' p@
+      abstract value. The meaning of @Eval p@ is to take the union of all the
+      abstract heap locations that @p@ might point to and then extracting all
+      the 'RhsValue's that correspond to a 'Tag' entry. Thus @v@ will have all
+      of the possible constructors returned as a result of the @eval@.
+
+    * Variables bound in a case statement get the value by extracting the value
+      from the corresponding component of the variable being cased. For pattern
+      matching of constructors, the 'Extract' is used to get the corresponding
+      variable for the pattern match. For literals, no new equations are added.
+      For variables in the case (i.e. @case v  of  v' -> ...@), the variable @v'@
+      gets the same value as the variable @v@ being cased.
+
+  /Dealing with Higer Order Functions/
+
+  Higher order functions are handled with the @apply@ primitive. We need to
+  handle two cases with higher order functions.
+
+    * The abstract value of @apply f a@. This value depends of the value of @f@.
+      If @f@ contains a function node that still needs > 1 argument then the
+      result of the apply is the same function node with one fewer missing
+      arguments. If @f@ contains a function node that is missing one argument
+      then the abstract value of the @apply@ is the same as the abstract value
+      returned by the function call. We use an @'Apply' f a@ node to denote the
+      abstract value of an @apply@ primitive. It will be intpreted as described
+      above when the equations are solved.
+
+    * The abstract values of formal parameters. With higher order functions the
+      formal parameters of functions need to include values that are passed to
+      the function in a call to the @apply@ primitive. We use a single abstract
+      variable (say @applications@), to track the effects of @apply@. For each
+      @apply f a@ in the program we add a @'PartialApplication'f a@ to the rhs
+      of the the @applications@ variable.  When solving the equations, if a
+      'PartialApplication' would result in a fully saturated call, we add a
+      @'Tag' f ... a ...@ to the rhs of @applications@. Finally the equation for
+      each the @nth@ formal parameter to a function needs to add an
+      @'Extract applications (f,...) n'@ component to the rhs of its
+      equation. The extract will pull out the abstract value for the @nth@
+      argument to the function that occurs from all calls to that function
+      through the @apply@ primitive.
+
+
+-}
 module Grin.HPT.Environment
     ( mkEnvironment
     , Equations
@@ -23,9 +102,14 @@ import Control.Monad.Writer
 
 import Control.Parallel.Strategies
 
+import LHC.Prim
+
 type HeapPointer = Int
-data Lhs = HeapEntry HeapPointer
-         | VarEntry Renamed
+-- | Left hand side of the heap points to equations. We model both the
+--   environment and the  heap. The envirnement tracks values for each variable
+--   in the program. The heap tracks values for each abstract heap location.
+data Lhs = HeapEntry HeapPointer -- ^ Heap location
+         | VarEntry Renamed      -- ^ Variable
     deriving (Eq,Ord,Show)
 
 instance NFData Lhs where
@@ -34,19 +118,26 @@ instance NFData Lhs where
 
 type Node = (Renamed, NodeType, Int) -- Name, node type, missing arguments.
 
+
+-- | Possible entries on the right hand side of a heap points to equation. The
+--   actual 'Rhs' with be a set of these values.
 data RhsValue
+      -- | Extract the abstract nth parameter for a given tag from the set of values (e.g. the \downarrow operator).
+      --   @Renamed@ = named set of values (e.g. a varaible on the Lhs)
+      --   Node = the tag of the node to extract
+      --   Int = the position of the parameter in the Grin node
     = Extract Renamed Node Int
-    | ExtractVector Renamed Int
-    | Eval Renamed
-    | Update Renamed Renamed
-    | Apply Renamed Renamed
-    | PartialApply Renamed Renamed
-    | Ident Renamed
-    | Fetch Renamed
-    | Base
-    | Heap HeapPointer
-    | Tag Renamed NodeType Int [Rhs]
-    | VectorTag [Rhs]
+    | ExtractVector Renamed Int      -- ^ Extract a position from a vector appearing on the Lhs with name @Renamed@
+    | Eval Renamed                   -- ^ An application of the @eval@ primitive
+    | Update Renamed Renamed         -- ^ An application of the @update@ primitive
+    | Apply Renamed Renamed          -- ^ An application of the @apply@ primitive
+    | PartialApply Renamed Renamed   -- ^ An application of the @apply@ primitive (to remembering partial applications)
+    | Ident Renamed                  -- ^ An identifier of another Lhs value
+    | Fetch Renamed                  -- ^ An application of the @fetch@ primitive
+    | Base                           -- ^ A basic value
+    | Heap HeapPointer               -- ^ A pointer to a heap location
+    | Tag Renamed NodeType Int [Rhs] -- ^ A function or constructor grin node
+    | VectorTag [Rhs]                -- ^ An unboxed tuple value
     deriving (Eq,Ord,Show)
 
 -- A set of possible rhs values
@@ -104,8 +195,9 @@ zipJoin lst []        = zipWith mappend lst (repeat mempty)
 zipJoin (x:xs) (y:ys) = mappend x y : zipJoin xs ys
 
 
-type GenReader = Map.Map Renamed [Renamed]
-type GenM a = RWS GenReader (Endo Equations) Int a
+type GenReader = Map.Map Renamed [Renamed] -- map from functions to function args
+type GenM a = RWS GenReader (Endo Equations) HeapPointer a
+
 
 applications :: Renamed
 applications = Builtin "applications"
@@ -128,39 +220,8 @@ setupEnvGrin grin
            do rhs <- setupEnv (funcDefBody function)
               addEquation (VarEntry (funcDefName function)) rhs
               forM_ (zip (funcDefArgs function) [0..]) $ \(arg, n) ->
-                addEquation (VarEntry arg)
+                addEquation (VarEntry arg) -- For applications resulting from the apply primitive
                             (singleton $ Extract applications (funcDefName function, FunctionNode, 0) n)
-
--- FIXME: Put these in order.
-baseBuiltins, vectorBuiltins, unsupportedBuiltins :: [CompactString]
-baseBuiltins        = ["<#",">#","<=#",">=#","-#","+#","*#","narrow32Int#"
-                      ,"uncheckedIShiftRA#","and#","==#", "remInt#", "noDuplicate#"
-                      ,"narrow8Word#", "writeInt8OffAddr#", "writeWord8OffAddr#"
-                      ,"narrow8Int#", "byteArrayContents#","touch#"
-                      ,"uncheckedIShiftL#", "negateInt#", "not#"
-                      ,"indexCharOffAddr#","minusWord#","geWord#","eqWord#","narrow16Word#"
-                      ,"neWord#", "ltWord#", "gtWord#", "remWord#"
-                      ,"ord#","chr#","or#","narrow32Word#","uncheckedShiftL#","plusWord#"
-                      ,"uncheckedShiftRL#","neChar#","narrow16Int#","timesWord#"
-                      ,"writeAddrOffAddr#","writeInt32OffAddr#","quotInt#", "quotWord#"
-                      ,"writeDoubleOffAddr#"
-                      ,"leWord#","/=#","writeCharArray#","xor#", "realWorld#"
-                      ,"waitWrite#", "negateDouble#", "negateFloat#", "sqrtDouble#", "expDouble#", "**##"
-                      ,"sinDouble#", "tanDouble#", "cosDouble#", "asinDouble#", "atanDouble#"
-                      ,"acosDouble#", "asinhDouble#", "sinhDouble#", "tanhDouble#", "coshDouble#"
-                      ,"<##", "==##", ">##", "<=##", ">=##", "-##", "+##", "*##", "/##"
-                      ,"ltFloat#", "eqFloat#", "writeWord8Array#"
-                      ,"coerceDoubleToWord", "coerceWordToDouble", "logDouble#", "int2Double#", "double2Int#"
-                      ,"int2Float#", "divideFloat#", "timesFloat#", "minusFloat#", "plusFloat#"
-                      ,"gtFloat#", "geFloat#", "leFloat#", "sqrtFloat#" ]
-vectorBuiltins      = ["unsafeFreezeByteArray#", "newAlignedPinnedByteArray#"
-                      , "word2Integer#","integer2Int#", "newByteArray#", "newPinnedByteArray#"
-                      ,"readInt8OffAddr#","readInt32OffAddr#","readAddrOffAddr#","readInt32OffAddr#"
-                      ,"readWord8Array#", "readDoubleOffAddr#", "writeDoubleOffAddr#"
-                      ,"mkWeak#", "readCharArray#"]
-unsupportedBuiltins = ["raise#","atomicModifyMutVar#","writeTVar#"
-                      ,"raiseIO#","fork#","atomically#"]
-
 
 setupEnv :: Expression -> GenM Rhs
 setupEnv (Store val)
@@ -244,8 +305,8 @@ setupEnv (Application (Builtin builtin) args)
 
 setupEnv (Application fn args)
     = do funcArgs <- lookupFuncArgs fn
-         forM_ (zip funcArgs args) $ \(var, arg) ->
-           addEquation (VarEntry var) (singleton $ Ident arg)
+         forM_ (zip funcArgs args) $ \(formal, actual) -> -- Add abstract value of actual arg to the formal arg
+           addEquation (VarEntry formal) (singleton $ Ident actual)
          return $ singleton (Ident fn)
 
 
@@ -256,17 +317,22 @@ processVal (Node name nt missing args)
     = do case nt of
            FunctionNode ->
              do funcArgs <- lookupFuncArgs name
-                forM_ (zip funcArgs args) $ \(funcArg,arg) ->
-                  addEquation (VarEntry funcArg) (singleton $ Ident arg)
+                forM_ (zip funcArgs args) $ \(formal,actual) -> -- Add abstract value of actual arg to the formal arg
+                  addEquation (VarEntry formal) (singleton $ Ident actual)
            ConstructorNode ->
              do return ()
          return $ singleton $ Tag name nt missing (map (singleton . Ident) args)
+
 processVal (Variable var) = return $ singleton $ Ident var
 processVal Lit{}          = return $ singleton Base
 processVal Hole{}         = return mempty
 processVal Empty          = return mempty
 processVal (Vector vs)    = return $ singleton $ VectorTag (map (singleton . Ident) vs)
 
+
+-- TODO: if the value stored is a function application, meet the abstract
+--       value of the function (representing its return value) to the heap pointer
+--       value.
 store :: Rhs -> GenM Int
 store rhs
   = do u <- get
