@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, PatternGuards#-}
 {-|
   This module contains the datatype for the abstract heap and environment used
   in the heap-points-to analysis. The description is based on the paper
@@ -90,15 +90,11 @@ module Grin.HPT.Environment
     , isSubsetOf
     ) where
 
-import CompactString
 import Grin.Types hiding (Update)
 import qualified Grin.Types as Grin
 
 import qualified Data.Map as Map
 import Control.Monad.RWS
-import Control.Monad.State
-import Control.Monad.Reader
-import Control.Monad.Writer
 
 import Control.Parallel.Strategies
 
@@ -272,8 +268,8 @@ setupEnv (Application (Builtin "updateMutVar") [ptr, val, realWorld])
 
 setupEnv (Application (Builtin fn) args) | fn `elem` baseBuiltins
     = return $ singleton Base
-setupEnv (Application (Builtin fn) args) | fn `elem` vectorBuiltins
-    = return $ singleton $ VectorTag [singleton Base, singleton Base]
+setupEnv (Application (Builtin fn) args) | Just len <- fn `lookup` vectorBuiltins 
+    = return $ singleton $ VectorTag $ take len $ repeat (singleton Base)
 setupEnv (Application (Builtin fn) args) | fn `elem` unsupportedBuiltins
     = return mempty
 
