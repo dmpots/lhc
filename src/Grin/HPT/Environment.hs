@@ -248,8 +248,13 @@ setupEnv (Case val alts)
                                           setupEnv alt
                      _              -> error $ "setupEnv: Invalid case: " ++ show l
          return $ mconcat rets
+--TODO: figure this out -->>>
+setupEnv (Application (External "getOrSetTypeableStore" _) [ptr, realworld])
+    = return $ singleton (VectorTag [singleton Base, singleton $ Fetch ptr])
 setupEnv (Application External{} args)
     = return $ singleton (VectorTag [singleton Base, singleton Base])
+    -- = return mempty
+--TODO: <<<-- figure this out
 
 setupEnv (Application (Builtin "eval") [arg])
   = do return $ singleton (Eval arg)

@@ -73,6 +73,9 @@ instance Monoid Rhs where
     mempty = Empty
     mappend = joinRhs
 
+-- join operation for elements in the points to analysis
+-- joining sets of node values are unioned tag by tag so that there is only one element for each node tag
+-- joining sets of abstract pointers are unioned using a standard set union
 joinRhs :: Rhs -> Rhs -> Rhs
 joinRhs Empty rhs                         = rhs
 joinRhs rhs Empty                         = rhs
@@ -88,8 +91,8 @@ joinRhs Base rhs                          = rhs
 joinRhs (Tagged nodes1) (Tagged nodes2)   = Tagged (Map.unionWith zipJoin nodes1 nodes2)
 joinRhs (Vector args1) (Vector args2)     = Vector (zipJoin args1 args2)
 joinRhs (Heap hp1) (Heap hp2)             = Heap (Set.union hp1 hp2)
-joinRhs left right                        = error $ "Unmatched rhs values: " ++ show (left,right)
 -}
+joinRhs left right                        = error $ "Interface.hs: Unmatched rhs values: " ++ show (left,right)
 
 isSubsetOf :: Rhs -> Rhs -> Bool
 lRhs `isSubsetOf` rRhs

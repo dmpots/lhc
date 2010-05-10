@@ -25,9 +25,7 @@ data HPTState
                , hptChanged :: !Bool
                }
 type M = State HPTState
-
-type Minner a = ReaderT Lhs M a
-
+type IterM a = M a
 type SharingMap = Map.Map Lhs Bool
 
 
@@ -37,17 +35,17 @@ solve eqs
               = do live <- return (reverse $ Map.toList eqs) 
                    forM_ live $ \(lhs,rhs) ->
                      do debugMsg $ "Reducing: " ++ ppLhs lhs ++ " " ++ show rhs
-                        reducedRhs <- runReaderT (reduceEqs rhs) lhs
+                        reducedRhs <- reduceEqs rhs
                         addReduced lhs reducedRhs
                         return ()
           bootSequence
               = do let live = HM.fromList (Map.toList eqs)
                    forM_ (HM.toList live) $ \(lhs,rhs) ->
-                     do reducedRhs <- runReaderT (reduceEqs rhs) lhs
+                     do reducedRhs <- reduceEqs rhs
                         modify $ \st -> st{ hptAnalysis = hptAddBinding lhs reducedRhs (hptAnalysis st) }
           loop iter prev
               = case execState (iterate iter) prev of
-                  (newData) ->
+                  newData ->
                     if not (hptChanged newData)
                     then ([hptAnalysis newData], hptAnalysis newData) else                   -- termination
                     let (iterList, finishedData) = loop (iter+1) newData{hptChanged = False} -- remaining iterations
@@ -109,11 +107,11 @@ listHeapPointers (Interface.Heap hps) = Set.toList hps
 listHeapPointers _ = []
 
 
-reduceEqs :: Env.Rhs -> Minner Interface.Rhs
+reduceEqs :: Env.Rhs -> IterM Interface.Rhs
 reduceEqs (Rhs rhs) = do rhs' <- mapM reduceEq rhs
                          return $ mconcat rhs'
 
-reduceEq :: RhsValue -> Minner Interface.Rhs
+reduceEq :: RhsValue -> IterM Interface.Rhs
 reduceEq Env.Base  = return $ Interface.Base
 reduceEq (Env.Heap hp) = return $ Interface.Heap (Set.singleton hp)
 reduceEq (Ident i) = lookupEq (VarEntry i)
@@ -124,9 +122,10 @@ reduceEq (ExtractVector eq n)
            Interface.Empty -> return mempty
            Interface.Other {rhsVector = args} ->
              return (args `nth` n)
-    where nth [] n = error $ "reduceEq: ExtractVector: " ++ show (eq, n)
+           _ -> error $ "unexpected rhs: "++(show rhs)++" for vec: "++(show eq)
+    where nth [] i = error $ "reduceEq: ExtractVector: " ++ show (eq, n, i)
           nth (x:xs) 0 = x
-          nth (x:xs) n = nth xs (n-1)
+          nth (x:xs) i = nth xs (i-1)
 reduceEq (Tag t nt missing args)
     = do args' <- mapM reduceEqs args
          return $ Other (Map.singleton (t, nt, missing) args') []
@@ -139,6 +138,7 @@ reduceEq (Fetch i)
          case rhs of
            Interface.Heap hp -> liftM mconcat (mapM (lookupEq . HeapEntry) (Set.toList hp))
            Empty -> return Empty
+           _ -> error $ "unexpected rhs: "++(show rhs)++" for Fetch: "++(show i)
 reduceEq (Apply a b) = reduceApply a b
 reduceEq (PartialApply a b)
     = do rhs <- lookupEq (VarEntry a)
@@ -165,6 +165,7 @@ reduceExtract eq node n
            Interface.Empty -> return mempty
            Other{rhsTagged = nodes} ->
              return (Map.findWithDefault [] node nodes `nth` n)
+           _ -> error $ "unexpected rhs: "++(show rhs)++" for var: "++(show eq)++". Expected Node: "++(show node)
     where nth [] n = mempty
           nth (x:xs) 0 = x
           nth (x:xs) n = nth xs (n-1)
