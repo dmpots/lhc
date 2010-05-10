@@ -296,6 +296,11 @@ setupEnv (Application (Builtin "indexArray#") [arr, nth])
 setupEnv (Application (Builtin "writeArray#") [arr, nth, elt, realworld])
     = do addEquation (VarEntry updates) (singleton $ Update arr elt)
          return (singleton Base)
+setupEnv (Application (Builtin "mkWeak#") [o,val,c,realworld])
+    = do hp <- store (singleton $ Ident val)
+         return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
+setupEnv (Application (Builtin "deRefWeak#") [ptr,realworld])
+    = do return $ singleton $ VectorTag [singleton Base, singleton Base, singleton $ Fetch ptr]
 setupEnv (Application (Builtin builtin) args)
     = error $ "unknown builtin: " ++ show builtin
 

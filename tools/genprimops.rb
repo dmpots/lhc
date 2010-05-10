@@ -96,6 +96,8 @@ specialBuiltins = %w(
   unsafeFreezeArray#
   indexArray#
   writeArray#
+  mkWeak#
+  deRefWeak#
 )
 
 extraBuiltins = %w(
