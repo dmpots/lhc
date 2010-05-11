@@ -38,7 +38,9 @@ Executable lhc-exe
  build-depends:      base >= 4 && < 5, mtl, bytestring, containers, ansi-wl-pprint, binary,
                      digest, bytestring-trie, core >=0.5, filepath, directory,
                      derive, unix, xhtml, pretty, ghc >= 6.10, time,
-                     parallel, libffi
+                     parallel, libffi,
+                     test-framework, test-framework-hunit, 
+                     test-framework-quickcheck
 
  other-modules:        Paths_lhc
                      , LhcMain
