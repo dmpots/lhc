@@ -77,8 +77,8 @@ nonlinearVariables eqs
 
 debugMsg :: Monad m => String -> m ()
 debugMsg str
-    = trace str (return ())
-    -- = return () -- trace str (return ())
+    -- = trace str (return ())
+    = return ()
 
 ppLhs :: Lhs -> String
 ppLhs (VarEntry v)   = show (ppRenamed v)
@@ -187,6 +187,7 @@ reduceEval i
                                case hpRhs of
                                  Empty        -> return mempty
                                  Other{rhsTagged = nodes} -> liftM mconcat $ mapM worker (Map.toList nodes)
+                                 _ -> error $ "Unexpected rhs: "++(show hpRhs)++" for heap entry: "++(show hp)
                 liftM mconcat $ mapM fn (Set.toList hps)
            rhs -> error $ "Eval: " ++ show (rhs, i)
 

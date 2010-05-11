@@ -331,9 +331,20 @@ unsupportedBuiltins :: [CompactString]
 unsupportedBuiltins = [
     "atomicModifyMutVar#"
   , "atomically#"
+  , "blockAsyncExceptions#"
+  , "deRefStablePtr#"
+  , "deRefWeak#"
   , "fork#"
+  , "indexArray#"
+  , "makeStablePtr#"
+  , "mkWeak#"
+  , "newArray#"
   , "raise#"
   , "raiseIO#"
+  , "readArray#"
+  , "unblockAsyncExceptions#"
+  , "unsafeFreezeArray#"
+  , "writeArray#"
   , "writeTVar#"
   ]
 {- ORIGINAL DEFINITIONS

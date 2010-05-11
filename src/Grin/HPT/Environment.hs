@@ -248,25 +248,22 @@ setupEnv (Case val alts)
                                           setupEnv alt
                      _              -> error $ "setupEnv: Invalid case: " ++ show l
          return $ mconcat rets
---TODO: figure this out -->>>
-setupEnv (Application (External "getOrSetTypeableStore" _) [ptr, realworld])
-    = return $ singleton (VectorTag [singleton Base, singleton $ Fetch ptr])
+setupEnv (Grin.Update size ptr val)
+    = do addEquation (VarEntry updates) (singleton $ Update ptr val)
+         return mempty
+
+--setupEnv (Application (External "getOrSetTypeableStore" _) [ptr, realworld])
+--  = return $ singleton (VectorTag [singleton Base, singleton $ Ident ptr])
 setupEnv (Application External{} args)
     = return $ singleton (VectorTag [singleton Base, singleton Base])
-    -- = return mempty
---TODO: <<<-- figure this out
 
 setupEnv (Application (Builtin "eval") [arg])
   = do return $ singleton (Eval arg)
 setupEnv (Application (Builtin "apply") [arg1, arg2])
   = do addEquation (VarEntry applications) (singleton $ PartialApply arg1 arg2)
        return $ singleton (Apply arg1 arg2)
---setupEnv (Application (Builtin "update") [ptr,val])
---    = do addEquation (VarEntry updates) (singleton $ Update ptr val)
---           return mempty
-setupEnv (Grin.Update size ptr val)
-    = do addEquation (VarEntry updates) (singleton $ Update ptr val)
-         return mempty
+setupEnv (Application (Builtin "fetch") [a])
+    = return $ singleton $ Fetch a
 setupEnv (Application (Builtin "updateMutVar") [ptr, val, realWorld])
     = do addEquation (VarEntry updates) (singleton $ Update ptr val)
          return $ singleton Base
@@ -277,7 +274,7 @@ setupEnv (Application (Builtin fn) args) | Just len <- fn `lookup` vectorBuiltin
     = return $ singleton $ VectorTag $ take len $ repeat (singleton Base)
 setupEnv (Application (Builtin fn) args) | fn `elem` unsupportedBuiltins
     = return mempty
-
+{-
 setupEnv (Application (Builtin "makeStablePtr#") [val,realworld])
     = do hp <- store (singleton $ Ident val)
          return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
@@ -287,8 +284,6 @@ setupEnv (Application (Builtin "unblockAsyncExceptions#") [fn, realworld])
     = do return $ singleton $ Apply fn realworld
 setupEnv (Application (Builtin "blockAsyncExceptions#") [fn, realworld])
     = do return $ singleton $ Apply fn realworld
-setupEnv (Application (Builtin "fetch") [a])
-    = return $ singleton $ Fetch a
 setupEnv (Application (Builtin "newArray#") [size, elt, realworld])
     = do hp <- store (singleton $ Ident elt)
          return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
@@ -306,6 +301,7 @@ setupEnv (Application (Builtin "mkWeak#") [o,val,c,realworld])
          return $ singleton $ VectorTag [singleton Base, singleton $ Heap hp]
 setupEnv (Application (Builtin "deRefWeak#") [ptr,realworld])
     = do return $ singleton $ VectorTag [singleton Base, singleton Base, singleton $ Fetch ptr]
+-}
 setupEnv (Application (Builtin builtin) args)
     = error $ "unknown builtin: " ++ show builtin
 

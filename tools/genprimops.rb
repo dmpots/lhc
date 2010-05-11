@@ -84,9 +84,7 @@ unsupportedBuiltins = %w(
   raiseIO#
   fork#
   atomically#
-)
 
-specialBuiltins = %w(
   makeStablePtr#
   deRefStablePtr#
   unblockAsyncExceptions#
@@ -98,6 +96,9 @@ specialBuiltins = %w(
   writeArray#
   mkWeak#
   deRefWeak#
+)
+
+specialBuiltins = %w(
 )
 
 extraBuiltins = %w(
