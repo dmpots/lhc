@@ -30,15 +30,26 @@ compileFastCode = compile' ["-O2"]
 
 compile' :: [String] -> Grin -> FilePath -> IO ()
 compile' gccArgs grin target
-    = do rts <- getDataFileName ("rts" </> "rts.c")
+    = do rts_c     <- getDataFileName ("rts" </> "rts.c")
+         rts_ghc_c <- getDataFileName ("rts" </> "rts_ghc.c")
+         rts_ghc   <- readFile rts_ghc_c
          let cTarget = replaceExtension target "c"
-         copyFile rts cTarget
+         copyFile rts_c cTarget
+         appendFile cTarget rts_ghc 
          appendFile cTarget (show cCode)
          dDir <- getDataDir
-         let ltmDir = dDir </> "rts/ltm/"
-         ltmFiles <- getDirectoryContents ltmDir
-         let ltmOptions = ["-I"++ltmDir, "-DXMALLOC=GC_malloc", "-DXFREE=GC_free", "-DXREALLOC=GC_realloc"] ++ map (ltmDir </>) [ file | file <- ltmFiles, takeExtension file == ".c" ]
-         pid <- runCommand (unwords $ cmdLine ++ ltmOptions)
+         lDir <- getLibDir
+         let wordSize   = ["-m32"]
+         let libDir     = lDir </> "../" -- lDir points to the ghc-6.12.x subdir
+         let incDirs    = [dDir </> "rts/include", libDir </> "include", "/opt/include/gc"]
+         let ldDirs     = ["/opt/lib", libDir]
+         let libs       = ["m", "gc", "iconv", "HSghc-prim-0.2.0.0", "HSBase-4.2.0.1", "HSinteger-gmp-0.1.0.0"]
+         let gcOptions  = ["-DXMALLOC=GC_malloc", "-DXFREE=GC_free", "-DXREALLOC=GC_realloc"]
+         let incOptions = map ("-I"++) incDirs
+         let ldOptions  = map ("-L"++) ldDirs ++ map ("-l"++) libs
+         let cmd        = (unwords $ cmdLine ++ wordSize ++ gcOptions ++ incOptions ++ ldOptions)
+         --putStrLn ("RUNNING COMMAND: \n" ++ (show $ cmd))
+         pid <- runCommand cmd
          ret <- waitForProcess pid
          case ret of
            ExitSuccess -> return ()
@@ -46,7 +57,7 @@ compile' gccArgs grin target
                    exitWith ret
     where cCode = grinToC grin
           cFile = replaceExtension target "c"
-          cmdLine = ["gcc", "-w", "-lm", "-I/usr/include/gc/", "-lgc", cFile, "-o", target] ++ gccArgs
+          cmdLine = ["gcc", "-w", cFile, "-o", target] ++ gccArgs
 
 
 
@@ -269,7 +280,8 @@ ppBuiltin binds prim args
           indexAnyArray ty arr idx
               = parens (ty <+> ppRenamed arr) <> brackets (cunit <+> ppRenamed idx)
 
-
+ppExternal binds "hs_free_stable_ptr" tys [ptr, realWorld]
+    = text "hs_free_stable_ptr" <> parens (cvoidp <> ppRenamed ptr) <> semi
 ppExternal binds "isDoubleNaN" tys [double, realWorld]
     = mkBind binds [ ppRenamed realWorld
                    , text "isnan" <> parens (castToDouble double) ]
@@ -793,5 +805,5 @@ cs16p = parens (s16<>char '*')
 cs8 = parens s8
 cs8p = parens (s8<>char '*')
 
-
+cvoidp = parens (void <>char '*')
 

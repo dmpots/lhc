@@ -15,8 +15,11 @@ build-type:          Custom
 data-files:
   rts/rts.ll
   rts/rts.c
+  rts/rts_ghc.c
   rts/ltm/*.c
   rts/ltm/*.h
+  rts/include/*.h
+  rts/include/ghc/*.h
 
 
 flag hpc
