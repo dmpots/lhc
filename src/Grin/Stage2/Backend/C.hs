@@ -265,6 +265,23 @@ ppBuiltin binds prim args
                                                                 , indexAnyArray cs8p arr idx ]
            , "readAddrOffAddr#"  ~> \[arr,idx,realWorld] -> out [ ppRenamed realWorld
                                                                 , indexAnyArray cunitp arr idx ]
+
+            -- GHC 6.12
+           , "narrow8Int#"        ~> unOp cu8 ""
+           , "writeInt8OffAddr#"    ~> \[arr,idx,chr,realWorld] -> vsep [ writeAnyArray u8 arr idx chr
+                                                                      , out [ ppRenamed realWorld ] ]
+           , "writeWideCharOffAddr#"    ~> \[arr,idx,chr,realWorld] -> vsep [ writeAnyArray unit arr idx chr
+                                                                      , out [ ppRenamed realWorld ] ]
+           , "uncheckedIShiftL#"      ~> binOp csunit "<<"
+           , "uncheckedIShiftRA#"     ~> binOp cunit  ">>"
+           , "uncheckedIShiftRL#"     ~> binOp csunit ">>"
+
+           , "writeAddrOffAddr#"    ~> \[arr,idx,addr,realWorld] -> vsep [ writeAnyArray unit arr idx addr
+                                                                      , out [ ppRenamed realWorld ] ]
+           , "writeWord32OffAddr#"    ~> \[arr,idx,word32,realWorld] -> vsep [ writeAnyArray unit arr idx word32
+                                                                      , out [ ppRenamed realWorld ] ]
+           , "readWord32OffAddr#"  ~> \[arr,idx,realWorld] -> out [ ppRenamed realWorld
+                                                                 , indexAnyArray cs32p arr idx ]
            ]
           (~>) = (,)
           out = mkBind binds

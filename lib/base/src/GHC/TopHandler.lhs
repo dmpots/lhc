@@ -53,6 +53,7 @@ import GHC.ConsoleHandler
 runMainIO :: IO a -> IO a
 runMainIO main = 
     do 
+    {-
       main_thread_id <- myThreadId
       weak_tid <- mkWeakThreadId main_thread_id
       install_interrupt_handler $ do
@@ -60,6 +61,7 @@ runMainIO main =
            case m of
                Nothing  -> return ()
                Just tid -> throwTo tid (toException UserInterrupt)
+    -}
       a <- main
       cleanUp
       return a
