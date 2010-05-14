@@ -268,6 +268,13 @@ ppBuiltin binds prim args
 
             -- GHC 6.12
            , "narrow8Int#"        ~> unOp cu8 ""
+           , "narrow16Int#"       ~> unOp cu16 ""
+           , "narrow32Int#"       ~> unOp cu32 ""
+
+           , "narrow8Word#"        ~> unOp cu8 ""
+           , "narrow16Word#"       ~> unOp cu16 ""
+           , "narrow32Word#"       ~> unOp cu32 ""
+
            , "writeInt8OffAddr#"    ~> \[arr,idx,chr,realWorld] -> vsep [ writeAnyArray u8 arr idx chr
                                                                       , out [ ppRenamed realWorld ] ]
            , "writeWideCharOffAddr#"    ~> \[arr,idx,chr,realWorld] -> vsep [ writeAnyArray unit arr idx chr
@@ -275,6 +282,9 @@ ppBuiltin binds prim args
            , "uncheckedIShiftL#"      ~> binOp csunit "<<"
            , "uncheckedIShiftRA#"     ~> binOp cunit  ">>"
            , "uncheckedIShiftRL#"     ~> binOp csunit ">>"
+
+           , "uncheckedShiftL#"      ~> binOp csunit "<<"
+           , "uncheckedShiftRL#"     ~> binOp csunit ">>"
 
            , "writeAddrOffAddr#"    ~> \[arr,idx,addr,realWorld] -> vsep [ writeAnyArray unit arr idx addr
                                                                       , out [ ppRenamed realWorld ] ]

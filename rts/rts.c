@@ -6,7 +6,7 @@
 #include <math.h>
 #include <errno.h>
 #include <gc.h>
-#include "HsFFI.h"
+#include "Rts.h"
 
 typedef unsigned long u64;
 typedef unsigned int u32;
