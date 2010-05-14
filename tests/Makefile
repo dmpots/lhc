@@ -12,7 +12,7 @@ help:
 	@echo "====================== targets ============================"
 
 run: prep
-	python ../utils/lit/lit.py -s $(RunDir)
+	python ../utils/lit/lit.py -s -j16 $(RunDir)
   
 prep:
 	rm -rf $(RunDir)
