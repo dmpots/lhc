@@ -1,4 +1,5 @@
 TESTS  := simple
+LITARGS = -s -j16
 RunDir := RunDir
 
 DEFAULT: help
@@ -12,7 +13,7 @@ help:
 	@echo "====================== targets ============================"
 
 run: prep
-	python ../utils/lit/lit.py -s -j16 $(RunDir)
+	python ../utils/lit/lit.py $(LITARGS) $(RunDir)
   
 prep:
 	rm -rf $(RunDir)
