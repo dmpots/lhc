@@ -117,3 +117,4 @@ dist/
 *.hcr
 Setup
 *.grin_*
+tests/RunDir/
