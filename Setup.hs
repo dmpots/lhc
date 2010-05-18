@@ -103,6 +103,13 @@ main = defaultMainWithHooks simpleUserHooks {   postInst  = myPostInst
           system $ "cp "++unlit++" "++(ldir </> "unlit")
           system $ "cp "++extragccopts++" "++(ldir </> "extra-gcc-opts")
           putStrLn "Done"
+
+          -- build the libHSRts.a
+          putStrLn "Building runtime library..."
+          runCommand ("cd rts && make") "Done"
+          putStr   "Installing runtime library..."
+          runCommand ("cp rts/libHSRts.a "++(ldir</>"../")) "Done"
+
           -- build libraries if -fwith-libs is passed
           when (withLibs customF) $ do
             let confargs = unwords [ "--lhc", "--with-lhc="++lhc, "--with-lhc-pkg="++lhcpkg
@@ -111,7 +118,6 @@ main = defaultMainWithHooks simpleUserHooks {   postInst  = myPostInst
             putStrLn "building libraries..."
             installLhcPkgs confargs libsToBuild
 
-        withLibs = any $ \(x,y) -> x == "x-build-libs" && y == "True"
         installLhcPkgs cf  = mapM_ (installLhcPkg cf)
         installLhcPkg cf n = do
             putStrLn $ "\n[installing "++n++" package for lhc]\n"
@@ -125,7 +131,12 @@ main = defaultMainWithHooks simpleUserHooks {   postInst  = myPostInst
             runCommand x "\nDone"
 
 --cleanLibs :: Args -> CleanFlags -> PackageDescription -> () -> IO ()
-cleanLibs _ _ _ _ = mapM_ (\n -> runClean n) libsToBuild
+cleanLibs _ _ pkgdesc _ = do
+  let customF  = customFieldsPD pkgdesc
+  runCommand "cd rts && make clean" "Cleaned runtime library"
+  mapM_ (\n -> runClean n) libsToBuild
+  --when (withLibs customF) $ mapM_ (\n -> runClean n) libsToBuild
+  return ()
   where runClean n = do {
       putStrLn ("Cleaning " ++ n)
     ; runCommand ("cd "++n++" && cabal clean") ("Cleaned "++n)
@@ -149,3 +160,5 @@ setExecutable file = do
   p <- getPermissions file
   setPermissions file p {executable = True}
 
+withLibs :: [(String, String)] -> Bool
+withLibs = any $ \(x,y) -> x == "x-build-libs" && y == "True"

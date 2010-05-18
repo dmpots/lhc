@@ -1,22 +1,8 @@
 /* Fakeing some Ghc RTS calls */
-
 #include <stdio.h>
-#include <stdarg.h>
-#include "HsFFI.h"
+#include <stdlib.h>
+#include "ghc/RtsGhc.h"
 
-StgStablePtr getOrSetTypeableStore(StgStablePtr ptr);
-StgStablePtr getOrSetGHCConcSignalHandlerStore(StgStablePtr ptr);
-StgStablePtr getOrSetGHCConcPendingEventsStore(StgStablePtr ptr);
-StgStablePtr getOrSetGHCConcPendingDelaysStore(StgStablePtr ptr);
-StgStablePtr getOrSetGHCConcIOManagerThreadStore(StgStablePtr ptr);
-StgStablePtr getOrSetGHCConcProddingStore(StgStablePtr ptr);
-void barf(const char*s, ...);
-void errorBelch(const char*s, ...);
-void verrorBelch(const char*s, va_list ap);
-void rtsFatalInternalErrorFn(const char *s, va_list ap);
-void rtsErrorMsgFn(const char *s, va_list ap);
-void rtsDebugMsgFn(const char *s, va_list ap);
-HsBool rtsSupportsBoundThreads(void);
 
 typedef void RtsMsgFunction(const char *, va_list);
 RtsMsgFunction *fatalInternalErrorFn = rtsFatalInternalErrorFn;
@@ -227,4 +213,9 @@ stg_sig_install(int sig, int spi, void *mask)
 
     return previous_spi;
   */
+}
+
+void hs_free_stable_ptr(HsStablePtr sp)
+{
+  errorBelch("%s: hs_free_stable_ptr not implemented", __FILE__);
 }

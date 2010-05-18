@@ -30,23 +30,15 @@ compileFastCode = compile' ["-O2"]
 
 compile' :: [String] -> Grin -> FilePath -> IO ()
 compile' gccArgs grin target
-    = do rts_c     <- getDataFileName ("rts" </> "rts.c")
-         rts_ghc_c <- getDataFileName ("rts" </> "rts_ghc.c")
-         prim_c    <- getDataFileName ("rts" </> "prim.c")
-         rts_ghc   <- readFile rts_ghc_c
-         prims     <- readFile prim_c
-         let cTarget = replaceExtension target "c"
-         copyFile rts_c cTarget
-         appendFile cTarget rts_ghc 
-         appendFile cTarget prims
-         appendFile cTarget (show cCode)
+    = do
+         writeFile cFile (show cCode)
          dDir <- getDataDir
          lDir <- getLibDir
          let wordSize   = ["-m32"]
          let libDir     = lDir </> "../" -- lDir points to the ghc-6.12.x subdir
          let incDirs    = [dDir </> "rts/include", libDir </> "include", "/opt/include/gc"]
          let ldDirs     = ["/opt/lib", libDir]
-         let libs       = ["m", "gc", "iconv", "HSghc-prim-0.2.0.0", "HSBase-4.2.0.1", "HSinteger-gmp-0.1.0.0"]
+         let libs       = ["m", "gc", "iconv", "HSRts", "HSghc-prim-0.2.0.0", "HSBase-4.2.0.1", "HSinteger-gmp-0.1.0.0"]
          let gcOptions  = ["-DXMALLOC=GC_malloc", "-DXFREE=GC_free", "-DXREALLOC=GC_realloc"]
          let incOptions = map ("-I"++) incDirs
          let ldOptions  = map ("-L"++) ldDirs ++ map ("-l"++) libs
@@ -69,7 +61,10 @@ compile' gccArgs grin target
 
 grinToC :: Grin -> Doc
 grinToC grin
-    = vsep [ comment "CAFs:"
+    = vsep [ comment "HEADERS:"
+           , text "#include \"Rts.h\""
+           , text "#include <gc.h>"
+           , comment "CAFs:"
            , vsep (map ppCAF (grinCAFs grin))
            , comment "Return arguments:"
            , vsep (map ppCAF returnArguments)
@@ -317,6 +312,9 @@ ppBuiltin binds prim args
 
 ppExternal binds "hs_free_stable_ptr" tys [ptr, realWorld]
     = text "hs_free_stable_ptr" <> parens (cvoidp <> ppRenamed ptr) <> semi
+ppExternal binds "__word_encodeFloat" tys [word, val, realWorld]
+    = mkBind binds [ppRenamed realWorld
+                    , castToWord (text "__word_encodeFloat" <> parens (ppRenamed word <> comma <> ppRenamed val))]
 ppExternal binds "isDoubleNaN" tys [double, realWorld]
     = mkBind binds [ ppRenamed realWorld
                    , text "isnan" <> parens (castToDouble double) ]

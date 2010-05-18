@@ -139,4 +139,13 @@ typedef StgWord8*          StgByteArray;
 typedef void  *(*(*StgFunPtr)(void))(void);
 typedef StgFunPtr StgFun(void);
 
+
+/* StgTypes copied from Stg.h */
+typedef StgChar   C_;
+typedef StgWord   W_;
+typedef StgWord*  P_;
+typedef StgInt    I_;
+typedef StgWord StgWordArray[];
+typedef StgFunPtr       F_;
+
 #endif /* STGTYPES_H */
