@@ -21,10 +21,10 @@ transformer target steps firstValue
               | otherwise
               = worker n steps endValue endValue
           worker n (Step name fn:xs) startValue intermediaryValue
-              = do let targetFile = printf "%s_%03d" target n
+              = do let --nStr       = printf "%03d" n            :: String
+                       --targetFile = printf "%s_%s" target nStr :: FilePath
                        value = fn intermediaryValue
-                   --timeIt name $ writeFile targetFile (show $ pretty value)
-                   writeFile targetFile (show $ pretty value)
+                   --timeIt (name++"["++nStr++"]") $ writeFile targetFile (show $ pretty value)
                    putStr "." >> hFlush stdout
                    worker (n+1) xs startValue value
                    
