@@ -48,8 +48,8 @@ ghcBuiltins = []
 
 # Collect the name of all primitive operations
 File.open(PRIM_FILE).each do |line|
-  if line =~ /#,$/ then
-    op = line.gsub(",","").lstrip.rstrip
+  if line =~ /#\)?,$/ then
+    op = line.gsub(",","").gsub("(","").gsub(")","").lstrip.rstrip
     ghcBuiltins << op
     prims[op] = Prim.new(op)
   end
@@ -61,11 +61,15 @@ File.open(PRIM_FILE).each do |line|
     name,len = $1,$2.split(',').length
     debug("V: #{line.chomp} YIELDS: #{name} of length #{len}")
     addPrimType(prims, name, :vector, len)
-  elsif line =~ /(\w+\#)\s+::\s+(.*)$/ then
+  elsif line =~ /(\w+\#)\s+::\s+(.*)$/ then # named prims
     name = $1
     debug("B: #{line}")
     addPrimType(prims, name, :base)
-  elsif line =~ /data (\w+\#)(\s*[a-z])*$/ then
+  elsif line =~ /\(([\*+\/\-<>=]+\#\#?)\)\s+::\s+(.*)$/ then # operand prims
+    name = $1
+    debug("B: #{line}")
+    addPrimType(prims, name, :base)
+  elsif line =~ /data (\w+\#)(\s*[a-z])*$/ then # data constructors
     name = $1
     debug("C: #{line}")
     addPrimType(prims, name, :base)
@@ -102,24 +106,6 @@ specialBuiltins = %w(
 )
 
 extraBuiltins = %w(
-  <#
-  >#
-  <=#
-  >=#
-  -#
-  +#
-  *#
-  /=#
-  ==#
-  <##
-  ==##
-  >##
-  <=##
-  >=##
-  -##
-  +##
-  *##
-  /##
   realWorld#
 )
 
