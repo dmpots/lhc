@@ -32,10 +32,13 @@ compile' :: [String] -> Grin -> FilePath -> IO ()
 compile' gccArgs grin target
     = do rts_c     <- getDataFileName ("rts" </> "rts.c")
          rts_ghc_c <- getDataFileName ("rts" </> "rts_ghc.c")
+         prim_c    <- getDataFileName ("rts" </> "prim.c")
          rts_ghc   <- readFile rts_ghc_c
+         prims     <- readFile prim_c
          let cTarget = replaceExtension target "c"
          copyFile rts_c cTarget
          appendFile cTarget rts_ghc 
+         appendFile cTarget prims
          appendFile cTarget (show cCode)
          dDir <- getDataDir
          lDir <- getLibDir
@@ -292,6 +295,11 @@ ppBuiltin binds prim args
                                                                       , out [ ppRenamed realWorld ] ]
            , "readWord32OffAddr#"  ~> \[arr,idx,realWorld] -> out [ ppRenamed realWorld
                                                                  , indexAnyArray cs32p arr idx ]
+           , "waitRead#"           ~> \[fd,realWorld] -> vsep [ waitRead fd <> semi
+                                                                      , out [ ppRenamed realWorld ] ]
+
+           , "readWideCharOffAddr#" ~> \[addr,idx,realWorld] -> out [ ppRenamed realWorld
+                                                                 , indexAnyArray cs32p addr idx ]
            ]
           (~>) = (,)
           out = mkBind binds
@@ -346,6 +354,8 @@ castToWord double
     = text "doubleToWord" <> parens double
 castToDouble ptr
     = text "wordToDouble" <> parens (ppRenamed ptr)
+waitRead fd 
+    = text "waitRead" <> parens (ppRenamed fd)
 
 ppCase binds scrut alts
     = switch (cunit <+> ppRenamed scrut) $

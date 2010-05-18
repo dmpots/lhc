@@ -14,8 +14,7 @@ homepage:            http://lhc.seize.it/
 build-type:          Custom
 data-files:
   rts/rts.ll
-  rts/rts.c
-  rts/rts_ghc.c
+  rts/*.c
   rts/ltm/*.c
   rts/ltm/*.h
   rts/include/*.h

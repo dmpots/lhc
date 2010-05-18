@@ -31,7 +31,10 @@ void getProgArgv(int *argc, char ***argv)
 
 void panic(char *str)
 {
+  puts("====================== LHC Internal Error =======================");
   puts(str);
+  fflush(stdout);
+  fflush(stderr);
   exit(1);
 }
 
