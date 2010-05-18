@@ -173,6 +173,31 @@ promoteBottoms exp
 
 type StoreFetch = ReaderT (Map.Map Expression Expression) Transform
 
+{-  I think this is trying to do the split fetch transformation of Boquist.
+    as described in his thesis (pg. 104)
+
+    Note [StoreHoles]
+    ~~~~~~~~~~~~~~~~~
+    The storeFetch was causing an incorrect transformation by rewriting the
+    StoreHole expression constructors. The problem is that all StoreHole
+    expressions of the same size are treated as equal. We had some code like:
+
+    [x40820] <- store _
+    [x40821] <- store _
+    ...
+    @update x40820
+    ...
+    @update x40821
+
+    By adding (StoreHole 1, Unit x40820) to the map, the following StoreHole
+    was getting incorrectly rewritten as:
+
+    [x40820] <- store _
+    [x40821] <- unit [x40820]
+
+    This in turn (after forward propagation) was causing the updates to both
+    update the address in x40820, which is not correct.
+-}
 storeFetch :: Expression -> StoreFetch Expression
 storeFetch exp
     = case exp of
@@ -190,7 +215,8 @@ storeFetch exp
                 case mbMatch of
                   Nothing  -> tmapM storeFetch exp
                   Just new -> return new
-    where addBinding key val = local (Map.insert key val)
+    where addBinding (StoreHole _) val = id -- Should not rewrite StoreHoles see Note [StoreHoles]
+          addBinding key val = local (Map.insert key val)
           addBindings [] = id
           addBindings ((k,v):xs) = addBinding k v . addBindings xs
 
